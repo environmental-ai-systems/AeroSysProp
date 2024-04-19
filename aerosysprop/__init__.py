@@ -26,9 +26,9 @@ import sys
 __project__ = 'aerosysprop'
 __version__ = '0.1'
 __keywords__ = ['aerosol', 'organic', 'chemistry','droplets','atmospheric']
-__author__ = 'David Topping'
-__author_email__ = '[David Topping] david.topping@manchester.ac.uk'
-__url__ = 'http://aerosyspropsysprop.readthedocs.org/'
+__authors__ = 'David Topping and project team'
+__lead_author_email__ = '[David Topping] david.topping@manchester.ac.uk'
+__url__ = 'TBC'
 __platforms__ = 'ALL'
 __requires__ = ['openbabel',]
 __extra_requires__ = {'server': ['openbabel'],

@@ -1,30 +1,5 @@
 ##########################################################################################
-#											 #
-#    Example file that loads in SMILES strings and then calculates pure component        #
-#    properties for a given temperature                                                  # 
-#                                                                                        #
-#                                                                                        #
-#    Copyright (C) 2016  David Topping : david.topping@manchester.ac.uk                  #
-#                                      : davetopp80@gmail.com     			 #
-#    Personal website: davetoppingsci.com                                                #
-#											 #
-#    This program is free software: you can redistribute it and/or modify                #
-#    it under the terms of the GNU Affero General Public License as published            #
-#    by the Free Software Foundation, either version 3 of the License, or                #
-#    (at your option) any later version.                                                 # 
-#                                                                                        #   
-#    This program is distributed in the hope that it will be useful,                     #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of                      # 
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                       #
-#    GNU Affero General Public License for more details.                                 #
-#                                                                                        #
-#    You should have received a copy of the GNU Affero General Public License            # 
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.               #
-#                                                                                        #
-#                                                                                        #
-##########################################################################################
-
-# This file demonstrates how to call existing routines in UManSysProp to extract pure
+# This file demonstrates how to call existing routines in AeroSysProp to extract pure
 # component properties. Please note this file is not designed to be run directly from
 # this sub-directory of the main distribution. It is deisgned to illustrate how one might
 # call the seperate methods according to your UManSysProp location.
@@ -47,11 +22,11 @@ import collections
 import sys
 # Here you will need to put the relevant path in for your UManSysProp distribution. Mine is
 # given as an example  - change this!
-sys.path.append('/Users/user/Documents/GitHub/UManSysProp_public/')
-from umansysprop import boiling_points
-from umansysprop import vapour_pressures
-from umansysprop import critical_properties
-from umansysprop import liquid_densities
+sys.path.append('/Users/davidtopping/Documents/GitHub/AeroSysProp/')
+from aerosysprop.methods import boiling_points
+from aerosysprop.methods import vapour_pressures
+from aerosysprop.methods import critical_properties
+from aerosysprop.methods import liquid_densities
 import pdb
 
 ##########################################################################################
@@ -76,7 +51,7 @@ for filename in onlyfiles: # If you have more than one file, for whatever reason
    filenames.append(filename[:])
    text=open(filename[:],'r')
    
-   for line in text.readlines():
+   for line in text:
        input = line.split()
        # Keep a list of the information
        Compound_reference.append(input[0])
@@ -118,10 +93,12 @@ for smiles in smiles_array:
     vapour_pressure_dict_BP[smiles]['VP_Myrdal_Yalkowsky']['BP_Nannoolal']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object_dict[smiles], temperature, boiling_point_dict[smiles]['nannoolal'])
     vapour_pressure_dict_BP[smiles]['VP_Myrdal_Yalkowsky']['BP_Stein_Brown']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object_dict[smiles], temperature, boiling_point_dict[smiles]['stein_and_brown'])
     vapour_pressure_dict_BP[smiles]['VP_Myrdal_Yalkowsky']['BP_Joback_Reid']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object_dict[smiles], temperature, boiling_point_dict[smiles]['joback_and_reid'])
-    
+   
+    #pdb.set_trace()
     vapour_pressure_dict[smiles]['EVAP']=vapour_pressures.evaporation(Pybel_object_dict[smiles], temperature)
-
-
+    vapour_pressure_dict[smiles]['EVAP2']=vapour_pressures.evaporation2(Pybel_object_dict[smiles], temperature)
+    vapour_pressure_dict[smiles]['SIMPOL']=vapour_pressures.simpol(Pybel_object_dict[smiles], temperature)
+    
 # 2c) Subooled liquid density [(g/cc) at a specific temperature]
 # Some require a pre-calculated critical properties and thus boiling points which are fed into the function directly
 
@@ -167,15 +144,20 @@ for smiles in smiles_array:
 # To finish the program, simply type 'c' to continue. The following code then saves some
 # of the vapour pressure estimations to a file. 
     
-pdb.set_trace()
-
-file_name = open('Example_output.txt','w')
-file_name.write(str('SMILES')+'\t'+str('VP_Nannoolal_BP_Nannoolal')+'\t'+str('EVAP')) 
+file_name = open('testing.txt','w')
+file_name.write(
+    str('SMILES')+'\t'+str('VP_Nannoolal_BP_Nannoolal')+'\t'+str('VP_Nannoolal_BP_Stein_Brown')+'\t'+str('VP_Nannoolal_BP_Joback_Reid')+'\t'+str('VP_Myrdal_Yalkowsky_BP_Nannoolal')+
+    '\t'+str('VP_Myrdal_Yalkowsky_BP_Stein_Brown')+'\t'+str('VP_Myrdal_Yalkowsky_BP_Joback_Reid')+'\t'+str('EVAP')+'\t'+str('EVAP2')+'\t'+str('SIMPOL')) 
     
 for smiles in smiles_array:
 
     file_name.write('\n')
-    file_name.write(str(smiles)+'\t'+str(vapour_pressure_dict_BP[smiles]['VP_Nannoolal']['BP_Nannoolal'])+'\t'+str(vapour_pressure_dict[smiles]['EVAP']))  
+    file_name.write(
+	    str(smiles)+'\t'+str(vapour_pressure_dict_BP[smiles]['VP_Nannoolal']['BP_Nannoolal'])+'\t'+str(vapour_pressure_dict_BP[smiles]['VP_Nannoolal']['BP_Stein_Brown'])+
+	    '\t'+str(vapour_pressure_dict_BP[smiles]['VP_Nannoolal']['BP_Joback_Reid'])+'\t'+str(vapour_pressure_dict_BP[smiles]['VP_Myrdal_Yalkowsky']['BP_Nannoolal'])+
+        '\t'+str(vapour_pressure_dict_BP[smiles]['VP_Myrdal_Yalkowsky']['BP_Stein_Brown'])+'\t'+str(vapour_pressure_dict_BP[smiles]['VP_Myrdal_Yalkowsky']['BP_Joback_Reid'])+
+		'\t'+str(vapour_pressure_dict[smiles]['EVAP'])+'\t'+str(vapour_pressure_dict[smiles]['EVAP2'])+'\t'+str(vapour_pressure_dict[smiles]['SIMPOL'])
+        )  
 
 file_name.close()
 

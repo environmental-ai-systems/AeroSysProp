@@ -27,8 +27,8 @@ from __future__ import (
 str = type('')
 
 
-from . import data
-from . import groups
+from aerosysprop import data
+from aerosysprop import groups
 
 
 def joback_and_reid(compound):

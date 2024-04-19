@@ -30,8 +30,8 @@ str = type('')
 from collections import namedtuple
 
 
-from . import groups
-from . import data
+from aerosysprop import groups
+from aerosysprop import data
 
 
 CriticalProperties = namedtuple(

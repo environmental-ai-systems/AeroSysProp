@@ -29,8 +29,8 @@ str = type('')
 
 from math import log, sqrt
 
-from . import data
-from . import groups
+from aerosysprop import data
+from aerosysprop import groups
 import pdb
 
 def nannoolal(compound, temperature, boiling_point):

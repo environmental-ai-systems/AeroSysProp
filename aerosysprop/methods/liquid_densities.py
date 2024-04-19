@@ -27,9 +27,9 @@ from __future__ import (
 str = type('')
 
 
-from . import groups
-from . import molar_volumes
-from . import boiling_points
+from aerosysprop import groups
+from aerosysprop import molar_volumes
+from aerosysprop.methods import boiling_points
 
 
 def girolami(compound):
