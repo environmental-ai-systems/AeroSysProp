@@ -20,9 +20,15 @@ import glob
 from openbabel import pybel
 import collections
 import sys
+import os
+
 # Here you will need to put the relevant path in for your UManSysProp distribution. Mine is
 # given as an example  - change this!
-sys.path.append('/Users/davidtopping/Documents/GitHub/AeroSysProp/')
+
+#sys.path.append('/Users/davidtopping/Documents/GitHub/AeroSysProp/')
+parent_directory = os.path.abspath('../..')
+sys.path.append(parent_directory)
+
 from aerosysprop.methods import boiling_points
 from aerosysprop.methods import vapour_pressures
 from aerosysprop.methods import critical_properties
