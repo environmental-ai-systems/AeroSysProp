@@ -32,6 +32,7 @@ import pickle
 from xml.dom import minidom
 import re
 import tqdm
+import numpy as np
 
 parent_directory = os.path.abspath('../..')
 sys.path.append(parent_directory)
@@ -124,11 +125,16 @@ property_array=[]
 
 print('Predicting properties and generating test data')
 
+boiling_point_dict=collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict())))
+vapour_pressure_dict_BP=collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))))
+vapour_pressure_dict=collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict())))
+temperature=298.15
+density_CP=collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))))
+density=collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict())))
+
+
 for filename in os.listdir(smiles_folder):
     
-    # 2a) Boiling points [(K)]
-    boiling_point_dict=collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
-
     # Now leed to loop through 'Pybel_object_dict[filename][species_name]=Pybel_object'
     print('Boiling points, file:',filename)
 
@@ -137,7 +143,56 @@ for filename in os.listdir(smiles_folder):
         boiling_point_dict[filename][species_name]['joback_and_reid']=boiling_points.joback_and_reid(Pybel_object)
         boiling_point_dict[filename][species_name]['stein_and_brown']=boiling_points.stein_and_brown(Pybel_object)
         boiling_point_dict[filename][species_name]['nannoolal']=boiling_points.nannoolal(Pybel_object)
+        
+    # Now leed to loop through 'Pybel_object_dict[filename][species_name]=Pybel_object'
+    print('Vapour pressure (psat), file:',filename)
+
+
+    for species_name, Pybel_object in tqdm.tqdm(Pybel_object_dict[filename].items()):
+        
+        vapour_pressure_dict_BP[filename][species_name]['VP_Nannoolal']['BP_Nannoolal']=vapour_pressures.nannoolal(Pybel_object, temperature, boiling_point_dict[filename][species_name]['nannoolal'])
+        vapour_pressure_dict_BP[filename][species_name]['VP_Nannoolal']['BP_Stein_Brown']=vapour_pressures.nannoolal(Pybel_object, temperature, boiling_point_dict[filename][species_name]['stein_and_brown'])
+        vapour_pressure_dict_BP[filename][species_name]['VP_Nannoolal']['BP_Joback_Reid']=vapour_pressures.nannoolal(Pybel_object, temperature, boiling_point_dict[filename][species_name]['joback_and_reid'])
+        vapour_pressure_dict_BP[filename][species_name]['VP_Myrdal_Yalkowsky']['BP_Nannoolal']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object, temperature, boiling_point_dict[filename][species_name]['nannoolal'])
+        vapour_pressure_dict_BP[filename][species_name]['VP_Myrdal_Yalkowsky']['BP_Stein_Brown']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object, temperature, boiling_point_dict[filename][species_name]['stein_and_brown'])
+        vapour_pressure_dict_BP[filename][species_name]['VP_Myrdal_Yalkowsky']['BP_Joback_Reid']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object, temperature, boiling_point_dict[filename][species_name]['joback_and_reid'])
+        #pdb.set_trace()
+        vapour_pressure_dict[filename][species_name]['EVAP']=vapour_pressures.evaporation(Pybel_object, temperature)
+        vapour_pressure_dict[filename][species_name]['EVAP2']=vapour_pressures.evaporation2(Pybel_object, temperature)
+        vapour_pressure_dict[filename][species_name]['SIMPOL']=vapour_pressures.simpol(Pybel_object, temperature)
+
     
-    with open('bp_test.json', 'w') as fp:
-        json.dump(boiling_point_dict, fp)
+    # 2c) Subooled liquid density [(g/cc) at a specific temperature]
+    # Some require a pre-calculated critical properties and thus boiling points which are fed into the function directly
+
+    print('Liquid density, file:',filename)
+
+    for species_name, Pybel_object in tqdm.tqdm(Pybel_object_dict[filename].items()):
+
+        boiling_point=boiling_point_dict[filename][species_name]['nannoolal'] #Selecting this as an example
+
+        density[filename][species_name]['Girolami']=np.real((liquid_densities.girolami(Pybel_object)))
     
+        density_CP[filename][species_name]['Schroeder']['CP_Nannoolal']=np.real(liquid_densities.schroeder(Pybel_object, temperature, critical_properties.nannoolal(Pybel_object, boiling_point)))
+        density_CP[filename][species_name]['Schroeder']['CP_Joback_Reid']=np.real(liquid_densities.schroeder(Pybel_object, temperature, critical_properties.joback_and_reid(Pybel_object, boiling_point)))
+        density_CP[filename][species_name]['Le_Bas']['CP_Nannoolal']=np.real(liquid_densities.le_bas(Pybel_object, temperature, critical_properties.nannoolal(Pybel_object, boiling_point)))
+        density_CP[filename][species_name]['Le_Bas']['CP_Joback_Reid']=np.real(liquid_densities.le_bas(Pybel_object, temperature, critical_properties.joback_and_reid(Pybel_object, boiling_point)))
+        density_CP[filename][species_name]['Tyn_Calus']['CP_Nannoolal']=np.real(liquid_densities.tyn_and_calus(Pybel_object, temperature, critical_properties.nannoolal(Pybel_object, boiling_point)))
+        density_CP[filename][species_name]['Tyn_Calus']['CP_Joback_Reid']=np.real(liquid_densities.tyn_and_calus(Pybel_object, temperature, critical_properties.joback_and_reid(Pybel_object, boiling_point)))
+
+pdb.set_trace()
+
+with open('density_test.json', 'w') as fp:
+    json.dump(density, fp)
+
+with open('density_cp_test.json', 'w') as fp:
+    json.dump(density_CP, fp)
+
+with open('bp_test.json', 'w') as fp:
+    json.dump(boiling_point_dict, fp)
+
+with open('vp_bp_test.json', 'w') as fp:
+    json.dump(vapour_pressure_dict_BP, fp)
+
+with open('vp_test.json', 'w') as fp:
+    json.dump(vapour_pressure_dict, fp)
