@@ -1,5 +1,5 @@
 # AeroSysProp
-A facility to parse chemical structures and predict molecular properties for use in aerosol research.
+A facility to parse chemical structures and predict molecular properties for use in aerosol and droplet research.
 
 ---
 
