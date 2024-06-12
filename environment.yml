@@ -1,0 +1,10 @@
+name: AeroSysProp
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - openbabel
+  - pytest
+  - conda-forge::tqdm
+  - numpy
+prefix: /Users/davidtopping/anaconda3/envs/AeroSysProp
