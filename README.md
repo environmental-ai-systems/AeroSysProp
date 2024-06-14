@@ -6,8 +6,7 @@ A facility to parse chemical structures and predict molecular properties for use
 ### Badges
 ![Build Status - just an example for now](https://img.shields.io/badge/build-passing-brightgreen)
 ![Test Coverage - just an example for now](https://img.shields.io/badge/coverage-90%25-brightgreen)
-![License - just an example for now](https://img.shields.io/badge/license-MIT-green)
-![Version - just an example for now](https://img.shields.io/badge/version-1.0.0-blue)
+![Version - just an example for now](https://img.shields.io/badge/version-0.1.0-blue)
 
 ## Table of Contents
 - [Background](#background)
