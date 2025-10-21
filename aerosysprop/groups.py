@@ -59,6 +59,7 @@ def matches(patterns, compound):
     :returns:
         A mapping of group number to match counts
     """
+    
     return {
         group: len(smarts.findall(compound))
         for group, smarts in patterns.items()
@@ -902,7 +903,6 @@ def evaporation2(compound):
     return result
 	
 ### SIMPOL added by Petroc Shelley January 2019
-### Email address: petroc.shelley@manchester.ac.uk
 	
 def simpol(compound):
     m = matches(data.SIMPOL_SMARTS, compound)
@@ -911,42 +911,124 @@ def simpol(compound):
     result['0'] = 1
     #total number of carbons present
     result['1'] = m[1]
-    #number of carbons on acid side of amide bond
-    result['2'] = m[2]
+    #number of carbons on acid side of amide bond, this edited by
+    # Simon O'Meara on 15th October 2025 because it was omitting
+    # the carbon contained in the amide (whereas the example
+    # (n-propyl-butyramide)
+    # given in Pankow and Asher 2008 includes it 
+    # (https://doi.org/10.5194/acp-8-2773-2008)), and because
+    # it was not excluding carbons on the non-acid-side of the
+    # amide bond. Simon O'Meara provided the group 2
+    # identification below: if an amide group
+    # is identified by any of groups 22, 23, or 24,
+    # then the SMARTS string is cut at the nitrogen atom
+    # of the amide group, allowing the carbons on the
+    # acid side to be counted from the remaining SMILES
+    result['2'] = 0 # prepare to hold any non-zero result for group 2
+    if (m[22] > 0 or m[23] > 0 or m[24] > 0):
+
+        # get amide group of interest
+        if (m[22] > 0):
+            goi = 22
+        if (m[23] > 0):
+            goi = 23
+        if (m[24] > 0):
+            goi = 24
+
+        for group, smarts in data.SIMPOL_SMARTS.items():
+            
+            if (group == 1):
+                # get location of all carbon atoms
+                c_atom_loc = smarts.findall(compound)
+            
+            if (group == goi):
+                # get location of this group
+                amide_loc = smarts.findall(compound)
+                # get number of carbon atoms on the acid-side
+                # of the amide, adding one to include the
+                # carbon in the carbonyl group of the amide
+                result['2'] = 1
+                
+                for cpi in c_atom_loc:
+                    # if the carboxyl group comes before the nitrogen atom of the
+                    # amide group in the compound identifier, then count the carbons
+                    # preceeding the carboxyl group
+                    if ((amide_loc[0][0]<amide_loc[0][2]) and (cpi[0] < amide_loc[0][0])):
+                        result['2'] += 1
+                    # if the carboxyl group comes after the nitrogen atom of the
+                    # amide group in the compound identifier, then count the carbons
+                    # subsequent to the carboxyl group
+                    if ((amide_loc[0][0]>amide_loc[0][2]) and (cpi[0] > amide_loc[0][0])):
+                        result['2'] += 1
+   
     #Aromatic ring present
     #for one ring contribution is one. A ring containing 3 atoms will give answer of 3 therefore
     #must be divided by 3 to give the correct contribution
     #m[301] for 3 membered rings
     #m[302] for 4 membered rings
     #up to m[306] for 8 membered rings
+    # updated by Simon O'Meara on 17th October 2025
+    # to allow for 9 or 10 membered rings
     #ceil function used to compensate for fused rings
     result['3'] =   ceil(
                         m[301] / 3 + m[302] / 4 + m[303] / 5
                         + m[304] / 6 + m[305] / 7 + m[306] / 8
+                        + m[307] / 9 + m[308] / 10
                     )
     #Aliphatic ring present
     #same theory as result['3']
+    # updated by Simon O'Meara on 17th October 2025
+    # to allow for 9 or 10 membered rings, e.g. beta-caryophyllene
     result['4'] = 	ceil(
                         m[401] / 3 + m[402] / 4 + m[403] / 5
                         + m[404] / 6 + m[405] / 7 + m[406] / 8
+                        + m[407] / 9 + m[408] / 10
                     )
     #total number of non aromatic C=C bonds present
     result['5'] = m[5]
     #total number of C=C-C=O present in a non-aromatic ring
     result['6'] = m[6]
-    #total number of hydroxyl groups not attached to aromatic carbon. Also described as alkyl hydroxyl
-    #which is OH attached to a CX4 which is the current SMART used. may be incorrect use of term alkyl
-    #when non-aromatic is meant.
+    # total number of hydroxyl groups attached to non-aromatic carbon (footnote h of 
+    # Table 5 of Pankow and Asher 2008 (https://doi.org/10.5194/acp-8-2773-2008)).
+    # Also described as alkyl hydroxyl
+    # which is OH attached to a CX4 which is the current SMART used. may be incorrect use of term alkyl
+    # when non-aromatic is meant. Simon O'Meara 17th October 2025: chose to keep the above 
+    # description of alkyl hydroxyl radical because alkyl does mean a carbon chain, whereas a 
+    # hydroxyl bonded to anything other than carbon is a different sub-set of hydroxyl, e.g.
+    # hydroxylamine in dimethyl-hydroxylamine (N,N-Dimethylhydroxylamine), plus one expects the
+    # charge distribution to be quite different between hydroxyl groups bonded to carbon atoms
+    # compared to being bonded to other atoms. Anyway, footnote h of Table 5 of Pankow and
+    # Asher 2008 specifies attachment to carbon, not other atoms. However, Simon O'Meara on 
+    # 17th October 2025 did loosen the previous definition of this group so that the bonding
+    # carbon atom did not need to bond to 4 atoms, but nor could it double bond to an
+    # oxygen to make a carboxylic acid. This change allows the hydroxyl group closest to
+    # the oxygen radical in O=N(=O)C12OOC(C2O)C(O)([O])C(=C1)O be counted
     result['7'] = m[7]
-    #total number of aldehyde groups present
-    result['8'] = m[8]
+    #total number of aldehyde groups present, SMARTS were updated 17th October 2025
+    # by Simon O'Meara to allow the carbonyl group of the aldehyde to bond to two hydrogens
+    # as well as a hydrogen and a carbon, such that formaldehyde would be registered as
+    # an aldehyde
+    result['8'] = (m[801]+m[802])
     #total number of ketone groups present
     result['9'] = m[9]
-    #total number of carboxylic acid groups present
-    result['10'] = m[10]
+    #total number of carboxylic acid groups present, updated on 17th October 2025
+    # by Simon O'Meara to allow the carboxylic acid group to attach to both a carbon
+    # as well as a hydrogen, so the formic acid would register a carboxylic acid group
+    result['10'] = (m[1001]+m[1002])
     #total number of ester groups present UNLESS there is a nitro group bonded to the acid side carbon
-    #chain of the ester. In that case result['30'] would be used.
-    result['11'] = m[11]
+    #chain of the ester. In that case result['30'] would be used. 
+    # Simon O'Meara October 17th 2025: note that Table 3b of Pankow and Asher (2008)
+    # (https://doi.org/10.5194/acp-8-2773-2008) classifies n-butyl benzoate as an ester,
+    # though the carbon atom of the ester group that has a double bond with oxygen connects to
+    # an aromatic carbon, therefore SMARTS were changed to allow both/one or the other/no 
+    # carbon atoms of the ester group to bond to aromatic carbons, in addition Table 3b of
+    # Pankow and Asher (2008) classify phenyl acetate (a.k.a. acetic-acid,-phenyl-ester) as
+    # an ester, though the carbon atom bonding to the single bond oxygen is aromatic,
+    # therefore SMARTS were changed to allow this carbon to be aliphatic and aromatic
+    # Updated on 17th October 2025 by Simon O'Meara to allow the ester group to bond
+    # to both a carbon as well as a hydrogen, so that methyl ester would have an ester
+    # group counted
+    result['11'] = (m[1101]+m[1102])
     #total number of ether groups where both carbons attached to the oxygen are not part of an aromatic
     #ring system and the oxygen is not part of any ring system
     result['12'] = m[12]
@@ -954,7 +1036,12 @@ def simpol(compound):
     #ether
     result['13'] = m[13]
     #total number of ether groups not covered by result['12'] or result['13']. At least one of the
-    #carbons attached to the ether oxygen should be part of an aromatic system.
+    #carbons attached to the ether oxygen should be part of an aromatic system. Simon O'Meara
+    # added on 17th October 2025: but if the single bonded oxygen attaches to an aliphatic
+    # carbon which in turn attaches to a double bonded oxygen, this is classified as a group 11
+    # ester, as exemplified by Table 3b of
+    # Pankow and Asher (2008) classifying phenyl acetate (a.k.a. acetic-acid,-phenyl-ester) as
+    # an ester, therefore SMARTS were updated to prevent this situation marking as a group 14
     result['14'] = m[14]
     #total number of nitrate groups present
     result['15'] = m[15]
@@ -966,10 +1053,18 @@ def simpol(compound):
     #ring
     #divided by 2 as each OH counted twice. Both ways around ring
     result['17'] = m[17] / 2
-    #total number of primary amine groups where C bonded to N is not aromatic.
-    result['18'] = m[18]
-    #total number of secondary amine groups where both C bonded to N are not aromatic
-    result['19'] = m[19]
+    #total number of primary amine groups where C bonded to N is not aromatic, where the
+    # N is allowed to be bonded to hydroxyl groups as well as hydrogen atoms,
+    # consistent with the classification of dimethyl-hydroxylamine (N,N-Dimethylhydroxylamine)
+    # as an amine in Table 1C of the Pankow and Asher 2008 paper 
+    # (https://doi.org/10.5194/acp-8-2773-2008) (though it's strictly speaking a hydroxylamine)
+    result['18'] = (m[1801]+m[1802]+m[1803])
+    #total number of secondary amine groups where both C bonded to N are not aromatic, where the
+    # N is allowed to be bonded to a hydroxyl group as well as a hydrogen atom,
+    # consistent with the classification of dimethyl-hydroxylamine (N,N-Dimethylhydroxylamine)
+    # as an amine in Table 1C of the Pankow and Asher 2008 paper 
+    # (https://doi.org/10.5194/acp-8-2773-2008) (though it's strictly speaking a hydroxylamine)
+    result['19'] = (m[1901]+m[1902])
     #total number of tertiary amine groups where all C bonded to N are not aromatic.
     result['20'] = m[20]
     #total number of amines where at least one C bonded to N is aromatic.
@@ -1006,13 +1101,51 @@ def simpol(compound):
     result['29'] = m[2901] + m[2902] + m[2903] / 2 + m[2904] + m[2905] +m[2906] / 2
     if result['29'] > 0:
         result['17'] = 0
-    #total number of nitroester groups present
-    #group 3001 is for the nitro part represented as -N(=O)=O
-    #group 3002 is for the nitro part represented as -[N+](=O)[O-]
-    result['30'] = m[3001] + m[3002]
-    if result['30'] > 0:
-        result['11'] = 0
+    # for group 30, check if both at least 1 ester group and
+    # 1 nitro group have been identified
+    # begin by preparing nitroester result
+    result['30'] = 0
+    if result['11']>0 and result['16']>0:
+        # now loop through the ester groups
+        for esti in range(result['11']):
+
+            for group, smarts in data.SIMPOL_SMARTS.items():
+
+                if ((m[1101]>0 and group == 1101) or (m[1102]>0 and group == 1102)):
+                    # get the location of this ester group
+                    ester_loc = smarts.findall(compound)[esti]
+                    # determine whether acid side of ester is below
+                    # or above this ester
+                    if ester_loc[2]>ester_loc[3]: 
+                        ase = 'above'
+                    if ester_loc[2]<ester_loc[3]: 
+                        ase = 'below'
+                    
+                if (group == 1601 or group == 1602):
+                    # get the location of nitro groups
+                    nitro_loc = smarts.findall(compound)
+                    # now loop through nitro groups
+                    for niti in range(len(nitro_loc)):
+                        # if this nitro group is on the acid side of
+                        # the ester, then discount the ester from group 11
+                        # and count the nitroester group in group 30
+                        # but don't discount the nitro group from
+                        # group 16 as explained in footnote L of the
+                        # Pankow and Asher Table 5 for the 
+                        # methyl nitroacetate example. Note by referencing [0]
+                        # in nitro_loc[niti][0] we are using the location
+                        # of the carbon to which the nitro group is
+                        # attached, and this should prevent issues
+                        # with branching
+                        if nitro_loc[niti][0]>=ester_loc[2] and ase == 'above':
+                            result['11'] -= 1
+                            result['30'] += 1
+                        if nitro_loc[niti][0]<=ester_loc[2] and ase == 'below':
+                            result['11'] -= 1
+                            result['30'] += 1
+                    
     #pdb.set_trace()
+    print(result)
     return result
 	
 

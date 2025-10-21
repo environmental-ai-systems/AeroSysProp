@@ -6,7 +6,7 @@ A facility to parse chemical structures and predict molecular properties for use
 ### Badges
 ![Build Status - just an example for now](https://img.shields.io/badge/build-passing-brightgreen)
 ![Test Coverage - just an example for now](https://img.shields.io/badge/coverage-90%25-brightgreen)
-![Version - just an example for now](https://img.shields.io/badge/version-0.1.0-blue)
+![Version - set by Simon O'Meara on 21st October 2025](https://img.shields.io/badge/version-0.1.1-blue)
 
 ## Table of Contents
 - [Background](#background)
@@ -46,6 +46,9 @@ AeroSysProp is distributed in the hope that it will be useful, but WITHOUT ANY W
 
 ## Citation
 TBC
+
+## Major updates
+Following the report of Bezaatpour et al. (2025) (https://doi.org/10.5194/egusphere-2025-2564), highlighting accuracy issues with certain SIMPOL.1 contributing groups in UMansSysProp. The issues were resolved in version 0.1.1 of AeroSysProp, with the relevant test in SIMPOL_tests.py, and further details of the updates contained in groups.py (simpol function).
 
 ## Features
 

@@ -297,21 +297,24 @@ def evaporation2(compound, temperature):
 
 	
 ### SIMPOL added by Petroc Shelley	January 2019
-### Email address: petroc.shelley@manchester.ac.uk
+# SIMPOL.1 paper is Pankow and Asher 2008:
+# https://doi.org/10.5194/acp-8-2773-2008
 def simpol(compound, temperature):
     m = groups.simpol(compound)
     
     # equations to be implemented
     #bk(T) = b1,k/T + b2,k + b3,k * T + b4,k * ln(T)
     #Where bk(T) is the group contribution term of group k at temp T
-    #log10(Pl,i(T))= SUMk Vki bk(T)
+    #log10(Pl,i(T))= SUMk Vki bk(T) (Eq. 6 of 
+    # https://doi.org/10.5194/acp-8-2773-2008)
 	#Where Pl,i(T) is the liquid vapour pressure in atm of compound i at
     #temperature, T, Vki is the number of groups of type k in compound i
-    
+    # b values in data.SIMPOL.data are from
+    # Table 5 of https://doi.org/10.5194/acp-8-2773-2008
     b1 = groups.aggregate_matches(m, data.SIMPOL_1)
     b2 = groups.aggregate_matches(m, data.SIMPOL_2)	
     b3 = groups.aggregate_matches(m, data.SIMPOL_3)
     b4 = groups.aggregate_matches(m, data.SIMPOL_4)
-    #pdb.set_trace()
+    
     bkT = b1 / temperature + b2 + b3 * temperature + b4 * log(temperature)
     return bkT
