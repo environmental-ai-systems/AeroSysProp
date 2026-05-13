@@ -18,15 +18,6 @@
 # umansysprop.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import (
-    unicode_literals,
-    absolute_import,
-    print_function,
-    division,
-    )
-str = type('')
-
-
 from aerosysprop import data
 from aerosysprop import groups
 

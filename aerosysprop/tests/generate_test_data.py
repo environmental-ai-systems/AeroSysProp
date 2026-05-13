@@ -23,12 +23,12 @@
 # Last modification 17/05/24
 
 import glob
-from openbabel import pybel
+from rdkit import Chem
 import collections
 import sys
 import os
 import json
-import pickle 
+import pickle
 from xml.dom import minidom
 import re
 import tqdm
@@ -41,7 +41,6 @@ from aerosysprop.methods import boiling_points
 from aerosysprop.methods import vapour_pressures
 from aerosysprop.methods import critical_properties
 from aerosysprop.methods import liquid_densities
-import pdb
 
 # ------------ This file is seperated into sections --------------
 # A) - Individual property (molecule) predictions
@@ -61,18 +60,15 @@ import pdb
 # The following loop works through the files stored in the SMILES folder 
 
 
-print('Mapping species names to SMILES and Pybel objects to generate test data')
+print('Mapping species names to SMILES and RDKit mol objects to generate test data')
 
 smiles_folder = os.getcwd()+'/SMILES'
 
 SMILES_dict=collections.defaultdict(lambda: collections.defaultdict())
 Pybel_object_dict=collections.defaultdict(lambda: collections.defaultdict())
 
-#1) extract the data from each file and start generating a dictionary of Pybel objects
-# The following is taken from PyBox
-print('Mapping species names to SMILES and Pybel objects')
+print('Mapping species names to SMILES and RDKit mol objects')
 
-# In the following we try to account for the variable way in which SMILES strings are stored by application/project 
 for filename in os.listdir(smiles_folder):
 
     if filename.endswith('.txt'):
@@ -80,32 +76,26 @@ for filename in os.listdir(smiles_folder):
         for line in text:
             input = line.split()
             try:
-                # Keep a list of the information
-                #pdb.set_trace()
-                #Compound_reference.append(input[0])
-                #smiles_array.append(input[1])
                 species_SMILES=input[1]
-                # Now create Pybel objects which are used in all property predictive techniques
-                # Note for text files, unlike XML files, its unlikely that we will also have a species name so using 'species_SMILES'
                 SMILES_dict[filename][species_SMILES]=species_SMILES
-                Pybel_object=pybel.readstring('smi',input[1])
-                Pybel_object_dict[filename][species_SMILES]=Pybel_object
+                mol = Chem.MolFromSmiles(input[1])
+                if mol is None:
+                    raise ValueError('Could not parse SMILES: %s' % input[1])
+                Pybel_object_dict[filename][species_SMILES]=mol
             except:
-                print('Problem generating Pybel object from SMILES string')
+                print('Problem generating mol object from SMILES string')
     elif filename.endswith('.xml'):
-        # parse an xml file by name - use this to store species name versus SMILES
         dom = minidom.parse(smiles_folder+'/'+filename)
         for node in dom.getElementsByTagName('species'):
             species_name=node.attributes['species_name'].value
-            if species_name not in ['OH','HO2','O3','hv']: 
-                #Now check to see if the species is in your dictionary extracted from the mechanism
-                #Right, the following is an overkill way t extract the SMILES. If the XML was written correctly, and the SMILES were in quotation marks, the node. method would be all that is needed
+            if species_name not in ['OH','HO2','O3','hv']:
                 try:
-                    #pdb.set_trace()
                     species_SMILES=re.search(r'<smiles>(.*?)</smiles>',node.getElementsByTagName('smiles').item(0).toxml()).group(1)
                     SMILES_dict[filename][species_name]=species_SMILES
-                    Pybel_object=pybel.readstring('smi',species_SMILES)
-                    Pybel_object_dict[filename][species_name]=Pybel_object
+                    mol = Chem.MolFromSmiles(species_SMILES)
+                    if mol is None:
+                        raise ValueError('Could not parse SMILES: %s' % species_SMILES)
+                    Pybel_object_dict[filename][species_name]=mol
                 except:
                     print('No SMILES entry for species ',species_name)
 
@@ -156,7 +146,6 @@ for filename in os.listdir(smiles_folder):
         vapour_pressure_dict_BP[filename][species_name]['VP_Myrdal_Yalkowsky']['BP_Nannoolal']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object, temperature, boiling_point_dict[filename][species_name]['nannoolal'])
         vapour_pressure_dict_BP[filename][species_name]['VP_Myrdal_Yalkowsky']['BP_Stein_Brown']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object, temperature, boiling_point_dict[filename][species_name]['stein_and_brown'])
         vapour_pressure_dict_BP[filename][species_name]['VP_Myrdal_Yalkowsky']['BP_Joback_Reid']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object, temperature, boiling_point_dict[filename][species_name]['joback_and_reid'])
-        #pdb.set_trace()
         vapour_pressure_dict[filename][species_name]['EVAP']=vapour_pressures.evaporation(Pybel_object, temperature)
         vapour_pressure_dict[filename][species_name]['EVAP2']=vapour_pressures.evaporation2(Pybel_object, temperature)
         vapour_pressure_dict[filename][species_name]['SIMPOL']=vapour_pressures.simpol(Pybel_object, temperature)
@@ -179,8 +168,6 @@ for filename in os.listdir(smiles_folder):
         density_CP[filename][species_name]['Le_Bas']['CP_Joback_Reid']=np.real(liquid_densities.le_bas(Pybel_object, temperature, critical_properties.joback_and_reid(Pybel_object, boiling_point)))
         density_CP[filename][species_name]['Tyn_Calus']['CP_Nannoolal']=np.real(liquid_densities.tyn_and_calus(Pybel_object, temperature, critical_properties.nannoolal(Pybel_object, boiling_point)))
         density_CP[filename][species_name]['Tyn_Calus']['CP_Joback_Reid']=np.real(liquid_densities.tyn_and_calus(Pybel_object, temperature, critical_properties.joback_and_reid(Pybel_object, boiling_point)))
-
-pdb.set_trace()
 
 with open('density_test.json', 'w') as fp:
     json.dump(density, fp)

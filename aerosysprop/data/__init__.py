@@ -3,35 +3,29 @@
 # Copyright (c) 2014 Manchester University.
 # All Rights Reserved.
 
-from __future__ import (
-    unicode_literals,
-    absolute_import,
-    print_function,
-    division,
-    )
-str = type('')
-try:
-    from itertools import izip
-    zip = izip
-except ImportError:
-    pass
-
-
 import re
-import pdb 
-from openbabel import pybel
+from rdkit import Chem
 import pkg_resources as pkg
 
 
+class _Smarts:
+    """Thin wrapper so smarts.findall(mol) works with RDKit molecules."""
+    __slots__ = ('_mol',)
+
+    def __init__(self, pattern):
+        mol = Chem.MolFromSmarts(pattern)
+        if mol is None:
+            raise ValueError('Invalid SMARTS pattern: %r' % pattern)
+        self._mol = mol
+
+    def findall(self, mol):
+        return mol.GetSubstructMatches(self._mol)
+
+
 def smarts(s):
-    if not isinstance(s, bytes):
-        s = s.encode('ascii')
-    try:
-        #pdb.set_trace()
-        return pybel.Smarts(str(s,'utf-8'))
-    except IOError as e:
-        # Convert pybel's IOError (?!) into a ValueError
-        raise ValueError(str(e))
+    if isinstance(s, bytes):
+        s = s.decode('utf-8')
+    return _Smarts(s)
 
 
 _parse_re = re.compile(r'^\s*((?P<data>([^#]|\S#)*)(\s+#.*)?|#.*)$')

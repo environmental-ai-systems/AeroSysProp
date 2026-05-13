@@ -11,17 +11,13 @@ RUN apt-get update && apt-get install -y \
     bzip2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download the Anaconda installer script
-RUN curl -O https://repo.anaconda.com/archive/Anaconda3-2023.03-Linux-x86_64.sh
+# Download and install Miniconda (smaller, sufficient for conda envs)
+RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o miniconda.sh \
+    && bash miniconda.sh -b -p /opt/conda \
+    && rm miniconda.sh
 
-# Install Anaconda
-RUN bash Anaconda3-2023.03-Linux-x86_64.sh -b -p /opt/anaconda
-
-# Set the PATH environment variable to include the Anaconda installation
-ENV PATH=/opt/anaconda/bin:$PATH
-
-# Clean up
-RUN rm Anaconda3-2023.03-Linux-x86_64.sh
+# Set the PATH environment variable to include the conda installation
+ENV PATH=/opt/conda/bin:$PATH
 
 # add the repo host to know_hosts, only run once
 RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
@@ -37,7 +33,8 @@ WORKDIR /opt/AeroSysProp
 RUN conda env create -f /opt/AeroSysProp/environment.yml
 
 # Activate the conda environment and ensure it's available in the Docker container
-RUN echo "source activate $(head -1 /opt/AeroSysProp/environment.yml | cut -d ' ' -f 2)" > ~/.bashrc
+RUN echo "conda activate $(head -1 /opt/AeroSysProp/environment.yml | cut -d ' ' -f 2)" >> ~/.bashrc \
+    && /opt/conda/bin/conda init bash
 
 # docker build --ssh github=~/.ssh/id_rsa_github -t your-image-name .
 

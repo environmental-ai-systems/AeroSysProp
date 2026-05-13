@@ -3,8 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - openbabel
+  - rdkit
   - pytest
-  - conda-forge::tqdm
+  - tqdm
   - numpy
-prefix: /Users/davidtopping/anaconda3/envs/AeroSysProp

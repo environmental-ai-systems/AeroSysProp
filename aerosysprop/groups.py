@@ -18,23 +18,9 @@
 # umansysprop.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import (
-    unicode_literals,
-    absolute_import,
-    print_function,
-    division,
-    )
-str = type('')
-try:
-    range = xrange
-except NameError:
-    pass
-
-
 from math import ceil
 from itertools import chain, groupby
 from operator import itemgetter
-import pdb
 
 from . import data
 

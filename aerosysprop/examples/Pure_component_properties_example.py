@@ -17,15 +17,12 @@
 # Last modification 21/12/16
 
 import glob
-from openbabel import pybel
+from rdkit import Chem
+from rdkit.Chem import Descriptors, rdMolDescriptors
 import collections
 import sys
 import os
 
-# Here you will need to put the relevant path in for your UManSysProp distribution. Mine is
-# given as an example  - change this!
-
-#sys.path.append('/Users/davidtopping/Documents/GitHub/AeroSysProp/')
 parent_directory = os.path.abspath('../..')
 sys.path.append(parent_directory)
 
@@ -33,7 +30,6 @@ from aerosysprop.methods import boiling_points
 from aerosysprop.methods import vapour_pressures
 from aerosysprop.methods import critical_properties
 from aerosysprop.methods import liquid_densities
-import pdb
 
 ##########################################################################################
 # 1. Read in the property data, seperating only .prop files from the rest.
@@ -63,8 +59,8 @@ for filename in onlyfiles: # If you have more than one file, for whatever reason
        Compound_reference.append(input[0])
        smiles_array.append(input[1])
        # Now create Pybel objects which are used in all property predictive techniquexs
-       Pybel_object=pybel.readstring('smi',input[1])
-       Pybel_object_dict[input[1]]=Pybel_object
+       mol = Chem.MolFromSmiles(input[1])
+       Pybel_object_dict[input[1]]=mol
        
 ##########################################################################################       
 # 2) Create a dictionary of properties based on these Pybel objects
@@ -100,7 +96,6 @@ for smiles in smiles_array:
     vapour_pressure_dict_BP[smiles]['VP_Myrdal_Yalkowsky']['BP_Stein_Brown']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object_dict[smiles], temperature, boiling_point_dict[smiles]['stein_and_brown'])
     vapour_pressure_dict_BP[smiles]['VP_Myrdal_Yalkowsky']['BP_Joback_Reid']=vapour_pressures.myrdal_and_yalkowsky(Pybel_object_dict[smiles], temperature, boiling_point_dict[smiles]['joback_and_reid'])
    
-    #pdb.set_trace()
     vapour_pressure_dict[smiles]['EVAP']=vapour_pressures.evaporation(Pybel_object_dict[smiles], temperature)
     vapour_pressure_dict[smiles]['EVAP2']=vapour_pressures.evaporation2(Pybel_object_dict[smiles], temperature)
     vapour_pressure_dict[smiles]['SIMPOL']=vapour_pressures.simpol(Pybel_object_dict[smiles], temperature)
@@ -125,16 +120,14 @@ for smiles in smiles_array:
     density_CP[smiles]['Tyn_Calus']['CP_Nannoolal']=liquid_densities.tyn_and_calus(compound, temperature, critical_properties.nannoolal(compound, boiling_point))
     density_CP[smiles]['Tyn_Calus']['CP_Joback_Reid']=liquid_densities.tyn_and_calus(compound, temperature, critical_properties.nannoolal(compound, boiling_point))
 
-# 2d) Pybel object properties. By creating a pybel object you can extract a range of markers/features of the molecule
-# In Python, these features of the Pybel object class can be found by typing dir(inset name of your pybel object here)
-# For example:
+# 2d) RDKit mol properties — molecular weight and formula via rdkit.Chem.Descriptors / rdMolDescriptors
 
 general_dict=collections.defaultdict(lambda: collections.defaultdict())
 
 for smiles in smiles_array:
 
-    general_dict[smiles]['Mw']=Pybel_object_dict[smiles].molwt
-    general_dict[smiles]['Formula']=Pybel_object_dict[smiles].formula
+    general_dict[smiles]['Mw']=Descriptors.MolWt(Pybel_object_dict[smiles])
+    general_dict[smiles]['Formula']=rdMolDescriptors.CalcMolFormula(Pybel_object_dict[smiles])
     
 ##########################################################################################
 # 3) Example output

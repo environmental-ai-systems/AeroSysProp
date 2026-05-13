@@ -14,13 +14,6 @@
 # umansysprop. If not, see <http://www.gnu.org/licenses/>.
 """An system for calculating the properties of individual organic
 molecules and ensemble mixtures relevant to aerosol science"""
-from __future__ import (
-    unicode_literals,
-    absolute_import,
-    print_function,
-    division,
-    )
-str = type('')
 import sys
 
 __project__ = 'aerosysprop'
@@ -30,8 +23,8 @@ __authors__ = 'David Topping and project team'
 __lead_author_email__ = '[David Topping] david.topping@manchester.ac.uk'
 __url__ = 'TBC'
 __platforms__ = 'ALL'
-__requires__ = ['openbabel',]
-__extra_requires__ = {'server': ['openbabel'],
+__requires__ = ['rdkit',]
+__extra_requires__ = {'server': ['rdkit'],
     'client': [],
     'doc': ['sphinx'],
     }

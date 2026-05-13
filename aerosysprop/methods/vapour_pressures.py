@@ -18,20 +18,10 @@
 # umansysprop.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import (
-    unicode_literals,
-    absolute_import,
-    print_function,
-    division,
-    )
-str = type('')
-
-
 from math import log, sqrt
 
 from aerosysprop import data
 from aerosysprop import groups
-import pdb
 
 def nannoolal(compound, temperature, boiling_point):
     result1 = groups.aggregate_matches(
