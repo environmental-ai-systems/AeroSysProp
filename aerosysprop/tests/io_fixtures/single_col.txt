@@ -1,0 +1,5 @@
+# one SMILES per line (no name column)
+COO
+C(O)CO
+CC(C)=O
+CC(=O)O

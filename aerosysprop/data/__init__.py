@@ -4,8 +4,8 @@
 # All Rights Reserved.
 
 import re
+from importlib.resources import files
 from rdkit import Chem
-import pkg_resources as pkg
 
 
 class _Smarts:
@@ -34,7 +34,7 @@ def _read_data(
     result = {}
     cols = None
     for count, line in enumerate(
-            pkg.resource_stream(__name__, filename), start=1):
+            (files(__name__) / filename).open('rb'), start=1):
         data = _parse_re.match(line.decode('utf-8')).group('data')
         if data:
             data = data.split()
@@ -65,7 +65,7 @@ def _read_matrix(filename, key_conv=str, value_conv=float, symmetric=True):
     col_keys = []
     row_keys = []
     for count, line in enumerate(
-            pkg.resource_stream(__name__, filename), start = 1):
+            (files(__name__) / filename).open('rb'), start=1):
         data = _parse_re.match(line.decode('utf-8')).group('data')
         if data:
             try:
