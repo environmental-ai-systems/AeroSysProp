@@ -7,3 +7,5 @@ dependencies:
   - pytest
   - tqdm
   - numpy
+  - pandas
+  - streamlit
