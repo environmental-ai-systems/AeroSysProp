@@ -10,6 +10,7 @@ A Python library for predicting pure-component thermophysical properties of orga
 - [Directory structure](#directory-structure)
 - [Installation](#installation)
 - [Quick start](#quick-start)
+- [Loading SMILES from files](#loading-smiles-from-files)
 - [Available methods](#available-methods)
 - [Running the tests](#running-the-tests)
 - [Docker](#docker)
@@ -36,6 +37,7 @@ AeroSysProp/
 ├── aerosysprop/
 │   ├── __init__.py
 │   ├── groups.py                    # SMARTS-based group counting and aggregation
+│   ├── io.py                        # SMILES loaders: text, SQLite, SDF
 │   ├── molar_volumes.py             # Molar volume helpers used by density methods
 │   ├── data/                        # Group-contribution parameters and SMARTS patterns
 │   │   ├── __init__.py              # Loads all .data, .smarts, and .matrix files at import
@@ -52,8 +54,14 @@ AeroSysProp/
 │   │   └── test.prop                              # Example SMILES input file
 │   ├── tests/
 │   │   ├── test_properties.py       # Regression test suite (run with pytest)
+│   │   ├── test_io.py               # Tests for the SMILES loader utilities
 │   │   ├── fixtures.json            # Reference values for the regression tests
 │   │   ├── generate_fixtures.py     # Script to regenerate fixtures.json
+│   │   ├── io_fixtures/             # Sample files used by test_io.py
+│   │   │   ├── single_col.txt
+│   │   │   ├── two_col.txt
+│   │   │   ├── compounds.db
+│   │   │   └── compounds.sdf
 │   │   └── SMILES/
 │   │       └── short_list.txt       # SMILES used for testing
 │   └── Docker/
@@ -129,34 +137,91 @@ density = liquid_densities.schroeder(mol, temperature, cp)
 print(f'Schroeder rho:  {density.real:.4f} g/cc')
 ```
 
-### Processing multiple compounds from a file
+---
 
-Input files are tab-separated with an index in column 1 and the SMILES string in column 2
-(see [`aerosysprop/examples/test.prop`](aerosysprop/examples/test.prop)):
+## Loading SMILES from files
+
+`aerosysprop.io` provides loaders that read SMILES strings from common file formats and return `(name, mol)` pairs ready to pass directly into the property methods. Invalid SMILES are skipped with a warning rather than raising an exception.
+
+### Plain text file
+
+The simplest format is one SMILES per line:
 
 ```
-1    COO
-2    CC(O)OO
-3    CCCCC
+COO
+C(O)CO
+CC(C)=O
+CC(=O)O
+```
+
+Or tab-separated with a name column:
+
+```
+methyl_hydroperoxide	COO
+ethylene_glycol	C(O)CO
+acetone	CC(C)=O
 ```
 
 ```python
-from rdkit import Chem
+from aerosysprop.io import read_smiles_txt
 from aerosysprop.methods import boiling_points
 
-with open('aerosysprop/examples/test.prop') as f:
-    for line in f:
-        parts = line.split()
-        if len(parts) >= 2:
-            smiles = parts[1]
-            mol = Chem.MolFromSmiles(smiles)
-            if mol:
-                bp = boiling_points.nannoolal(mol)
-                print(f'{smiles:40s}  Tb = {bp:.2f} K')
+# One SMILES per line
+mols = read_smiles_txt('compounds.txt', smiles_col=0)
+
+# Name in column 0, SMILES in column 1
+mols = read_smiles_txt('compounds.txt', smiles_col=1, name_col=0)
+
+# AeroSysProp default: index\tSMILES (e.g. aerosysprop/examples/test.prop)
+mols = read_smiles_txt('test.prop')   # smiles_col=1 is the default
+
+for name, mol in mols:
+    bp = boiling_points.nannoolal(mol)
+    print(f'{name:30s}  Tb = {bp:.2f} K')
 ```
 
-A fully worked example covering all property types is in
-[`aerosysprop/examples/Pure_component_properties_example.py`](aerosysprop/examples/Pure_component_properties_example.py).
+Lines beginning with `#` are treated as comments and skipped. Empty lines are also ignored.
+
+### SQLite database
+
+```python
+from aerosysprop.io import read_smiles_db, create_smiles_db
+
+# Read from the default schema (table='compounds', columns 'name' and 'smiles')
+mols = read_smiles_db('mydata.db')
+
+# Read from a database with a different schema
+mols = read_smiles_db('mydb.db', table='molecules', smiles_col='smi', name_col='compound_id')
+
+# Create (or extend) a database
+create_smiles_db('mydata.db', [('ethanol', 'CCO'), ('acetone', 'CC(C)=O')])
+```
+
+The default SQLite schema created by `create_smiles_db` is:
+
+```sql
+CREATE TABLE compounds (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    name    TEXT,
+    smiles  TEXT NOT NULL
+);
+```
+
+Calling `create_smiles_db` on an existing database appends rows without duplicating the table, making it suitable for a companion storage tool that accumulates compounds over time.
+
+### SDF file
+
+```python
+from aerosysprop.io import read_smiles_sdf
+
+# Name taken from the title line of each record
+mols = read_smiles_sdf('compounds.sdf')
+
+# Name taken from a specific SD tag (e.g. from a PubChem download)
+mols = read_smiles_sdf('pubchem.sdf', name_property='PUBCHEM_COMPOUND_CID')
+```
+
+If a record has no title line, a sequential fallback name (`mol_1`, `mol_2`, …) is used automatically.
 
 ---
 
@@ -206,6 +271,8 @@ All functions return density in **g/cc**.
 
 ## Running the tests
 
+### Property regression tests
+
 The regression test suite checks all methods against pre-computed reference values across 21 representative atmospheric compounds:
 
 ```bash
@@ -214,6 +281,20 @@ pytest aerosysprop/tests/test_properties.py -v
 ```
 
 Expected output: **399 passed**.
+
+### IO loader tests
+
+```bash
+pytest aerosysprop/tests/test_io.py -v
+```
+
+Expected output: **16 passed**.
+
+### Run all tests
+
+```bash
+pytest aerosysprop/tests/ -v
+```
 
 ### Regenerating reference values
 
@@ -252,7 +333,7 @@ Contributions are welcome. Please open an issue before submitting a pull request
 
 1. A clear description of what differs from the published technique.
 2. Updated reference values (`fixtures.json`) generated by running `generate_fixtures.py`.
-3. Passing tests (`pytest aerosysprop/tests/test_properties.py`).
+3. Passing tests (`pytest aerosysprop/tests/`).
 
 ---
 

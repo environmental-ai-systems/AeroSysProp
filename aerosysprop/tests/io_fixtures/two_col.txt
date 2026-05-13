@@ -1,0 +1,4 @@
+methyl_hydroperoxide	COO
+ethylene_glycol	C(O)CO
+acetone	CC(C)=O
+acetic_acid	CC(=O)O

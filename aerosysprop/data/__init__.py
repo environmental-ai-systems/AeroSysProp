@@ -65,7 +65,7 @@ def _read_matrix(filename, key_conv=str, value_conv=float, symmetric=True):
     col_keys = []
     row_keys = []
     for count, line in enumerate(
-            (files(__name__) / filename).open('rb'), start = 1):
+            (files(__name__) / filename).open('rb'), start=1):
         data = _parse_re.match(line.decode('utf-8')).group('data')
         if data:
             try:
