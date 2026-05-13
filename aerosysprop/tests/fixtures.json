@@ -1,0 +1,569 @@
+{
+  "COO": {
+    "boiling_point": {
+      "joback_and_reid": 349.74,
+      "stein_and_brown": 354.07195337819996,
+      "nannoolal": 358.25208652822994
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -1.1636122259405342,
+      "nannoolal_bp_stein_and_brown": -1.0804541576364044,
+      "nannoolal_bp_joback_and_reid": -0.994636221198158,
+      "myrdal_yalkowsky_bp_nannoolal": -1.304380902559003,
+      "myrdal_yalkowsky_bp_stein_and_brown": -1.2087810104628636,
+      "myrdal_yalkowsky_bp_joback_and_reid": -1.1104022013530641,
+      "evaporation": -1.0717002701780682,
+      "evaporation2": -1.0717002701780682,
+      "simpol": -1.0194315436942265
+    },
+    "liquid_density": {
+      "girolami": 1.0569019999999998,
+      "schroeder_cp_nannoolal": 1.0809805866012845,
+      "schroeder_cp_joback": 1.0961639682158257,
+      "le_bas_cp_nannoolal": 1.1929740707987149,
+      "le_bas_cp_joback": 1.209730505463411,
+      "tyn_calus_cp_nannoolal": 1.0410276067202733,
+      "tyn_calus_cp_joback": 1.1617060860643658
+    }
+  },
+  "CC1(C2CCC(O)C1C2)C": {
+    "boiling_point": {
+      "joback_and_reid": 506.34999999999997,
+      "stein_and_brown": 473.86607544095,
+      "nannoolal": 470.5613157665865
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -3.53183198577136,
+      "nannoolal_bp_stein_and_brown": -3.6057534289807873,
+      "nannoolal_bp_joback_and_reid": -4.346200071320222,
+      "myrdal_yalkowsky_bp_nannoolal": -3.485126324118875,
+      "myrdal_yalkowsky_bp_stein_and_brown": -3.560167352851425,
+      "myrdal_yalkowsky_bp_joback_and_reid": -4.309500135275293,
+      "evaporation": -2.8839868121132284,
+      "evaporation2": -2.8839868121132284,
+      "simpol": -4.200922011917875
+    },
+    "liquid_density": {
+      "girolami": 1.0127433333333333,
+      "schroeder_cp_nannoolal": 0.9359775135459499,
+      "schroeder_cp_joback": 0.9467209607413434,
+      "le_bas_cp_nannoolal": 0.9290758075470292,
+      "le_bas_cp_joback": 0.9397400347687752,
+      "tyn_calus_cp_nannoolal": 0.9171270087341112,
+      "tyn_calus_cp_joback": 0.9404820788167385
+    }
+  },
+  "C(C(O)OON(O)O)C1C(C(C(O)C)C1)(C)C": {
+    "boiling_point": {
+      "joback_and_reid": 613.0899999999999,
+      "stein_and_brown": 531.8018616278,
+      "nannoolal": 459.5010232038448
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -3.8009840780271804,
+      "nannoolal_bp_stein_and_brown": -5.7189098339123206,
+      "nannoolal_bp_joback_and_reid": -8.062131416237808,
+      "myrdal_yalkowsky_bp_nannoolal": -3.2333573119844874,
+      "myrdal_yalkowsky_bp_stein_and_brown": -4.920048713654456,
+      "myrdal_yalkowsky_bp_joback_and_reid": -6.926382327236688,
+      "evaporation": -5.117100003469916,
+      "evaporation2": -5.117100003469916,
+      "simpol": -6.784539846210716
+    },
+    "liquid_density": {
+      "girolami": 1.1878643636363637,
+      "schroeder_cp_nannoolal": 1.112658147335951,
+      "schroeder_cp_joback": 1.1245378674090776,
+      "le_bas_cp_nannoolal": 1.0903460467650825,
+      "le_bas_cp_joback": 1.1019875431666708,
+      "tyn_calus_cp_nannoolal": 1.1995069800924998,
+      "tyn_calus_cp_joback": 1.3532073962464979
+    }
+  },
+  "CC(O)OO": {
+    "boiling_point": {
+      "joback_and_reid": 464.35999999999996,
+      "stein_and_brown": 441.93307998855005,
+      "nannoolal": 461.85651016792997
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -3.6759962673833866,
+      "nannoolal_bp_stein_and_brown": -3.1955181432056006,
+      "nannoolal_bp_joback_and_reid": -3.73707592666875,
+      "myrdal_yalkowsky_bp_nannoolal": -3.7610343387842793,
+      "myrdal_yalkowsky_bp_stein_and_brown": -3.2591001674643194,
+      "myrdal_yalkowsky_bp_joback_and_reid": -3.824756257110004,
+      "evaporation": -3.7365124809764523,
+      "evaporation2": -3.7365124809764523,
+      "simpol": -3.6255588497558806
+    },
+    "liquid_density": {
+      "girolami": 1.1710049999999999,
+      "schroeder_cp_nannoolal": 1.2116966227092165,
+      "schroeder_cp_joback": 1.2437191651437718,
+      "le_bas_cp_nannoolal": 1.2608194587649957,
+      "le_bas_cp_joback": 1.2941402123793302,
+      "tyn_calus_cp_nannoolal": 1.24239117755539,
+      "tyn_calus_cp_joback": 1.320121399274541
+    }
+  },
+  "C(O)(OON(O)O)CO": {
+    "boiling_point": {
+      "joback_and_reid": 428.58,
+      "stein_and_brown": 408.1234305085501,
+      "nannoolal": 333.20056234333606
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -0.7366175484461129,
+      "nannoolal_bp_stein_and_brown": -2.3987699050625464,
+      "nannoolal_bp_joback_and_reid": -2.874718434935531,
+      "myrdal_yalkowsky_bp_nannoolal": -0.6503849606371429,
+      "myrdal_yalkowsky_bp_stein_and_brown": -2.208241578566396,
+      "myrdal_yalkowsky_bp_joback_and_reid": -2.6647921480875594,
+      "evaporation": -2.870691215908982,
+      "evaporation2": -2.870691215908982,
+      "simpol": -3.3684773274453894
+    },
+    "liquid_density": {
+      "girolami": 1.3543584000000002,
+      "schroeder_cp_nannoolal": 1.3186969204642407,
+      "schroeder_cp_joback": 1.3252524358484516,
+      "le_bas_cp_nannoolal": 1.439513207524317,
+      "le_bas_cp_joback": 1.44666932568252,
+      "tyn_calus_cp_nannoolal": 1.8830918001942414,
+      "tyn_calus_cp_joback": 2.3868472144498787
+    }
+  },
+  "C1(C(C(CCO)C1)(C)C)C(O)C": {
+    "boiling_point": {
+      "joback_and_reid": 614.23,
+      "stein_and_brown": 545.69441053895,
+      "nannoolal": 542.2317366234845
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -5.917706528534178,
+      "nannoolal_bp_stein_and_brown": -6.012955759182209,
+      "nannoolal_bp_joback_and_reid": -7.974836869539294,
+      "myrdal_yalkowsky_bp_nannoolal": -5.328850189014402,
+      "myrdal_yalkowsky_bp_stein_and_brown": -5.41501665110394,
+      "myrdal_yalkowsky_bp_joback_and_reid": -7.158797104151933,
+      "evaporation": -5.735110652155217,
+      "evaporation2": -5.735110652155217,
+      "simpol": -6.784539846210716
+    },
+    "liquid_density": {
+      "girolami": 1.0179472727272727,
+      "schroeder_cp_nannoolal": 0.9712449011752595,
+      "schroeder_cp_joback": 0.9820655834093952,
+      "le_bas_cp_nannoolal": 0.9231718946781924,
+      "le_bas_cp_joback": 0.9334569934289915,
+      "tyn_calus_cp_nannoolal": 0.9524645700669536,
+      "tyn_calus_cp_joback": 0.9629564593250793
+    }
+  },
+  "C12C(C(CC(C1(C)OO)O)C2)(C)C": {
+    "boiling_point": {
+      "joback_and_reid": 652.06,
+      "stein_and_brown": 570.39584184255,
+      "nannoolal": 570.9706450948225
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -6.836867533054316,
+      "nannoolal_bp_stein_and_brown": -6.820302121172932,
+      "nannoolal_bp_joback_and_reid": -9.283918344810177,
+      "myrdal_yalkowsky_bp_nannoolal": -5.923385438133315,
+      "myrdal_yalkowsky_bp_stein_and_brown": -5.909171274980463,
+      "myrdal_yalkowsky_bp_joback_and_reid": -7.973178424621137,
+      "evaporation": -6.507958580374539,
+      "evaporation2": -6.507958580374539,
+      "simpol": -7.064130840290016
+    },
+    "liquid_density": {
+      "girolami": 1.1005740909090909,
+      "schroeder_cp_nannoolal": 1.105240061477815,
+      "schroeder_cp_joback": 1.0976949549001453,
+      "le_bas_cp_nannoolal": 1.0881407075027716,
+      "le_bas_cp_joback": 1.0807123325317884,
+      "tyn_calus_cp_nannoolal": 1.0627606382680381,
+      "tyn_calus_cp_joback": 1.0852815701766239
+    }
+  },
+  "OOC1(CCC2C(C1C2)(C)C)CO": {
+    "boiling_point": {
+      "joback_and_reid": 656.73,
+      "stein_and_brown": 579.3338644608001,
+      "nannoolal": 589.529486556046
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -7.332580320435168,
+      "nannoolal_bp_stein_and_brown": -7.036056979468063,
+      "nannoolal_bp_joback_and_reid": -9.374513161226893,
+      "myrdal_yalkowsky_bp_nannoolal": -6.43784329723934,
+      "myrdal_yalkowsky_bp_stein_and_brown": -6.181147611988672,
+      "myrdal_yalkowsky_bp_joback_and_reid": -8.16427668487244,
+      "evaporation": -6.770796228022778,
+      "evaporation2": -6.770796228022778,
+      "simpol": -7.064130840290016
+    },
+    "liquid_density": {
+      "girolami": 1.1005740909090909,
+      "schroeder_cp_nannoolal": 1.1055204054069319,
+      "schroeder_cp_joback": 1.1097912165522907,
+      "le_bas_cp_nannoolal": 1.0884167141840395,
+      "le_bas_cp_joback": 1.0926214508953636,
+      "tyn_calus_cp_nannoolal": 1.0749429025598543,
+      "tyn_calus_cp_joback": 1.0951560745164588
+    }
+  },
+  "CC1(C2CCC(CO)(C1C2)ON(O)O)C": {
+    "boiling_point": {
+      "joback_and_reid": 528.77,
+      "stein_and_brown": 491.16452359280004,
+      "nannoolal": 446.7638910523607
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -2.9725199214037374,
+      "nannoolal_bp_stein_and_brown": -3.951106534283481,
+      "nannoolal_bp_joback_and_reid": -4.8165408690874445,
+      "myrdal_yalkowsky_bp_nannoolal": -2.8736381447165065,
+      "myrdal_yalkowsky_bp_stein_and_brown": -3.8572294419003534,
+      "myrdal_yalkowsky_bp_joback_and_reid": -4.721329445225926,
+      "evaporation": -3.092209544717452,
+      "evaporation2": -3.092209544717452,
+      "simpol": -4.625116142792438
+    },
+    "liquid_density": {
+      "girolami": 1.1528346938775509,
+      "schroeder_cp_nannoolal": 1.0739284150474857,
+      "schroeder_cp_joback": 1.089076207968761,
+      "le_bas_cp_nannoolal": 1.0923710430469802,
+      "le_bas_cp_joback": 1.1077789697964942,
+      "tyn_calus_cp_nannoolal": 1.1699883269272515,
+      "tyn_calus_cp_joback": 1.295166536115487
+    }
+  },
+  "C(OO)C1C(C(C(O)C)C1)(C)C": {
+    "boiling_point": {
+      "joback_and_reid": 626.43,
+      "stein_and_brown": 555.79083785495,
+      "nannoolal": 555.6364088640469
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -6.438228011366474,
+      "nannoolal_bp_stein_and_brown": -6.4426331834721715,
+      "nannoolal_bp_joback_and_reid": -8.53876237579369,
+      "myrdal_yalkowsky_bp_nannoolal": -5.657554591002471,
+      "myrdal_yalkowsky_bp_stein_and_brown": -5.661423820029313,
+      "myrdal_yalkowsky_bp_joback_and_reid": -7.468541748411148,
+      "evaporation": -5.7374906256133915,
+      "evaporation2": -5.7374906256133915,
+      "simpol": -6.617427237646645
+    },
+    "liquid_density": {
+      "girolami": 1.0786285714285713,
+      "schroeder_cp_nannoolal": 1.0589624317661568,
+      "schroeder_cp_joback": 1.0691213274430569,
+      "le_bas_cp_nannoolal": 1.0068823121710995,
+      "le_bas_cp_joback": 1.0165415900278245,
+      "tyn_calus_cp_nannoolal": 1.03963746287148,
+      "tyn_calus_cp_joback": 1.0538746825463035
+    }
+  },
+  "OCCC(O)OON(O)O": {
+    "boiling_point": {
+      "joback_and_reid": 451.46,
+      "stein_and_brown": 430.34395615895005,
+      "nannoolal": 358.3685313338272
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -1.2972155995339851,
+      "nannoolal_bp_stein_and_brown": -2.952544557416947,
+      "nannoolal_bp_joback_and_reid": -3.46156144177149,
+      "myrdal_yalkowsky_bp_nannoolal": -1.1436962189007043,
+      "myrdal_yalkowsky_bp_stein_and_brown": -2.6924710567166446,
+      "myrdal_yalkowsky_bp_joback_and_reid": -3.1754190608630504,
+      "evaporation": -3.734132507518276,
+      "evaporation2": -3.734132507518276,
+      "simpol": -3.792671458319954
+    },
+    "liquid_density": {
+      "girolami": 1.2836358620689654,
+      "schroeder_cp_nannoolal": 1.2511041570456556,
+      "schroeder_cp_joback": 1.2617725430392754,
+      "le_bas_cp_nannoolal": 1.333308116082309,
+      "le_bas_cp_joback": 1.3446774697453814,
+      "tyn_calus_cp_nannoolal": 1.6539274058574143,
+      "tyn_calus_cp_joback": 2.0039015138327207
+    }
+  },
+  "OCC(CC)(C)OO": {
+    "boiling_point": {
+      "joback_and_reid": 530.21,
+      "stein_and_brown": 500.35129063679994,
+      "nannoolal": 515.0039341241109
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -5.130551016473907,
+      "nannoolal_bp_stein_and_brown": -4.746694387429637,
+      "nannoolal_bp_joback_and_reid": -5.53531778871261,
+      "myrdal_yalkowsky_bp_nannoolal": -4.868862646017903,
+      "myrdal_yalkowsky_bp_stein_and_brown": -4.499201097210423,
+      "myrdal_yalkowsky_bp_joback_and_reid": -5.25680031840813,
+      "evaporation": -5.28517992261158,
+      "evaporation2": -5.28517992261158,
+      "simpol": -4.898141242379574
+    },
+    "liquid_density": {
+      "girolami": 1.0298399999999999,
+      "schroeder_cp_nannoolal": 1.0752629817065817,
+      "schroeder_cp_joback": 1.0707845009703352,
+      "le_bas_cp_nannoolal": 1.0706743772327272,
+      "le_bas_cp_joback": 1.06621500807857,
+      "tyn_calus_cp_nannoolal": 1.0959288308586705,
+      "tyn_calus_cp_joback": 1.0998881677802594
+    }
+  },
+  "C(O)C1C(C(C(O)C)(C1)OO)(C)C": {
+    "boiling_point": {
+      "joback_and_reid": 718.8499999999999,
+      "stein_and_brown": 601.6818491269499,
+      "nannoolal": 606.4258253223428
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -8.837166501626118,
+      "nannoolal_bp_stein_and_brown": -8.678029419837506,
+      "nannoolal_bp_joback_and_reid": -12.87361954291438,
+      "myrdal_yalkowsky_bp_nannoolal": -7.025680780154349,
+      "myrdal_yalkowsky_bp_stein_and_brown": -6.902243729039881,
+      "myrdal_yalkowsky_bp_joback_and_reid": -10.030953181940244,
+      "evaporation": -8.667736660806035,
+      "evaporation2": -8.667736660806035,
+      "simpol": -8.799360412833735
+    },
+    "liquid_density": {
+      "girolami": 1.1241395454545453,
+      "schroeder_cp_nannoolal": 1.1518411649848779,
+      "schroeder_cp_joback": 1.1210926372422185,
+      "le_bas_cp_nannoolal": 1.0950051817420747,
+      "le_bas_cp_joback": 1.0657738968803343,
+      "tyn_calus_cp_nannoolal": 1.1483289834246424,
+      "tyn_calus_cp_joback": 1.1063084600594717
+    }
+  },
+  "C(O)CO": {
+    "boiling_point": {
+      "joback_and_reid": 429.71999999999997,
+      "stein_and_brown": 426.7093437912,
+      "nannoolal": 480.6970102657021
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -4.012097717735033,
+      "nannoolal_bp_stein_and_brown": -2.7476447398606876,
+      "nannoolal_bp_joback_and_reid": -2.8163195667293963,
+      "myrdal_yalkowsky_bp_nannoolal": -4.456663828540964,
+      "myrdal_yalkowsky_bp_stein_and_brown": -3.031926726831468,
+      "myrdal_yalkowsky_bp_joback_and_reid": -3.1095112079173273,
+      "evaporation": -3.6148249995903603,
+      "evaporation2": -3.6148249995903603,
+      "simpol": -3.3684773274453894
+    },
+    "liquid_density": {
+      "girolami": 1.0640228571428572,
+      "schroeder_cp_nannoolal": 1.0529696982230454,
+      "schroeder_cp_joback": 1.1691598435473802,
+      "le_bas_cp_nannoolal": 1.1067249080422397,
+      "le_bas_cp_joback": 1.2288466824071562,
+      "tyn_calus_cp_nannoolal": 1.0643924193763126,
+      "tyn_calus_cp_joback": 1.2047658501152625
+    }
+  },
+  "CC(C(O)OON(O)O)C": {
+    "boiling_point": {
+      "joback_and_reid": 381.71999999999997,
+      "stein_and_brown": 352.40532373295,
+      "nannoolal": 285.0523843468044
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": 0.23917168525698887,
+      "nannoolal_bp_stein_and_brown": -1.023566792839116,
+      "nannoolal_bp_joback_and_reid": -1.5996785965460105,
+      "myrdal_yalkowsky_bp_nannoolal": 0.2152671516435302,
+      "myrdal_yalkowsky_bp_stein_and_brown": -0.982883370182684,
+      "myrdal_yalkowsky_bp_joback_and_reid": -1.5642211045914605,
+      "evaporation": -1.2539353883902549,
+      "evaporation2": -1.2539353883902549,
+      "simpol": -2.0349324140074305
+    },
+    "liquid_density": {
+      "girolami": 1.0867574193548388,
+      "schroeder_cp_nannoolal": 1.0190045760474113,
+      "schroeder_cp_joback": 1.022328672208818,
+      "le_bas_cp_nannoolal": 1.0730205779295807,
+      "le_bas_cp_joback": 1.0765208797614347,
+      "tyn_calus_cp_nannoolal": 1.3153919452088545,
+      "tyn_calus_cp_joback": 1.568803231851995
+    }
+  },
+  "CC(O)C(O)CC(O)OON(O)O": {
+    "boiling_point": {
+      "joback_and_reid": 588.52,
+      "stein_and_brown": 508.23253623854987,
+      "nannoolal": 430.2674050180728
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -3.3803427189506103,
+      "nannoolal_bp_stein_and_brown": -5.598422803056081,
+      "nannoolal_bp_joback_and_reid": -8.08376161239928,
+      "myrdal_yalkowsky_bp_nannoolal": -2.6945357870388644,
+      "myrdal_yalkowsky_bp_stein_and_brown": -4.536375902264144,
+      "myrdal_yalkowsky_bp_joback_and_reid": -6.558222412542513,
+      "evaporation": -6.036386336778006,
+      "evaporation2": -6.036386336778006,
+      "simpol": -6.82299289525617
+    },
+    "liquid_density": {
+      "girolami": 1.3277266666666667,
+      "schroeder_cp_nannoolal": 1.23935143905914,
+      "schroeder_cp_joback": 1.2367796410901493,
+      "le_bas_cp_nannoolal": 1.2772478024278793,
+      "le_bas_cp_joback": 1.2745973651098932,
+      "tyn_calus_cp_nannoolal": 1.4595160468895632,
+      "tyn_calus_cp_joback": 1.726733431018109
+    }
+  },
+  "C12C(C(CC(C1(C)O)ON(O)O)C2)(C)C": {
+    "boiling_point": {
+      "joback_and_reid": 524.0999999999999,
+      "stein_and_brown": 470.0327957912001,
+      "nannoolal": 424.2244372058693
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -2.4903877630281936,
+      "nannoolal_bp_stein_and_brown": -3.4764647500699373,
+      "nannoolal_bp_joback_and_reid": -4.702780987072161,
+      "myrdal_yalkowsky_bp_nannoolal": -2.379493243261188,
+      "myrdal_yalkowsky_bp_stein_and_brown": -3.36469145522137,
+      "myrdal_yalkowsky_bp_joback_and_reid": -4.584748588614393,
+      "evaporation": -2.3206689976450914,
+      "evaporation2": -2.3206689976450914,
+      "simpol": -4.625116142792438
+    },
+    "liquid_density": {
+      "girolami": 1.1528346938775509,
+      "schroeder_cp_nannoolal": 1.0544001783216852,
+      "schroeder_cp_joback": 1.0658904914436529,
+      "le_bas_cp_nannoolal": 1.0725074469058093,
+      "le_bas_cp_joback": 1.0841950837669916,
+      "tyn_calus_cp_nannoolal": 1.1158406879282137,
+      "tyn_calus_cp_joback": 1.270226594118724
+    }
+  },
+  "C(C(O)O)C1C(C(C(C)O)C1)(C)C": {
+    "boiling_point": {
+      "joback_and_reid": 705.97,
+      "stein_and_brown": 583.5277454137499,
+      "nannoolal": 574.3724468670971
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -7.767815979797785,
+      "nannoolal_bp_stein_and_brown": -8.0660584820963,
+      "nannoolal_bp_joback_and_reid": -12.367314081918318,
+      "myrdal_yalkowsky_bp_nannoolal": -6.204418652535487,
+      "myrdal_yalkowsky_bp_stein_and_brown": -6.439576426510417,
+      "myrdal_yalkowsky_bp_joback_and_reid": -9.689352430302684,
+      "evaporation": -7.330218602749036,
+      "evaporation2": -7.330218602749036,
+      "simpol": -8.966473021397803
+    },
+    "liquid_density": {
+      "girolami": 1.0641178260869566,
+      "schroeder_cp_nannoolal": 1.0277487675881072,
+      "schroeder_cp_joback": 1.0268325325216703,
+      "le_bas_cp_nannoolal": 0.9767319641057957,
+      "le_bas_cp_joback": 0.9758612103727371,
+      "tyn_calus_cp_nannoolal": 0.9940637880676655,
+      "tyn_calus_cp_joback": 1.0151602112809017
+    }
+  },
+  "CC(C)(C(O)OON(O)O)O": {
+    "boiling_point": {
+      "joback_and_reid": 471.10999999999996,
+      "stein_and_brown": 412.8775346365501,
+      "nannoolal": 341.676592674215
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -0.9206870670619538,
+      "nannoolal_bp_stein_and_brown": -2.51435576598561,
+      "nannoolal_bp_joback_and_reid": -3.905892716369088,
+      "myrdal_yalkowsky_bp_nannoolal": -0.7980810330164116,
+      "myrdal_yalkowsky_bp_stein_and_brown": -2.265705509536179,
+      "myrdal_yalkowsky_bp_joback_and_reid": -3.576293817254324,
+      "evaporation": -2.4055958258218624,
+      "evaporation2": -2.4055958258218624,
+      "simpol": -4.216865589194519
+    },
+    "liquid_density": {
+      "girolami": 1.230058181818182,
+      "schroeder_cp_nannoolal": 1.1589225286046527,
+      "schroeder_cp_joback": 1.1549657459533123,
+      "le_bas_cp_nannoolal": 1.2141093156810647,
+      "le_bas_cp_joback": 1.209964114808232,
+      "tyn_calus_cp_nannoolal": 1.4380975231084874,
+      "tyn_calus_cp_joback": 1.756524367549224
+    }
+  },
+  "C12C(C(CC(C1(C)OO)ON(O)O)C2)(C)C": {
+    "boiling_point": {
+      "joback_and_reid": 559.1800000000001,
+      "stein_and_brown": 515.93395478,
+      "nannoolal": 466.9448047440741
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -3.527517239544599,
+      "nannoolal_bp_stein_and_brown": -4.670584301047477,
+      "nannoolal_bp_joback_and_reid": -5.730616499332979,
+      "myrdal_yalkowsky_bp_nannoolal": -3.302053003944423,
+      "myrdal_yalkowsky_bp_stein_and_brown": -4.4063166367019635,
+      "myrdal_yalkowsky_bp_joback_and_reid": -5.417462839510126,
+      "evaporation": -3.8451677765507215,
+      "evaporation2": -3.8451677765507215,
+      "simpol": -4.882197665102932
+    },
+    "liquid_density": {
+      "girolami": 1.1891890196078432,
+      "schroeder_cp_nannoolal": 1.151251294192203,
+      "schroeder_cp_joback": 1.1548076743251845,
+      "le_bas_cp_nannoolal": 1.1684341493294002,
+      "le_bas_cp_joback": 1.1720436097628737,
+      "tyn_calus_cp_nannoolal": 1.226249688693838,
+      "tyn_calus_cp_joback": 1.3667444577053
+    }
+  },
+  "C(C(C(CO)OO)O)O": {
+    "boiling_point": {
+      "joback_and_reid": 694.04,
+      "stein_and_brown": 595.36621445855,
+      "nannoolal": 646.8506021054702
+    },
+    "vapour_pressure": {
+      "nannoolal_bp_nannoolal": -11.21071216429776,
+      "nannoolal_bp_stein_and_brown": -9.280628173322736,
+      "nannoolal_bp_joback_and_reid": -13.08300207363046,
+      "myrdal_yalkowsky_bp_nannoolal": -8.659076310583252,
+      "myrdal_yalkowsky_bp_stein_and_brown": -7.2187437309948725,
+      "myrdal_yalkowsky_bp_joback_and_reid": -10.008129974767813,
+      "evaporation": -9.803014186075345,
+      "evaporation2": -9.803014186075345,
+      "simpol": -8.837813461879186
+    },
+    "liquid_density": {
+      "girolami": 1.2825335714285715,
+      "schroeder_cp_nannoolal": 1.3068310800699707,
+      "schroeder_cp_joback": 1.3317381935173718,
+      "le_bas_cp_nannoolal": 1.304868871241037,
+      "le_bas_cp_joback": 1.3297385866201987,
+      "tyn_calus_cp_nannoolal": 1.305081544491582,
+      "tyn_calus_cp_joback": 1.3754099893111025
+    }
+  }
+}
