@@ -45,6 +45,15 @@ class TestResolveMethods:
         with pytest.raises(ValueError, match='Unknown method IDs'):
             run_all(_mols(), methods=['not_a_method'], workers=1)
 
+    def test_invalid_bp_source_raises(self):
+        with pytest.raises(ValueError, match='bp_source must be one of'):
+            resolve_methods(['vp_nannoolal'], bp_source='not_a_bp')
+
+    def test_bp_source_joback_resolves_correctly(self):
+        resolved = resolve_methods(['vp_nannoolal'], bp_source='bp_joback')
+        assert 'bp_joback' in resolved
+        assert 'bp_nannoolal' not in resolved
+
 
 # ---------------------------------------------------------------------------
 # run_all — method selection
@@ -111,6 +120,17 @@ class TestRunAll:
         for a, b in zip(r1, r2):
             assert a['bp_nannoolal_K'] == pytest.approx(b['bp_nannoolal_K'])
 
+    def test_bp_source_affects_results(self):
+        """Different bp_source choices produce different VP values."""
+        mols = _mols()
+        r_nannoolal = run_all(mols, methods=['vp_nannoolal'], workers=1,
+                              use_threads=True, bp_source='bp_nannoolal')
+        r_joback = run_all(mols, methods=['vp_nannoolal'], workers=1,
+                           use_threads=True, bp_source='bp_joback')
+        vp_n = [r['vp_nannoolal_log10atm'] for r in r_nannoolal if r]
+        vp_j = [r['vp_nannoolal_log10atm'] for r in r_joback if r]
+        assert vp_n != vp_j, 'Different BP inputs should yield different VP outputs'
+
     def test_progress_callback_called(self):
         calls = []
         run_all(_mols(), methods=['bp_nannoolal'], workers=1,
@@ -130,7 +150,7 @@ class TestRunAll:
 
     def test_invalid_smiles_returns_none(self):
         from aerosysprop.batch import _run_one
-        name, result = _run_one(('bad', 'NOT_A_SMILES', 298.15, frozenset(['bp_nannoolal'])))
+        name, result = _run_one(('bad', 'NOT_A_SMILES', 298.15, frozenset(['bp_nannoolal']), 'bp_nannoolal'))
         assert result is None
 
 

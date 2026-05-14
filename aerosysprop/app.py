@@ -16,6 +16,7 @@ from aerosysprop import db
 from aerosysprop.services import REGISTRY
 from aerosysprop.batch import (
     ALL_METHODS,
+    BP_METHODS,
     METHOD_GROUPS,
     METHOD_META,
     _OUTPUT_KEYS,
@@ -76,7 +77,7 @@ with st.sidebar:
             label, unit, _, deps = METHOD_META[m]
             dep_note = ''
             if deps:
-                dep_note = f' *(needs {", ".join(sorted(deps))})*'
+                dep_note = ' *(needs a boiling point)*'
             checked = st.checkbox(
                 f'{label} [{unit}]{dep_note}',
                 key=f'method_{m}',
@@ -87,6 +88,17 @@ with st.sidebar:
 
     st.divider()
     st.subheader('Settings')
+
+    bp_source = st.selectbox(
+        'Boiling point source for VP / CP / density',
+        options=['bp_nannoolal', 'bp_stein', 'bp_joback'],
+        format_func=lambda m: METHOD_META[m][0],
+        help=(
+            'Vapour pressure, critical property, and liquid density methods that '
+            'require a boiling point will use this method as their input.'
+        ),
+    )
+
     temperature = st.number_input(
         'Temperature (K)',
         min_value=200.0, max_value=400.0,
@@ -296,6 +308,7 @@ else:
                 workers=int(workers),
                 progress_callback=_update,
                 use_threads=True,
+                bp_source=bp_source,
             )
 
         progress_bar.progress(1.0)
