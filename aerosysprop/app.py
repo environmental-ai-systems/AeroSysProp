@@ -13,6 +13,7 @@ import streamlit as st
 from rdkit import Chem
 
 from aerosysprop import db
+from aerosysprop.services import REGISTRY
 from aerosysprop.batch import (
     ALL_METHODS,
     METHOD_GROUPS,
@@ -43,6 +44,7 @@ for key, default in [
     ('mols', []),
     ('results', []),
     ('session_db_path', None),
+    ('opera_exe', ''),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -370,3 +372,110 @@ if st.session_state.results:
                     use_container_width=True,
                 )
             st.success('Session saved. You can reload it next time via the sidebar.')
+
+
+# ---------------------------------------------------------------------------
+# External Services
+# ---------------------------------------------------------------------------
+
+st.divider()
+st.header('External Services')
+st.caption(
+    'Send your loaded compounds to third-party tools that accept SMILES input. '
+    'Results from these services can be compared with AeroSysProp predictions.'
+)
+
+if not st.session_state.mols:
+    st.info('Load compounds in the Input section above to enable exports.')
+else:
+    service_tabs = st.tabs([s.name for s in REGISTRY])
+
+    for tab, service in zip(service_tabs, REGISTRY):
+        with tab:
+            # Header row: name + homepage link
+            col_title, col_link = st.columns([3, 1])
+            col_title.subheader(service.name)
+            col_link.markdown(
+                f'[Documentation / Download ↗]({service.homepage})',
+                unsafe_allow_html=False,
+            )
+
+            st.markdown(f'*{service.tagline}*')
+            st.markdown(service.description)
+            st.divider()
+
+            if service.status == 'coming_soon':
+                st.info('Support for this service is coming soon.', icon='🔧')
+
+            elif service.status == 'file_export':
+                # --- Export file ---
+                st.markdown('#### Export for ' + service.name)
+                st.markdown(service.export_format_note)
+
+                # Build the .smi file content
+                lines = [
+                    f'{smi} {name}'
+                    for name, mol in st.session_state.mols
+                    for smi in [Chem.MolToSmiles(mol)]
+                ]
+                smi_content = '\n'.join(lines) + '\n'
+
+                st.download_button(
+                    f'⬇ Download {service.export_filename}',
+                    data=smi_content.encode(),
+                    file_name=service.export_filename,
+                    mime='text/plain',
+                    use_container_width=True,
+                )
+
+                # --- Installation / usage instructions ---
+                with st.expander('Installation and usage instructions'):
+                    st.markdown(service.install_notes)
+
+                # --- Direct invocation (subprocess) ---
+                st.markdown('#### Run locally from this UI')
+                st.info(
+                    'Direct invocation requires verifying the CLI flags against a local '
+                    f'{service.name} installation. Once confirmed, set the executable path '
+                    'below and the Run button will become active.',
+                    icon='⚙️',
+                )
+
+                exe_key = f'{service.id}_exe'
+                if exe_key not in st.session_state:
+                    st.session_state[exe_key] = ''
+
+                exe_path = st.text_input(
+                    f'{service.name} executable path',
+                    value=st.session_state[exe_key],
+                    placeholder='/path/to/OPERA2.x_CL',
+                    key=f'exe_input_{service.id}',
+                )
+                st.session_state[exe_key] = exe_path
+
+                run_disabled = not (exe_path and os.path.isfile(exe_path))
+                if st.button(
+                    f'▶ Run {service.name}',
+                    disabled=run_disabled,
+                    key=f'run_{service.id}',
+                    use_container_width=True,
+                ):
+                    # TODO: implement subprocess call once CLI flags are verified.
+                    # Expected pattern:
+                    #   import subprocess, tempfile, pathlib
+                    #   with tempfile.TemporaryDirectory() as out_dir:
+                    #       smi_tmp = pathlib.Path(out_dir) / 'input.smi'
+                    #       smi_tmp.write_text(smi_content)
+                    #       argv = service.subprocess_cmd(str(smi_tmp), out_dir)
+                    #       subprocess.run(argv, check=True)
+                    #       result_csv = next(pathlib.Path(out_dir).glob('*.csv'))
+                    #       opera_df = pd.read_csv(result_csv)
+                    #   st.dataframe(opera_df, use_container_width=True)
+                    st.warning(
+                        'Subprocess invocation not yet implemented — '
+                        'export the file above and run manually for now.'
+                    )
+
+            elif service.status == 'api':
+                # Placeholder for future API-based services
+                st.info('API-based integration — implementation in progress.', icon='🌐')
