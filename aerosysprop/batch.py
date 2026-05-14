@@ -36,17 +36,25 @@ _MP_CONTEXT = multiprocessing.get_context(
 # Method registry
 # ---------------------------------------------------------------------------
 
+# Sentinel used in METHOD_META deps to mean "whichever boiling point method
+# the user has chosen" — resolved to the actual method ID at runtime.
+BP_ANY = 'bp_any'
+
+# The three boiling point methods, for validation
+BP_METHODS = frozenset({'bp_joback', 'bp_stein', 'bp_nannoolal'})
+
 # (display label, unit string, property group, direct dependencies)
+# Use BP_ANY for any method that needs *a* boiling point — not a specific one.
 METHOD_META = {
     'bp_joback':         ('Joback & Reid (1987)',            'K',           'Boiling Point',       frozenset()),
     'bp_stein':          ('Stein & Brown (1994)',             'K',           'Boiling Point',       frozenset()),
     'bp_nannoolal':      ('Nannoolal et al. (2004)',          'K',           'Boiling Point',       frozenset()),
-    'vp_nannoolal':      ('Nannoolal et al. (2008)',          'log₁₀(atm)', 'Vapour Pressure',     frozenset({'bp_nannoolal'})),
-    'vp_myrdal':         ('Myrdal & Yalkowsky (1997)',        'log₁₀(atm)', 'Vapour Pressure',     frozenset({'bp_nannoolal'})),
+    'vp_nannoolal':      ('Nannoolal et al. (2008)',          'log₁₀(atm)', 'Vapour Pressure',     frozenset({BP_ANY})),
+    'vp_myrdal':         ('Myrdal & Yalkowsky (1997)',        'log₁₀(atm)', 'Vapour Pressure',     frozenset({BP_ANY})),
     'vp_evaporation':    ('EVAPORATION (Compernolle 2011)',   'log₁₀(atm)', 'Vapour Pressure',     frozenset()),
     'vp_evaporation2':   ('EVAPORATION revised',             'log₁₀(atm)', 'Vapour Pressure',     frozenset()),
     'vp_simpol':         ('SIMPOL.1 (Pankow & Asher 2008)',  'log₁₀(atm)', 'Vapour Pressure',     frozenset()),
-    'cp_nannoolal':      ('Nannoolal et al. (2004)',          'K / bar',     'Critical Properties', frozenset({'bp_nannoolal'})),
+    'cp_nannoolal':      ('Nannoolal et al. (2004)',          'K / bar',     'Critical Properties', frozenset({BP_ANY})),
     'density_girolami':  ('Girolami (1994)',                  'g/cc',        'Liquid Density',      frozenset()),
     'density_schroeder': ('Schroeder',                        'g/cc',        'Liquid Density',      frozenset({'cp_nannoolal'})),
     'density_le_bas':    ('Le Bas',                           'g/cc',        'Liquid Density',      frozenset({'cp_nannoolal'})),
@@ -91,31 +99,36 @@ _CSV_FIELDS = ['name', 'smiles'] + [
 ]
 
 
-def resolve_methods(requested):
+def resolve_methods(requested, bp_source='bp_nannoolal'):
     """
     Expand a list of method IDs to include all transitive dependencies.
-
-    Dependencies are computed internally but included in the returned set so
-    callers know what outputs to expect.
 
     Parameters
     ----------
     requested : iterable of str
         Method IDs from ``ALL_METHODS``.
+    bp_source : str
+        Which boiling point method to use as input for vapour pressure,
+        critical property, and density methods that need one.
+        Must be one of ``'bp_joback'``, ``'bp_stein'``, ``'bp_nannoolal'``.
+        Default ``'bp_nannoolal'``.
 
     Returns
     -------
     set of str
         The requested methods plus any dependencies needed to compute them.
     """
+    if bp_source not in BP_METHODS:
+        raise ValueError('bp_source must be one of %s' % sorted(BP_METHODS))
     needed = set(requested)
     changed = True
     while changed:
         changed = False
         for m in list(needed):
             for dep in METHOD_META[m][3]:
-                if dep not in needed:
-                    needed.add(dep)
+                actual = bp_source if dep == BP_ANY else dep
+                if actual not in needed:
+                    needed.add(actual)
                     changed = True
     return needed
 
@@ -136,10 +149,10 @@ def _run_one(args):
     """
     Compute selected property predictions for a single molecule.
 
-    Args are (name, smiles, temperature, frozenset_of_method_ids) — plain
-    types so they pickle safely across process boundaries.
+    Args are (name, smiles, temperature, frozenset_of_method_ids, bp_source) —
+    plain types so they pickle safely across process boundaries.
     """
-    name, smiles, temperature, methods = args
+    name, smiles, temperature, methods, bp_source = args
 
     from aerosysprop.methods import (
         boiling_points,
@@ -165,25 +178,28 @@ def _run_one(args):
     bp_s = _call(boiling_points.stein_and_brown, mol)  if 'bp_stein' in methods else None
     bp_n = _call(boiling_points.nannoolal, mol)         if 'bp_nannoolal' in methods else None
 
-    if 'bp_joback'    in methods: out['bp_joback_K']  = bp_j
-    if 'bp_stein'     in methods: out['bp_stein_K']   = bp_s
+    if 'bp_joback'    in methods: out['bp_joback_K']    = bp_j
+    if 'bp_stein'     in methods: out['bp_stein_K']     = bp_s
     if 'bp_nannoolal' in methods: out['bp_nannoolal_K'] = bp_n
+
+    # Pick the boiling point value that feeds VP / CP / density calculations
+    bp_for_downstream = {'bp_joback': bp_j, 'bp_stein': bp_s, 'bp_nannoolal': bp_n}[bp_source]
 
     # Vapour pressures
     if 'vp_nannoolal' in methods:
-        out['vp_nannoolal_log10atm'] = _call(vapour_pressures.nannoolal, mol, temperature, bp_n) if bp_n else None
+        out['vp_nannoolal_log10atm'] = _call(vapour_pressures.nannoolal, mol, temperature, bp_for_downstream) if bp_for_downstream else None
     if 'vp_myrdal' in methods:
-        out['vp_myrdal_log10atm'] = _call(vapour_pressures.myrdal_and_yalkowsky, mol, temperature, bp_n) if bp_n else None
+        out['vp_myrdal_log10atm'] = _call(vapour_pressures.myrdal_and_yalkowsky, mol, temperature, bp_for_downstream) if bp_for_downstream else None
     if 'vp_evaporation'  in methods: out['vp_evaporation_log10atm']  = _call(vapour_pressures.evaporation,  mol, temperature)
     if 'vp_evaporation2' in methods: out['vp_evaporation2_log10atm'] = _call(vapour_pressures.evaporation2, mol, temperature)
     if 'vp_simpol'       in methods: out['vp_simpol_log10atm']       = _call(vapour_pressures.simpol,       mol, temperature)
 
-    # Critical properties (Nannoolal only — depends on bp_nannoolal)
+    # Critical properties (Nannoolal only — uses chosen boiling point)
     cp_n = None
     if 'cp_nannoolal' in methods:
-        if bp_n is not None:
+        if bp_for_downstream is not None:
             try:
-                cp_n = critical_properties.nannoolal(mol, bp_n)
+                cp_n = critical_properties.nannoolal(mol, bp_for_downstream)
                 out['tc_nannoolal_K']   = _safe(cp_n.temperature)
                 out['pc_nannoolal_bar'] = _safe(cp_n.pressure)
             except Exception:
@@ -230,7 +246,8 @@ def _run_one(args):
 # ---------------------------------------------------------------------------
 
 def run_all(mols, methods=None, temperature=298.15, workers=None,
-            output_csv=None, progress_callback=None, use_threads=False):
+            output_csv=None, progress_callback=None, use_threads=False,
+            bp_source='bp_nannoolal'):
     """
     Run property predictions on a list of molecules in parallel.
 
@@ -255,6 +272,11 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
     use_threads : bool
         Use ``ThreadPoolExecutor`` instead of ``ProcessPoolExecutor``.
         Recommended when calling from a multi-threaded host (e.g. Streamlit).
+    bp_source : str
+        Which boiling point method to use as input for vapour pressure,
+        critical property, and density methods that need one.
+        Must be one of ``'bp_joback'``, ``'bp_stein'``, ``'bp_nannoolal'``.
+        Default ``'bp_nannoolal'``.
 
     Returns
     -------
@@ -273,13 +295,13 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
         unknown = set(methods) - set(ALL_METHODS)
         if unknown:
             raise ValueError('Unknown method IDs: %s' % sorted(unknown))
-        methods_to_run = frozenset(resolve_methods(methods))
+        methods_to_run = frozenset(resolve_methods(methods, bp_source=bp_source))
 
     if workers is None:
         workers = os.cpu_count() or 1
 
     args = [
-        (name, Chem.MolToSmiles(mol), temperature, methods_to_run)
+        (name, Chem.MolToSmiles(mol), temperature, methods_to_run, bp_source)
         for name, mol in mols
     ]
 
