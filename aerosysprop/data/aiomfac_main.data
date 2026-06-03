@@ -24,7 +24,7 @@
  15        6      0.03200000  1.4311  1.4320  # CH3OH
  16        7      0.01801528  0.9200  1.4000  # H2O
  17        8      0.02900000  0.8952  0.6800  # ACOH
- 18        9      0.04300000  1.6724  1.4480  # CH3CO (ketone)
+ 18        9      0.04300000  1.6724  1.4880  # CH3CO (ketone) [Q corrected from 1.448 -> Fortran SR_QQ 1.488]
  19        9      0.04200000  1.4457  1.1800  # CH2CO (ketone)
  20       10      0.02900000  0.9980  0.9480  # CHO (aldehyde)
  21       11      0.05900000  1.9031  1.7280  # CH3COO (ester)
@@ -148,7 +148,7 @@
 # Peng et al. (2001) groups
 
 136       64      0.01700000  1.0000  1.2000  # OH
-137       65      0.04500000  1.3013  1.2240  # COOH (carboxylic acid)
+137       20      0.04500000  1.3013  1.2240  # COOH (carboxylic acid) [Fortran NKTAB: main group 20, not 65]
 
 # Marcolli and Peter (2005) groups
 
@@ -162,13 +162,13 @@
 148       67      0.01201000  0.2195  0.0000  # C(long-chain)
 149       68      0.01503400  0.9011  0.8480  # CH3(hydroxy)
 150       68      0.01402600  0.6744  0.5400  # CH2(hydroxy)
-151       68      0.01301800  0.4469  0.2280  # CH(hydroxy)
-152       68      0.01201000  0.2195  0.0000  # C(hydroxy)
+151       52      0.01301800  0.4469  0.2280  # CH(hydroxy) [Fortran NKTAB: main group 52, not 68]
+152       52      0.01201000  0.2195  0.0000  # C(hydroxy) [Fortran NKTAB: main group 52, not 68]
 153       69      0.01700800  1.0000  1.2000  # OH(new)
 
 # Extension by A.Zuend, 2008, for the oxyethylene group(-CH2-O-CH2-)
 
-154       70      0.04405280  1.5927  1.3200  # CH2OCH2
+154       70      0.04405280  1.38143  3.0000  # CH2OCH2 [R,Q corrected to Fortran PEG values]
 
 # Extension by Compernolle et al. (2009) (peroxy groups and organonitrates
 # derived from UNIFAC fits to SPARC generated data) (see Zuend and Seinfeld,

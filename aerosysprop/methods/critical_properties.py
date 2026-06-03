@@ -22,6 +22,7 @@ from collections import namedtuple
 
 
 from aerosysprop import groups
+from aerosysprop.diagnostics import with_diagnostics
 from aerosysprop import data
 
 
@@ -30,6 +31,7 @@ CriticalProperties = namedtuple(
     ('temperature', 'pressure', 'volume', 'compressibility'))
 
 
+@with_diagnostics
 def joback_and_reid(compound, boiling_point):
     comp = groups.composition(compound)
     sandb_groups = groups.stein_and_brown(compound)
@@ -53,6 +55,7 @@ def joback_and_reid(compound, boiling_point):
         compressibility=compressibility)
 
 
+@with_diagnostics
 def nannoolal(compound, boiling_point):
     comp = groups.composition(compound)
     nannoolal_groups1 = groups.nannoolal_primary(compound)

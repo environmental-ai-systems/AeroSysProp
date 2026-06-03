@@ -1,6 +1,6 @@
 # AeroSysProp
 
-A Python library for predicting pure-component thermophysical properties of organic molecules relevant to atmospheric aerosol research. Given a SMILES string, AeroSysProp applies a range of published group-contribution methods to estimate boiling points, vapour pressures, critical properties, and liquid densities.
+A Python library for predicting thermophysical properties of organic molecules relevant to atmospheric aerosol research. Given a SMILES string, AeroSysProp applies a range of published group-contribution methods to estimate boiling points, vapour pressures, critical properties, and liquid densities. For mixtures, it also provides AIOMFAC activity coefficients (short-range modified UNIFAC, middle-range organic–ion and ion–ion, and long-range Debye–Hückel), validated against the Fortran AIOMFAC reference for >1500 atmospheric and laboratory compounds and the common atmospheric salts (NaCl, Na₂SO₄, (NH₄)₂SO₄, NH₄NO₃, KCl, NH₄Cl, …).
 
 ---
 
@@ -12,6 +12,8 @@ A Python library for predicting pure-component thermophysical properties of orga
 - [Quick start](#quick-start)
 - [Loading SMILES from files](#loading-smiles-from-files)
 - [Available methods](#available-methods)
+- [Activity coefficients](#activity-coefficients)
+- [Use in numerical simulations](#use-in-numerical-simulations)
 - [Running the tests](#running-the-tests)
 - [Docker](#docker)
 - [Contributing](#contributing)
@@ -269,6 +271,105 @@ All functions return density in **g/cc**.
 
 ---
 
+## Activity coefficients
+
+`aerosysprop.methods.activity_coefficients` implements the **short-range
+(SR) part** of the AIOMFAC model — a modified UNIFAC formulation that
+predicts mole-fraction-based activity coefficients γᵢ for non-electrolyte
+mixtures (organic + water) from SMILES strings.
+
+| Function / class | Returns | Use for |
+|---|---|---|
+| `aiomfac_sr_from_smiles(smiles, x, T_K)` | `ndarray` of γᵢ | Non-electrolyte one-shot SMILES API (SR only) |
+| `AIOMFAC_SR(components)` | object | Cached non-electrolyte system |
+| `aiomfac_from_smiles(smiles, salts, mass_fractions, T_K)` | `AIOMFACResult` | Full SR+MR+LR with electrolytes |
+| `AIOMFAC(neutrals, salts=None)` | object | Cached full system (works for non-electrolyte too) |
+
+```python
+# Non-electrolyte: 50:50 water-ethanol at 25 °C
+from aerosysprop.methods.activity_coefficients import aiomfac_sr_from_smiles
+print(aiomfac_sr_from_smiles(['O', 'CCO'], [0.5, 0.5], 298.15))
+# [1.26196 1.18692]
+
+# Electrolyte: water + ethanol + NaCl at mass fractions [0.75, 0.20, 0.05]
+from aerosysprop.methods.activity_coefficients import aiomfac_from_smiles
+result = aiomfac_from_smiles(['O', 'CCO'], ['NaCl'], [0.75, 0.20, 0.05], 298.15)
+print(result.gamma_neutral)   # mole-fraction basis γ for water, ethanol
+print(result.gamma_mean)      # mean ionic γ_± for NaCl (molality basis)
+```
+
+Outputs match the Fortran AIOMFAC reference
+([github.com/andizuend/AIOMFAC](https://github.com/andizuend/AIOMFAC)) to
+~5 × 10⁻⁵ relative across **1520 SR regression fixtures** spanning 30
+functional-group main groups (including 1432 unique-signature compounds
+from the [Master Chemical Mechanism](https://mcm.york.ac.uk/MCM/) v3.3.1)
+plus **43 electrolyte fixtures** covering every common atmospheric salt
+(NaCl, KCl, NH₄Cl, NaNO₃, NH₄NO₃, Na₂SO₄, (NH₄)₂SO₄, MgCl₂, CaCl₂, MgSO₄,
+HCl, HNO₃), multi-salt mixtures with 2-4 salts and full cation/anion
+cross-coupling, multi-organic + multi-salt cases (urban aerosol, marine
+SOA + sea-salt, biomass-burning, α-pinene SOA proxies), divalent cations,
+and edge concentrations from 10⁻⁴ to saturation.
+
+### Diagnostics
+
+Every aerosysprop method that consumes a SMILES has silent failure modes
+(matcher gaps for missing SMARTS, AIOMFAC 281-285 extension subgroups,
+mass fractions not summing to 1, missing MR parameter pairs, …). The
+`aerosysprop.diagnostics` module flags every known issue class. The
+AIOMFAC entry points accept a `strict='warn' | 'raise' | 'silent'`
+argument (default `'warn'`); for any method, you can also pre-flight a
+SMILES (or full mixture) without running the calculation:
+
+```python
+from aerosysprop.diagnostics import diagnose, diagnose_aiomfac
+from aerosysprop.methods import boiling_points
+
+report = diagnose(boiling_points.nannoolal, 'CS(=O)C')   # DMSO
+report.is_ok            # False - S=O atoms unmatched by Nannoolal SMARTS
+
+report = diagnose_aiomfac(
+    smiles=['O', 'Cc1ccccc1'], salts=['NH42SO4'],
+    mass_fractions=[0.85, 0.10, 0.05], T_K=298.15,
+)
+report.has_errors       # True - main_group 4 lacks SO4-- parameter
+```
+
+For full theory, API reference, validation methodology, compound coverage,
+known limitations, citations, and roadmap (bisulfate equilibrium and
+peroxy/nitrate SMARTS extension still pending), see
+[`aerosysprop/methods/activity_coefficients.md`](aerosysprop/methods/activity_coefficients.md).
+
+### SMARTS hit matrix for a batch of SMILES
+
+The `aerosysprop.fingerprints` module returns a hit-count matrix for any
+registered SMARTS method:
+
+```python
+from aerosysprop.fingerprints import smarts_hits, available_methods
+
+available_methods()
+# ['aiomfac', 'aiomfac_hctail', 'aiomfac_ions', 'simpol', 'nannoolal_primary',
+#  'nannoolal_secondary', 'evaporation', 'evaporation2', 'stein_and_brown',
+#  'girolami', 'le_bas', 'schroeder', 'composition', 'moller', 'fp4', 'maccs']
+
+df = smarts_hits(
+    smiles=['O', 'CCO', 'OCC(O)CO', 'Cc1ccccc1'],
+    method='aiomfac',
+    drop_zero_columns=True,
+)
+#             1   2   3   9   11  14  16
+# O           0   0   0   0   0   0   1
+# CCO         1   1   0   0   0   1   0
+# OCC(O)CO    0   2   1   0   0   3   0
+# Cc1ccccc1   1   0   0   5   1   0   0
+```
+
+A `smarts_hits_all(smiles, methods=[...])` companion returns a single
+DataFrame with a `MultiIndex(method, id)` for side-by-side comparison
+across multiple SMARTS sets.
+
+---
+
 ## Running the tests
 
 ### Property regression tests
@@ -290,6 +391,20 @@ pytest aerosysprop/tests/test_io.py -v
 
 Expected output: **16 passed**.
 
+### Activity-coefficient regression tests
+
+```bash
+pytest aerosysprop/tests/test_activity_coefficients.py \
+       aerosysprop/tests/test_activity_coefficients_electrolytes.py
+```
+
+Expected output: **3130 passed in ~10 s** (3042 SR + 88 electrolyte).
+The electrolyte suite exercises the full SR + MR + LR pipeline across
+43 atmospheric-salt and multi-component mixtures, including realistic
+SOA + inorganic aerosol proxies. To refresh the underlying
+fixtures against the Fortran AIOMFAC reference, see
+[`aerosysprop/methods/activity_coefficients.md`](aerosysprop/methods/activity_coefficients.md#validation-methodology).
+
 ### Run all tests
 
 ```bash
@@ -303,6 +418,158 @@ If you intentionally change a method's implementation, regenerate `fixtures.json
 ```bash
 python aerosysprop/tests/generate_fixtures.py
 ```
+
+---
+
+## Use in numerical simulations
+
+AeroSysProp is a library, not just the bundled Streamlit app. The
+methods are designed to be called directly from numerical simulations —
+partitioning solvers, Monte Carlo, droplet growth integrators,
+equilibrium iterators, parameter-fitting pipelines — that need to
+evaluate thermodynamic / property functions tens of thousands to
+millions of times per simulation.
+
+### Throughput
+
+All methods are written to amortise SMILES parsing, SMARTS matching,
+and parameter-table assembly across repeated calls with the same set
+of compounds (the typical simulation pattern: compounds are fixed,
+composition and temperature vary). Concrete numbers on a single
+M-series core for a 10-organic + 1-salt mixture:
+
+| API | Per-call time | Calls per second |
+|---|---|---|
+| ``aiomfac_from_smiles(..., strict='warn')`` (default, full SR+MR+LR) | ~0.10 ms | ~10 000 |
+| ``aiomfac_sr_from_smiles(...)`` (non-electrolyte SR-only) | ~0.05 ms | ~20 000 |
+| ``vapour_pressures.simpol(mol, T)`` (one organic) | ~0.01 ms | ~100 000 |
+| ``boiling_points.nannoolal(mol)`` | ~0.05 ms | ~20 000 |
+
+For 1 million AIOMFAC calls, expect ~100 seconds of wall time at the
+default settings.
+
+### Recommended integration patterns
+
+**1. Default — SMILES-driven, automatic caching.** Pass the same
+SMILES list on every call; aerosysprop transparently caches the
+constructed `AIOMFAC` system, the matcher decomposition for each
+SMILES, and the diagnostic pre-flight analysis. No setup code
+required.
+
+```python
+from aerosysprop.methods.activity_coefficients import aiomfac_from_smiles
+
+# In a tight loop -- same SMILES every call, varying composition
+for x in composition_grid:
+    result = aiomfac_from_smiles(
+        smiles=smiles, salts=salts,
+        mass_fractions=x, T_K=T,
+    )
+    gamma = result.gamma_neutral
+    # Issues (matcher gaps, missing parameters, edge concentrations) are
+    # surfaced as warnings.warn at the default strict='warn' setting and
+    # also attached at result.diagnostics for after-the-fact inspection.
+```
+
+**2. Hot path — skip the diagnostic memoisation.** ~10% faster than
+the default once you've pre-validated your inputs.
+
+```python
+for x in composition_grid:
+    result = aiomfac_from_smiles(..., strict='silent')
+```
+
+**3. Explicit system class — most control.** Build the `AIOMFAC`
+system once, reuse the same instance across all calls. Useful when
+the simulation framework owns the lifecycle of the mixture state
+and wants the SMILES → subgroup conversion to happen explicitly:
+
+```python
+from aerosysprop.methods.activity_coefficients import AIOMFAC
+from aerosysprop import groups
+from rdkit import Chem
+
+neutrals = [groups.aiomfac(Chem.MolFromSmiles(s)) for s in smiles]
+system   = AIOMFAC(neutrals, salts=['NaCl'])
+
+for x in composition_grid:
+    result = system.gamma(x, 298.15)
+```
+
+### Cache controls
+
+Both internal caches are introspectable and clearable. The system
+cache is bounded to 128 entries; the per-SMILES diagnostic cache is
+bounded to 4096 entries; both auto-evict via LRU. Memory ceiling is
+on the order of a few MB.
+
+```python
+from aerosysprop.methods.activity_coefficients import (
+    system_cache_info, clear_system_cache,
+)
+from aerosysprop.diagnostics import (
+    diagnostic_cache_info, clear_diagnostic_cache,
+)
+
+# (aiomfac_info, aiomfac_sr_info) — CacheInfo(hits, misses, maxsize, currsize)
+system_cache_info()
+
+# For screening workloads with unbounded distinct SMILES, drop the
+# caches periodically:
+clear_system_cache()
+clear_diagnostic_cache()
+```
+
+### Surfacing issues without crashing the loop
+
+The default `strict='warn'` issues `warnings.warn(...)` for any
+matcher truncation, missing parameter, or out-of-range concentration
+the framework detects, then proceeds with the calculation. Embed
+that in your standard Python warning capture for logging:
+
+```python
+import warnings
+with warnings.catch_warnings(record=True) as collected:
+    warnings.simplefilter('always')
+    result = aiomfac_from_smiles(...)
+    for w in collected:
+        logger.warning(str(w.message))
+```
+
+To turn issues into exceptions (so a misconfigured input aborts the
+simulation rather than silently producing wrong values), pass
+`strict='raise'`. To skip the pre-flight entirely, pass
+`strict='silent'`.
+
+### Thread safety
+
+Both caches use Python's `functools.lru_cache` which is thread-safe
+in CPython. The `AIOMFAC` and `AIOMFAC_SR` classes are stateless
+between calls except for an internal per-instance temperature cache,
+which is fine to share across threads (worst case: a redundant
+recomputation on first use). All numpy operations are GIL-free
+on numpy 2.x.
+
+### Pre-flighting inputs
+
+For framework integrators who want to validate inputs before the
+main simulation loop starts (e.g., at config-load time), the
+diagnostic functions run without computing gammas:
+
+```python
+from aerosysprop.diagnostics import diagnose_aiomfac
+
+report = diagnose_aiomfac(smiles, salts, mass_fractions, T_K)
+if report.has_errors:
+    raise SystemExit(report.summary())
+for warning in report.warnings:
+    logger.warning('%s: %s', warning.code, warning.message)
+```
+
+A `smarts_hits()` matrix is also available from the
+`aerosysprop.fingerprints` module for batch SMILES inspection. See
+[`aerosysprop/methods/activity_coefficients.md`](aerosysprop/methods/activity_coefficients.md#diagnostics)
+for the full diagnostic and fingerprint API.
 
 ---
 

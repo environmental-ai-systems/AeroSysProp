@@ -1,0 +1,3 @@
+AIOMFAC SR fixture generation - skipped compounds
+=================================================
+

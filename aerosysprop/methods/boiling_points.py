@@ -19,9 +19,11 @@
 
 
 from aerosysprop import data
+from aerosysprop.diagnostics import with_diagnostics
 from aerosysprop import groups
 
 
+@with_diagnostics
 def joback_and_reid(compound):
     return groups.aggregate_matches(
         groups.stein_and_brown(compound),
@@ -29,6 +31,7 @@ def joback_and_reid(compound):
         ) + 198.2
 
 
+@with_diagnostics
 def stein_and_brown(compound):
     result = groups.aggregate_matches(
         groups.stein_and_brown(compound),
@@ -41,6 +44,7 @@ def stein_and_brown(compound):
         )
 
 
+@with_diagnostics
 def nannoolal(compound):
     comp = groups.composition(compound)
     result1 = groups.aggregate_matches(

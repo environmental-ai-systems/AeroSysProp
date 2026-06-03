@@ -21,8 +21,10 @@
 from math import log, sqrt
 
 from aerosysprop import data
+from aerosysprop.diagnostics import with_diagnostics
 from aerosysprop import groups
 
+@with_diagnostics
 def nannoolal(compound, temperature, boiling_point):
     result1 = groups.aggregate_matches(
         groups.nannoolal_primary(compound),
@@ -44,6 +46,7 @@ def nannoolal(compound, temperature, boiling_point):
             )
 
 
+@with_diagnostics
 def myrdal_and_yalkowsky(compound, temperature, boiling_point):
     comp = groups.composition(compound)
     m = groups.stein_and_brown(compound)
@@ -134,6 +137,7 @@ def myrdal_and_yalkowsky(compound, temperature, boiling_point):
         )
 
 
+@with_diagnostics
 def evaporation(compound, temperature):
     m = groups.evaporation(compound)
     #pdb.set_trace()
@@ -213,6 +217,7 @@ def evaporation(compound, temperature):
 ### Changes from evaporation made by Petroc Shelley December 2018
 ### Email address: petroc.shelley@manchester.ac.uk
 	
+@with_diagnostics
 def evaporation2(compound, temperature):
     m = groups.evaporation2(compound)
 
@@ -288,6 +293,7 @@ def evaporation2(compound, temperature):
 	
 ### SIMPOL added by Petroc Shelley	January 2019
 ### Email address: petroc.shelley@manchester.ac.uk
+@with_diagnostics
 def simpol(compound, temperature):
     m = groups.simpol(compound)
     

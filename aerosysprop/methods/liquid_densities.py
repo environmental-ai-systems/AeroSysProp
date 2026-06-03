@@ -19,10 +19,12 @@
 
 
 from aerosysprop import groups
+from aerosysprop.diagnostics import with_diagnostics
 from aerosysprop import molar_volumes
 from aerosysprop.methods import boiling_points
 
 
+@with_diagnostics
 def girolami(compound):
     comp = groups.composition(compound)
     m = groups.girolami(compound)
@@ -68,6 +70,7 @@ def _generic(
     return comp['mass'] / result
 
 
+@with_diagnostics
 def schroeder(
         compound, temperature, critical_properties):
     return _generic(
@@ -76,6 +79,7 @@ def schroeder(
         critical_properties)
 
 
+@with_diagnostics
 def le_bas(
         compound, temperature, critical_properties):
     return _generic(
@@ -84,6 +88,7 @@ def le_bas(
         critical_properties)
 
 
+@with_diagnostics
 def tyn_and_calus(
         compound, temperature, critical_properties):
     return _generic(

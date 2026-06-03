@@ -1485,48 +1485,43 @@ def aiomfac(compound):
     # for a hydrocarbon tail. These are identified by a series of SMARTS
     # 100-107.  For triols there will be three hits in this set of SMARTS.
     elif alcohols_alone == 3:
-        n = sorted(
-            key - 98
+        # SMARTS 100..110 match pairs of OH-bearing carbons with (key - 100)
+        # carbons between them. For a chain triol with three OHs the maximum
+        # such distance is the span between the two extreme OHs (inclusive of
+        # any intermediate carbons that themselves bear OH). The count of
+        # non-OH-bearing carbons between the extreme OHs is therefore
+        #     c_atoms_between_oh = max_distance - (alcohols_alone - 2)
+        # Verified by inspection on
+        #   - glycerol (OHs at C1,C2,C3): max_distance = 1 -> 0
+        #   - 1,2,4-butanetriol         : max_distance = 2 -> 1
+        #   - 1,3,5-pentanetriol        : max_distance = 3 -> 2
+        # The previous formula used a broken len(n) == 2 fallback that
+        # produced a negative count for glycerol (bug since 2012-era port).
+        distances = [
+            key - 100
             for key, value in m.items()
-            if 100 <= key < 111
-            and value > 0
-            )
-        if len(n) > 0:
-            if len(n) == 1:
-                min_carbons = mid_carbons = max_carbons = n[0]
-            elif len(n) == 2:
-                min_carbons, max_carbons = n
-                mid_carbons = max_carbons
-            elif len(n) == 3:
-                min_carbons, mid_carbons, max_carbons = n
-            else:
-                min_carbons, mid_carbons, max_carbons = n
-            #WARNING: need appropriate capture here
-            # assert False
-            if (max_carbons + 1 - min_carbons - mid_carbons) == 0:
-                # Number of C atoms between the two extreme alcohol groups minus
-                # the three Cs carrying the -OH groups
-                c_atoms_between_oh = max_carbons - 3
-            else:
-                # See Book 7 (XXX What's book 7?) p100 for working
-                c_atoms_between_oh = ((sum(n) + 1) / 2) - 4
+            if 100 <= key < 111 and value > 0
+        ]
+        if distances:
+            c_atoms_between_oh = max(distances) - (alcohols_alone - 2)
+            # Guard against any pathological matcher state (should be >= 0)
+            c_atoms_between_oh = max(0, c_atoms_between_oh)
 
-            # For all triols and diols it is assumed that the carbons between those
-            # holding the -OH groups are CH2 unless we run out of CH2 groups, in which
-            # case the >CH- groups will be used, or >C< if they run out.
-            if alcohols_alone in (2, 3):
-                n = min(c_atoms_between_oh, ch_groups[2]) # CH2 groups
-                result[142] += n
-                ch_groups[2] -= n
-                c_atoms_between_oh -= n
-                n = min(c_atoms_between_oh, ch_groups[3]) # >CH- groups
-                result[143] += n
-                ch_groups[3] -= n
-                c_atoms_between_oh -= n
-                n = min(c_atoms_between_oh, ch_groups[4]) # >C< groups
-                result[144] += n
-                ch_groups[4] -= n
-                c_atoms_between_oh -= n
+            # Assign the between-OH carbons to subgroups 142 (CH2[alc]),
+            # 143 (CH[alc]), or 144 (C[alc]) in priority order. Same logic
+            # as the diol path.
+            n = min(c_atoms_between_oh, ch_groups[2])  # CH2 groups
+            result[142] += n
+            ch_groups[2] -= n
+            c_atoms_between_oh -= n
+            n = min(c_atoms_between_oh, ch_groups[3])  # >CH- groups
+            result[143] += n
+            ch_groups[3] -= n
+            c_atoms_between_oh -= n
+            n = min(c_atoms_between_oh, ch_groups[4])  # >C< groups
+            result[144] += n
+            ch_groups[4] -= n
+            c_atoms_between_oh -= n
 
     # Part 4: The assignment of the groups in the hydrocarbon tail. This
     # consists of everything left over from the previous parts
@@ -1554,6 +1549,14 @@ def aiomfac(compound):
     del result[261]
     del result[531]
     del result[561]
+
+    # AIOMFAC requires subgroup 153 (OH-new, main group 69) in any component
+    # using the alcohol CHn subgroups 149-152 (main group 68); the Fortran
+    # reference rejects mixtures that pair 149-152 with the standard UNIFAC OH
+    # (subgroup 14, main group 5). See SubModDefSystem.f90:624.
+    if any(result.get(g, 0) > 0 for g in (149, 150, 151, 152)):
+        result[153] = result.get(153, 0) + result.get(14, 0)
+        result[14] = 0
 
     return result
 

@@ -88,7 +88,7 @@ def _read_matrix(filename, key_conv=str, value_conv=float, symmetric=True):
                         for col_key, value in zip(col_keys, values)
                         }
             except ValueError as e:
-                e.args += ('on line %d of %s' % (count, filename))
+                e.args += ('on line %d of %s' % (count, filename),)
                 raise
     if symmetric:
         if sorted(row_keys) != sorted(col_keys):
@@ -209,7 +209,7 @@ AIOMFAC_MR_ORG_ION_INTERACTIONS_b2     = _read_matrix('aiomfac_mr_org_ion_intera
 AIOMFAC_MR_ION_ION_INTERACTIONS_b1     = _read_matrix('aiomfac_mr_ion_ion_interactions_b1.matrix', key_conv=int, symmetric=False)
 AIOMFAC_MR_ION_ION_INTERACTIONS_b2     = _read_matrix('aiomfac_mr_ion_ion_interactions_b2.matrix', key_conv=int, symmetric=False)
 AIOMFAC_MR_ION_ION_INTERACTIONS_b3     = _read_matrix('aiomfac_mr_ion_ion_interactions_b3.matrix', key_conv=int, symmetric=False)
-#AIOMFAC_MR_ION_ION_INTERACTIONS_c1     = _read_matrix('aiomfac_mr_ion_ion_interactions_c1.matrix', key_conv=int, symmetric=False)
+AIOMFAC_MR_ION_ION_INTERACTIONS_c1     = _read_matrix('aiomfac_mr_ion_ion_interactions_c1.matrix', key_conv=int, symmetric=False)
 AIOMFAC_MR_ION_ION_INTERACTIONS_c2     = _read_matrix('aiomfac_mr_ion_ion_interactions_c2.matrix', key_conv=int, symmetric=False)
 AIOMFAC_MR_ION_ION_INTERACTIONS_c3     = _read_matrix('aiomfac_mr_ion_ion_interactions_c3.matrix', key_conv=int, symmetric=False)
 #AIOMFAC_MR_ION_ION_INTERACTIONS_Rc     = _read_matrix('aiomfac_mr_ion_ion_interactions_Rc.matrix', key_conv=int, symmetric=False)
