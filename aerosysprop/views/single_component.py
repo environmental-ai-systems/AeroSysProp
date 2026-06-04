@@ -103,7 +103,7 @@ with st.sidebar:
 # Input
 # ---------------------------------------------------------------------------
 
-st.header('🧪 Single-component properties')
+st.header('Single-component properties')
 st.subheader('Input')
 mols = load_compounds_panel(state_key='mols', key_prefix='sc_')
 

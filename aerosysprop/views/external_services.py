@@ -20,7 +20,7 @@ with st.sidebar:
     st.divider()
     sidebar_session_loader()
 
-st.header('🔗 External services')
+st.header('External services')
 st.caption(
     'Send your loaded compounds to third-party tools that accept SMILES input. '
     'Results from these services can be compared with AeroSysProp predictions. '

@@ -56,7 +56,7 @@ with st.sidebar:
     sidebar_session_loader()
 
 
-st.header('⚗️ Mixture properties')
+st.header('Mixture properties')
 st.markdown(
     'Predict properties of a **mixture** rather than each compound '
     'independently. The active method is **AIOMFAC activity coefficients** '

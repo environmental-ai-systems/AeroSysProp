@@ -46,7 +46,7 @@ ensure_session_state()
 
 # Logo assets bundled with the package.
 _ASSETS = _pathlib.Path(__file__).parent / 'assets'
-_LOGO_GIF = _ASSETS / 'aerosysprop_logo.gif'
+_LOGO_GIF = _ASSETS / 'aerosysprop_splash_mono_2700x900.gif'
 _LOGO_STATIC = _ASSETS / 'aerosysprop_logo_static.png'
 
 # Length of the opening animation; the splash plays it through once on the
@@ -101,13 +101,13 @@ if _LOGO_STATIC.exists():
 # (Streamlit resolves st.Page paths against the main script's location).
 pages = [
     st.Page('views/home.py',
-            title='Homepage', icon='🏠', default=True),
+            title='Homepage', default=True),
     st.Page('views/single_component.py',
-            title='Single-component properties', icon='🧪'),
+            title='Single-component properties'),
     st.Page('views/mixture.py',
-            title='Mixture properties', icon='⚗️'),
+            title='Mixture properties'),
     st.Page('views/external_services.py',
-            title='External services', icon='🔗'),
+            title='External services'),
 ]
 
 pg = st.navigation(pages)

@@ -9,7 +9,7 @@ with st.sidebar:
     st.divider()
     sidebar_session_loader()
 
-st.title('🧪 AeroSysProp')
+st.title('AeroSysProp')
 st.markdown(
     'Thermophysical property prediction for atmospheric aerosol research, '
     'built on group-contribution methods. Choose a workflow from the sidebar, '
@@ -21,7 +21,7 @@ st.divider()
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.subheader('🧪 Single-component properties')
+    st.subheader('Single-component properties')
     st.markdown(
         """
 Predict **per-compound** thermophysical properties for a list of molecules:
@@ -37,7 +37,7 @@ parallel; export to CSV or a session database.
     )
 
 with col2:
-    st.subheader('⚗️ Mixture properties')
+    st.subheader('Mixture properties')
     st.markdown(
         """
 Predict properties of a **mixture** rather than each compound
@@ -55,7 +55,7 @@ Further mixture-property methods can be added alongside AIOMFAC here.
     )
 
 with col3:
-    st.subheader('🔗 External services')
+    st.subheader('External services')
     st.markdown(
         """
 Send the compounds you've loaded to **third-party tools** that accept
