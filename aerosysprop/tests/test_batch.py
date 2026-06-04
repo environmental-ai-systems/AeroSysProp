@@ -8,7 +8,10 @@ import tempfile
 import pytest
 from rdkit import Chem
 
-from aerosysprop.batch import ALL_METHODS, _OUTPUT_KEYS, resolve_methods, run_all
+from aerosysprop.batch import (
+    ALL_METHODS, _OUTPUT_KEYS, resolve_methods, run_all,
+    resolved_output_columns,
+)
 from aerosysprop import db
 
 SMILES = [
@@ -130,6 +133,71 @@ class TestRunAll:
         vp_n = [r['vp_nannoolal_log10atm'] for r in r_nannoolal if r]
         vp_j = [r['vp_nannoolal_log10atm'] for r in r_joback if r]
         assert vp_n != vp_j, 'Different BP inputs should yield different VP outputs'
+
+    def test_single_bp_source_column_names_unsuffixed(self):
+        """A single bp source must keep the original (unsuffixed) column names
+        for backward compatibility."""
+        results = run_all(_mols(), methods=['vp_nannoolal'], workers=1,
+                          use_threads=True, bp_sources=['bp_stein'])
+        for r in results:
+            if r:
+                assert 'vp_nannoolal_log10atm' in r
+                assert not any('__bp' in k for k in r)
+
+    def test_multi_bp_sources_suffix_columns(self):
+        """Multiple bp sources produce one suffixed column per source."""
+        results = run_all(
+            _mols(), methods=['vp_nannoolal', 'cp_nannoolal'], workers=1,
+            use_threads=True, bp_sources=['bp_nannoolal', 'bp_stein'],
+        )
+        r = next(x for x in results if x)
+        for key in ('vp_nannoolal_log10atm', 'tc_nannoolal_K'):
+            assert f'{key}__bpNannoolal' in r
+            assert f'{key}__bpStein' in r
+        # Unsuffixed key must NOT be present in the multi-source case
+        assert 'vp_nannoolal_log10atm' not in r
+
+    def test_multi_bp_sources_values_differ(self):
+        """The per-source VP values should differ when the BP methods differ."""
+        results = run_all(
+            _mols(), methods=['vp_nannoolal'], workers=1, use_threads=True,
+            bp_sources=['bp_nannoolal', 'bp_joback'],
+        )
+        diffs = [
+            r['vp_nannoolal_log10atm__bpNannoolal']
+            != r['vp_nannoolal_log10atm__bpJoback']
+            for r in results
+            if r and r.get('vp_nannoolal_log10atm__bpNannoolal') is not None
+            and r.get('vp_nannoolal_log10atm__bpJoback') is not None
+        ]
+        assert diffs and any(diffs)
+
+    def test_resolved_output_columns_single_vs_multi(self):
+        mset = resolve_methods(['vp_nannoolal'], bp_sources=['bp_nannoolal'])
+        single = resolved_output_columns(mset, ['bp_nannoolal'])
+        assert 'vp_nannoolal_log10atm' in single
+        assert not any('__bp' in c for c in single)
+
+        mset2 = resolve_methods(['vp_nannoolal'],
+                                bp_sources=['bp_nannoolal', 'bp_stein'])
+        multi = resolved_output_columns(mset2, ['bp_nannoolal', 'bp_stein'])
+        assert 'vp_nannoolal_log10atm__bpNannoolal' in multi
+        assert 'vp_nannoolal_log10atm__bpStein' in multi
+
+    def test_invalid_bp_source_in_list_raises(self):
+        with pytest.raises(ValueError, match='bp_source must be one of'):
+            run_all(_mols(), methods=['vp_nannoolal'], workers=1,
+                    use_threads=True, bp_sources=['bp_nannoolal', 'not_a_bp'])
+
+    def test_multi_bp_csv_header(self, tmp_path):
+        """CSV output must include the suffixed columns for multiple sources."""
+        csv_path = str(tmp_path / 'multi.csv')
+        run_all(_mols(), methods=['vp_nannoolal'], workers=1, use_threads=True,
+                bp_sources=['bp_nannoolal', 'bp_stein'], output_csv=csv_path)
+        with open(csv_path) as f:
+            header = f.readline()
+        assert 'vp_nannoolal_log10atm__bpNannoolal' in header
+        assert 'vp_nannoolal_log10atm__bpStein' in header
 
     def test_progress_callback_called(self):
         calls = []

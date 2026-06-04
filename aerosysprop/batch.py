@@ -98,8 +98,47 @@ _CSV_FIELDS = ['name', 'smiles'] + [
     col for m in ALL_METHODS for col in _OUTPUT_KEYS[m]
 ]
 
+# Short labels used to suffix output columns when a calculation is run across
+# more than one boiling-point source.
+_BP_SHORT = {
+    'bp_joback': 'Joback',
+    'bp_stein': 'Stein',
+    'bp_nannoolal': 'Nannoolal',
+}
 
-def resolve_methods(requested, bp_source='bp_nannoolal'):
+# Methods whose output depends on the chosen boiling-point source. When more
+# than one source is selected, their columns are produced once per source with
+# a '__bp<Source>' suffix; with a single source the column names are unchanged.
+_BP_DEPENDENT_KEYS = {
+    'vp_nannoolal':      ('vp_nannoolal_log10atm',),
+    'vp_myrdal':         ('vp_myrdal_log10atm',),
+    'cp_nannoolal':      ('tc_nannoolal_K', 'pc_nannoolal_bar'),
+    'density_schroeder': ('density_schroeder_gcc',),
+    'density_le_bas':    ('density_le_bas_gcc',),
+    'density_tyn_calus': ('density_tyn_calus_gcc',),
+}
+
+
+def resolved_output_columns(methods_to_run, bp_sources):
+    """Return the ordered output-column names for a run, accounting for the
+    boiling-point-source suffix when multiple sources are selected."""
+    multi = len(bp_sources) > 1
+    cols = []
+    for m in ALL_METHODS:
+        if m not in methods_to_run:
+            continue
+        if m in _BP_DEPENDENT_KEYS:
+            for key in _BP_DEPENDENT_KEYS[m]:
+                if multi:
+                    cols.extend(key + '__bp' + _BP_SHORT[b] for b in bp_sources)
+                else:
+                    cols.append(key)
+        else:
+            cols.extend(_OUTPUT_KEYS[m])
+    return cols
+
+
+def resolve_methods(requested, bp_source='bp_nannoolal', bp_sources=None):
     """
     Expand a list of method IDs to include all transitive dependencies.
 
@@ -108,28 +147,36 @@ def resolve_methods(requested, bp_source='bp_nannoolal'):
     requested : iterable of str
         Method IDs from ``ALL_METHODS``.
     bp_source : str
-        Which boiling point method to use as input for vapour pressure,
-        critical property, and density methods that need one.
-        Must be one of ``'bp_joback'``, ``'bp_stein'``, ``'bp_nannoolal'``.
-        Default ``'bp_nannoolal'``.
+        Single boiling-point method used as input for vapour pressure,
+        critical property, and density methods that need one. Must be one of
+        ``'bp_joback'``, ``'bp_stein'``, ``'bp_nannoolal'``. Default
+        ``'bp_nannoolal'``. Ignored if ``bp_sources`` is given.
+    bp_sources : sequence of str or None
+        Multiple boiling-point sources to run the dependent methods across.
+        When given, each ``BP_ANY`` dependency resolves to all of these.
+        ``None`` falls back to ``[bp_source]``.
 
     Returns
     -------
     set of str
         The requested methods plus any dependencies needed to compute them.
     """
-    if bp_source not in BP_METHODS:
-        raise ValueError('bp_source must be one of %s' % sorted(BP_METHODS))
+    if bp_sources is None:
+        bp_sources = [bp_source]
+    for b in bp_sources:
+        if b not in BP_METHODS:
+            raise ValueError('bp_source must be one of %s' % sorted(BP_METHODS))
     needed = set(requested)
     changed = True
     while changed:
         changed = False
         for m in list(needed):
             for dep in METHOD_META[m][3]:
-                actual = bp_source if dep == BP_ANY else dep
-                if actual not in needed:
-                    needed.add(actual)
-                    changed = True
+                actuals = bp_sources if dep == BP_ANY else [dep]
+                for actual in actuals:
+                    if actual not in needed:
+                        needed.add(actual)
+                        changed = True
     return needed
 
 
@@ -149,10 +196,13 @@ def _run_one(args):
     """
     Compute selected property predictions for a single molecule.
 
-    Args are (name, smiles, temperature, frozenset_of_method_ids, bp_source) —
-    plain types so they pickle safely across process boundaries.
+    Args are (name, smiles, temperature, frozenset_of_method_ids,
+    tuple_of_bp_sources) — plain types so they pickle safely across process
+    boundaries. Methods that depend on a boiling point are computed once per
+    boiling-point source; when more than one source is given the resulting
+    columns get a '__bp<Source>' suffix.
     """
-    name, smiles, temperature, methods, bp_source = args
+    name, smiles, temperature, methods, bp_sources = args
 
     from aerosysprop.methods import (
         boiling_points,
@@ -173,70 +223,73 @@ def _run_one(args):
         except Exception:
             return None
 
-    # Boiling points
-    bp_j = _call(boiling_points.joback_and_reid, mol) if 'bp_joback' in methods else None
-    bp_s = _call(boiling_points.stein_and_brown, mol)  if 'bp_stein' in methods else None
-    bp_n = _call(boiling_points.nannoolal, mol)         if 'bp_nannoolal' in methods else None
+    # --- Boiling points (each computed once; needed as output and/or input) ---
+    bp_vals = {}
+    for bp_id, fn, key in (
+        ('bp_joback',    boiling_points.joback_and_reid, 'bp_joback_K'),
+        ('bp_stein',     boiling_points.stein_and_brown, 'bp_stein_K'),
+        ('bp_nannoolal', boiling_points.nannoolal,       'bp_nannoolal_K'),
+    ):
+        if bp_id in methods or bp_id in bp_sources:
+            bp_vals[bp_id] = _call(fn, mol)
+        if bp_id in methods:
+            out[key] = bp_vals.get(bp_id)
 
-    if 'bp_joback'    in methods: out['bp_joback_K']    = bp_j
-    if 'bp_stein'     in methods: out['bp_stein_K']     = bp_s
-    if 'bp_nannoolal' in methods: out['bp_nannoolal_K'] = bp_n
-
-    # Pick the boiling point value that feeds VP / CP / density calculations
-    bp_for_downstream = {'bp_joback': bp_j, 'bp_stein': bp_s, 'bp_nannoolal': bp_n}[bp_source]
-
-    # Vapour pressures
-    if 'vp_nannoolal' in methods:
-        out['vp_nannoolal_log10atm'] = _call(vapour_pressures.nannoolal, mol, temperature, bp_for_downstream) if bp_for_downstream else None
-    if 'vp_myrdal' in methods:
-        out['vp_myrdal_log10atm'] = _call(vapour_pressures.myrdal_and_yalkowsky, mol, temperature, bp_for_downstream) if bp_for_downstream else None
+    # --- Boiling-point-independent vapour pressures / density ---
     if 'vp_evaporation'  in methods: out['vp_evaporation_log10atm']  = _call(vapour_pressures.evaporation,  mol, temperature)
     if 'vp_evaporation2' in methods: out['vp_evaporation2_log10atm'] = _call(vapour_pressures.evaporation2, mol, temperature)
     if 'vp_simpol'       in methods: out['vp_simpol_log10atm']       = _call(vapour_pressures.simpol,       mol, temperature)
-
-    # Critical properties (Nannoolal only — uses chosen boiling point)
-    cp_n = None
-    if 'cp_nannoolal' in methods:
-        if bp_for_downstream is not None:
-            try:
-                cp_n = critical_properties.nannoolal(mol, bp_for_downstream)
-                out['tc_nannoolal_K']   = _safe(cp_n.temperature)
-                out['pc_nannoolal_bar'] = _safe(cp_n.pressure)
-            except Exception:
-                out['tc_nannoolal_K']   = None
-                out['pc_nannoolal_bar'] = None
-        else:
-            out['tc_nannoolal_K']   = None
-            out['pc_nannoolal_bar'] = None
-
-    # Liquid densities
     if 'density_girolami' in methods:
         try:
             out['density_girolami_gcc'] = _safe(float(liquid_densities.girolami(mol).real))
         except Exception:
             out['density_girolami_gcc'] = None
 
-    # Densities that need critical properties — resolve cp_n if not already done
-    needs_cp = any(m in methods for m in ('density_schroeder', 'density_le_bas', 'density_tyn_calus'))
-    if needs_cp and cp_n is None and bp_n is not None and 'cp_nannoolal' not in methods:
-        try:
-            cp_n = critical_properties.nannoolal(mol, bp_n)
-        except Exception:
-            cp_n = None
+    # --- Boiling-point-dependent block: once per boiling-point source ---
+    multi = len(bp_sources) > 1
+    needs_cp = any(m in methods for m in
+                   ('cp_nannoolal', 'density_schroeder', 'density_le_bas', 'density_tyn_calus'))
+    for bp_src in bp_sources:
+        suffix = ('__bp' + _BP_SHORT[bp_src]) if multi else ''
+        bp_for = bp_vals.get(bp_src)
 
-    for method_id, fn, key in (
-        ('density_schroeder', liquid_densities.schroeder, 'density_schroeder_gcc'),
-        ('density_le_bas',    liquid_densities.le_bas,    'density_le_bas_gcc'),
-        ('density_tyn_calus', liquid_densities.tyn_and_calus, 'density_tyn_calus_gcc'),
-    ):
-        if method_id in methods:
-            if cp_n is not None:
-                try:
-                    out[key] = _safe(float(fn(mol, temperature, cp_n).real))
-                except Exception:
-                    out[key] = None
-            else:
-                out[key] = None
+        if 'vp_nannoolal' in methods:
+            out['vp_nannoolal_log10atm' + suffix] = (
+                _call(vapour_pressures.nannoolal, mol, temperature, bp_for)
+                if bp_for else None
+            )
+        if 'vp_myrdal' in methods:
+            out['vp_myrdal_log10atm' + suffix] = (
+                _call(vapour_pressures.myrdal_and_yalkowsky, mol, temperature, bp_for)
+                if bp_for else None
+            )
+
+        # Critical properties from THIS boiling-point source (also used for
+        # the density methods below, for consistency).
+        cp_n = None
+        if needs_cp and bp_for is not None:
+            try:
+                cp_n = critical_properties.nannoolal(mol, bp_for)
+            except Exception:
+                cp_n = None
+
+        if 'cp_nannoolal' in methods:
+            out['tc_nannoolal_K'   + suffix] = _safe(cp_n.temperature) if cp_n else None
+            out['pc_nannoolal_bar' + suffix] = _safe(cp_n.pressure)    if cp_n else None
+
+        for method_id, fn, key in (
+            ('density_schroeder', liquid_densities.schroeder,     'density_schroeder_gcc'),
+            ('density_le_bas',    liquid_densities.le_bas,        'density_le_bas_gcc'),
+            ('density_tyn_calus', liquid_densities.tyn_and_calus, 'density_tyn_calus_gcc'),
+        ):
+            if method_id in methods:
+                if cp_n is not None:
+                    try:
+                        out[key + suffix] = _safe(float(fn(mol, temperature, cp_n).real))
+                    except Exception:
+                        out[key + suffix] = None
+                else:
+                    out[key + suffix] = None
 
     return name, out
 
@@ -247,7 +300,7 @@ def _run_one(args):
 
 def run_all(mols, methods=None, temperature=298.15, workers=None,
             output_csv=None, progress_callback=None, use_threads=False,
-            bp_source='bp_nannoolal'):
+            bp_source='bp_nannoolal', bp_sources=None):
     """
     Run property predictions on a list of molecules in parallel.
 
@@ -273,10 +326,16 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
         Use ``ThreadPoolExecutor`` instead of ``ProcessPoolExecutor``.
         Recommended when calling from a multi-threaded host (e.g. Streamlit).
     bp_source : str
-        Which boiling point method to use as input for vapour pressure,
-        critical property, and density methods that need one.
-        Must be one of ``'bp_joback'``, ``'bp_stein'``, ``'bp_nannoolal'``.
-        Default ``'bp_nannoolal'``.
+        Single boiling-point method used as input for vapour pressure,
+        critical property, and density methods that need one. One of
+        ``'bp_joback'``, ``'bp_stein'``, ``'bp_nannoolal'``. Default
+        ``'bp_nannoolal'``. Ignored if ``bp_sources`` is given.
+    bp_sources : sequence of str or None
+        Multiple boiling-point sources to run the dependent methods across.
+        With one source the output column names are unchanged; with several,
+        each dependent column is produced once per source with a
+        ``'__bp<Source>'`` suffix (e.g. ``'vp_nannoolal_log10atm__bpStein'``).
+        ``None`` falls back to ``[bp_source]``.
 
     Returns
     -------
@@ -287,21 +346,31 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
     Examples
     --------
     >>> results = run_all(mols, methods=['bp_nannoolal', 'vp_simpol'])
-    >>> results = run_all(mols, output_csv='out.csv', progress_callback=print)
+    >>> results = run_all(mols, methods=['vp_nannoolal'],
+    ...                   bp_sources=['bp_nannoolal', 'bp_stein'])
     """
+    # Normalise the boiling-point source list (dedupe, preserve order, validate)
+    if bp_sources is None:
+        bp_sources = [bp_source]
+    bp_sources = list(dict.fromkeys(bp_sources))
+    for b in bp_sources:
+        if b not in BP_METHODS:
+            raise ValueError('bp_source must be one of %s' % sorted(BP_METHODS))
+
     if methods is None:
-        methods_to_run = frozenset(ALL_METHODS)
+        methods_to_run = frozenset(resolve_methods(ALL_METHODS, bp_sources=bp_sources))
     else:
         unknown = set(methods) - set(ALL_METHODS)
         if unknown:
             raise ValueError('Unknown method IDs: %s' % sorted(unknown))
-        methods_to_run = frozenset(resolve_methods(methods, bp_source=bp_source))
+        methods_to_run = frozenset(resolve_methods(methods, bp_sources=bp_sources))
 
     if workers is None:
         workers = os.cpu_count() or 1
 
+    bp_sources_t = tuple(bp_sources)
     args = [
-        (name, Chem.MolToSmiles(mol), temperature, methods_to_run, bp_source)
+        (name, Chem.MolToSmiles(mol), temperature, methods_to_run, bp_sources_t)
         for name, mol in mols
     ]
 
@@ -310,11 +379,8 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
     writer = None
 
     if output_csv:
-        requested_fields = ['name', 'smiles'] + [
-            col for m in ALL_METHODS
-            if m in methods_to_run
-            for col in _OUTPUT_KEYS[m]
-        ]
+        requested_fields = ['name', 'smiles'] + resolved_output_columns(
+            methods_to_run, bp_sources)
         csv_file = open(output_csv, 'w', newline='')
         writer = csv.DictWriter(csv_file, fieldnames=requested_fields,
                                 extrasaction='ignore')

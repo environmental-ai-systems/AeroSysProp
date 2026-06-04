@@ -13,6 +13,7 @@ A Python library for predicting thermophysical properties of organic molecules r
 - [Loading SMILES from files](#loading-smiles-from-files)
 - [Available methods](#available-methods)
 - [Activity coefficients](#activity-coefficients)
+- [Web interface](#web-interface)
 - [Use in numerical simulations](#use-in-numerical-simulations)
 - [Running the tests](#running-the-tests)
 - [Docker](#docker)
@@ -40,32 +41,33 @@ AeroSysProp/
 │   ├── __init__.py
 │   ├── groups.py                    # SMARTS-based group counting and aggregation
 │   ├── io.py                        # SMILES loaders: text, SQLite, SDF
+│   ├── db.py                        # Session database (compounds, results, mixtures)
+│   ├── diagnostics.py               # Input pre-flight checks (matcher coverage, parameters, composition)
+│   ├── fingerprints.py              # Batch SMARTS-hit matrix for SMILES inspection
 │   ├── molar_volumes.py             # Molar volume helpers used by density methods
+│   ├── app.py                       # Streamlit app — navigation router (st.navigation)
+│   ├── _ui.py                       # Shared Streamlit UI helpers used by the views
+│   ├── views/                       # Streamlit multipage app pages
+│   │   ├── home.py                  # Homepage / landing
+│   │   ├── single_component.py      # Per-compound property prediction
+│   │   ├── mixture.py               # Mixture properties (AIOMFAC activity coefficients)
+│   │   └── external_services.py     # Third-party tool integrations (OPERA, …)
 │   ├── data/                        # Group-contribution parameters and SMARTS patterns
 │   │   ├── __init__.py              # Loads all .data, .smarts, and .matrix files at import
 │   │   ├── *.smarts                 # SMARTS patterns for each method's functional groups
 │   │   ├── *.data                   # Group contribution coefficients
-│   │   └── *.matrix                 # Interaction matrices (e.g. Nannoolal)
+│   │   └── *.matrix                 # Interaction matrices (Nannoolal, AIOMFAC SR/MR)
 │   ├── methods/
 │   │   ├── boiling_points.py        # Joback & Reid, Stein & Brown, Nannoolal
 │   │   ├── vapour_pressures.py      # Nannoolal, Myrdal & Yalkowsky, EVAPORATION, SIMPOL
 │   │   ├── critical_properties.py   # Joback & Reid, Nannoolal
-│   │   └── liquid_densities.py      # Girolami, Schroeder, Le Bas, Tyn & Calus
+│   │   ├── liquid_densities.py      # Girolami, Schroeder, Le Bas, Tyn & Calus
+│   │   ├── activity_coefficients.py # AIOMFAC SR + MR + LR (mixtures, electrolytes)
+│   │   └── activity_coefficients.md # AIOMFAC reference documentation
 │   ├── examples/
 │   │   ├── Pure_component_properties_example.py   # Worked example script
 │   │   └── test.prop                              # Example SMILES input file
-│   ├── tests/
-│   │   ├── test_properties.py       # Regression test suite (run with pytest)
-│   │   ├── test_io.py               # Tests for the SMILES loader utilities
-│   │   ├── fixtures.json            # Reference values for the regression tests
-│   │   ├── generate_fixtures.py     # Script to regenerate fixtures.json
-│   │   ├── io_fixtures/             # Sample files used by test_io.py
-│   │   │   ├── single_col.txt
-│   │   │   ├── two_col.txt
-│   │   │   ├── compounds.db
-│   │   │   └── compounds.sdf
-│   │   └── SMILES/
-│   │       └── short_list.txt       # SMILES used for testing
+│   ├── tests/                       # pytest suite (3600+ tests)
 │   └── Docker/
 │       └── Dockerfile
 ```
@@ -418,6 +420,49 @@ If you intentionally change a method's implementation, regenerate `fixtures.json
 ```bash
 python aerosysprop/tests/generate_fixtures.py
 ```
+
+---
+
+## Web interface
+
+AeroSysProp ships a [Streamlit](https://streamlit.io/) multipage app.
+Launch it with:
+
+```bash
+conda activate AeroSysProp
+streamlit run aerosysprop/app.py
+```
+
+The sidebar navigates between three workflows, reflecting the fact that
+single-component and mixture predictions have fundamentally different
+inputs:
+
+| Page | Workflow | Input | Output |
+|---|---|---|---|
+| **Single-component properties** | Predict each compound independently | A list of SMILES (typed, file upload, or session) | Boiling points, vapour pressures, critical properties, liquid densities — one row per compound |
+| **Mixture properties** | One coupled mixture calculation (currently AIOMFAC) | Neutral components (SMILES) + salts + a mass-fraction composition + temperature | Per-species activity coefficients and mean ionic γ± for the mixture |
+| **External services** | Hand compounds to third-party tools | The compounds loaded on the single-component page | Exported files (and, where supported, direct invocation) for tools like OPERA |
+
+The single-component page's **boiling-point input** sits with the methods
+(not under generic settings) because it is an input dependency of the
+vapour-pressure, critical-property, and density methods. It is a
+multi-select: pick one source for the usual behaviour, or several to
+compare the sensitivity of the dependent predictions to the
+boiling-point choice — each dependent column is then reported once per
+source (e.g. `vp_nannoolal_log10atm__bpStein`).
+
+A **session database** (`.db`) loaded in the sidebar is shared across
+all three pages — compounds, single-component results, and saved
+mixture calculations persist as you move between them. Both
+single-component results and mixture activity-coefficient calculations
+can be saved to and reloaded from the same `.db` file, or downloaded as
+CSV.
+
+The **Mixture activity coefficients** page accepts SMILES the same way
+as the single-component page (type, upload a file, or reload from a
+saved session), lets you pick inorganic salts from the AIOMFAC catalog,
+and surfaces input diagnostics (matcher gaps, missing interaction
+parameters, out-of-range concentrations) inline with the results.
 
 ---
 

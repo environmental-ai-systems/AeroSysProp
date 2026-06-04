@@ -41,6 +41,31 @@ CREATE TABLE IF NOT EXISTS results (
 
 CREATE INDEX IF NOT EXISTS idx_results_compound ON results(compound_id);
 CREATE INDEX IF NOT EXISTS idx_results_method   ON results(method);
+
+-- Mixture (AIOMFAC activity-coefficient) calculations. A mixture is a set of
+-- neutral components plus optional salts at a given composition / temperature;
+-- each species (neutral, cation, anion, or per-salt mean ionic) gets a row in
+-- mixture_species with its computed activity coefficient.
+CREATE TABLE IF NOT EXISTS mixtures (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT,
+    temperature REAL NOT NULL,
+    basis       TEXT NOT NULL DEFAULT 'mass',
+    salts       TEXT,
+    created_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE TABLE IF NOT EXISTS mixture_species (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    mixture_id INTEGER NOT NULL REFERENCES mixtures(id) ON DELETE CASCADE,
+    species    TEXT NOT NULL,
+    smiles     TEXT,
+    kind       TEXT NOT NULL,          -- 'neutral' | 'cation' | 'anion' | 'salt_mean'
+    fraction   REAL,                   -- mass fraction (NULL for ions / mean ionic)
+    gamma      REAL
+);
+
+CREATE INDEX IF NOT EXISTS idx_mixspecies_mixture ON mixture_species(mixture_id);
 """
 
 
@@ -167,6 +192,91 @@ def list_compounds(path):
         return conn.execute(
             'SELECT name, smiles FROM compounds ORDER BY id'
         ).fetchall()
+    finally:
+        conn.close()
+
+
+def save_mixture_result(path, name, species_rows, temperature,
+                        basis='mass', salts=None):
+    """Persist an AIOMFAC mixture activity-coefficient calculation.
+
+    Parameters
+    ----------
+    path : str
+        Path to the ``.db`` session file (created if it does not exist).
+    name : str
+        A label for this mixture calculation.
+    species_rows : list of dict
+        One dict per species with keys ``species``, ``smiles`` (optional),
+        ``kind`` ('neutral' | 'cation' | 'anion' | 'salt_mean'),
+        ``fraction`` (optional), and ``gamma``.
+    temperature : float
+        Temperature (K) used.
+    basis : str
+        Composition basis ('mass' or 'mole').
+    salts : sequence of str or None
+        Salt names included in the mixture.
+
+    Returns
+    -------
+    int
+        The new mixture row id.
+    """
+    conn = _connect(path)
+    try:
+        cur = conn.execute(
+            'INSERT INTO mixtures (name, temperature, basis, salts) '
+            'VALUES (?, ?, ?, ?)',
+            (name, temperature, basis,
+             ','.join(salts) if salts else ''),
+        )
+        mixture_id = cur.lastrowid
+        for r in species_rows:
+            conn.execute(
+                'INSERT INTO mixture_species '
+                '(mixture_id, species, smiles, kind, fraction, gamma) '
+                'VALUES (?, ?, ?, ?, ?, ?)',
+                (mixture_id, r['species'], r.get('smiles'), r['kind'],
+                 r.get('fraction'), r.get('gamma')),
+            )
+        conn.commit()
+        return mixture_id
+    finally:
+        conn.close()
+
+
+def list_mixtures(path):
+    """Return stored mixtures as a list of dicts (id, name, temperature,
+    basis, salts, created_at), newest first."""
+    conn = _connect(path)
+    try:
+        rows = conn.execute(
+            'SELECT id, name, temperature, basis, salts, created_at '
+            'FROM mixtures ORDER BY id DESC'
+        ).fetchall()
+        return [
+            {'id': r[0], 'name': r[1], 'temperature': r[2],
+             'basis': r[3], 'salts': r[4], 'created_at': r[5]}
+            for r in rows
+        ]
+    finally:
+        conn.close()
+
+
+def load_mixture_species(path, mixture_id):
+    """Return the species rows for one stored mixture as a list of dicts."""
+    conn = _connect(path)
+    try:
+        rows = conn.execute(
+            'SELECT species, smiles, kind, fraction, gamma '
+            'FROM mixture_species WHERE mixture_id = ? ORDER BY id',
+            (mixture_id,),
+        ).fetchall()
+        return [
+            {'species': r[0], 'smiles': r[1], 'kind': r[2],
+             'fraction': r[3], 'gamma': r[4]}
+            for r in rows
+        ]
     finally:
         conn.close()
 
