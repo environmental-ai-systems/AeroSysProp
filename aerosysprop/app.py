@@ -110,6 +110,8 @@ pages = [
             title='External services'),
     st.Page('views/documentation.py',
             title='Documentation'),
+    st.Page('views/add_a_method.py',
+            title='Add a method'),
 ]
 
 pg = st.navigation(pages)
