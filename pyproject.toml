@@ -9,3 +9,13 @@ requires-python = ">=3.9"
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[tool.setuptools.package-data]
+aerosysprop = [
+    "assets/*.gif",
+    "assets/*.png",
+    "data/*.data",
+    "data/*.smarts",
+    "data/*.matrix",
+    "methods/*.md",
+]
