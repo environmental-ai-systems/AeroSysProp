@@ -8,6 +8,7 @@ left to a separate page.
 import streamlit as st
 
 from aerosysprop._ui import ensure_session_state, sidebar_session_loader
+from aerosysprop.mixture_methods import MIXTURE_METHODS
 
 ensure_session_state()
 
@@ -24,10 +25,12 @@ st.markdown(
     '*The prediction methods themselves are documented on a separate page.*'
 )
 
-tab_overview, tab_db, tab_diag, tab_python, tab_notes = st.tabs([
+(tab_overview, tab_db, tab_diag, tab_mixture, tab_python,
+ tab_notes) = st.tabs([
     'Overview',
     'Session database',
     'Diagnostics',
+    'Mixture methods',
     'Use from Python',
     'Other notes',
 ])
@@ -48,8 +51,9 @@ mixtures. The sidebar navigates three working areas plus this guide:
   (boiling points, vapour pressures, critical properties, densities) for
   a list of SMILES.
 - **Mixture properties** — treats the loaded compounds as one coupled
-  mixture and returns AIOMFAC activity coefficients (organic + water,
-  with optional inorganic salts).
+  mixture. A family of methods (currently AIOMFAC activity coefficients;
+  see the **Mixture methods** tab) where every species' result depends on
+  the whole composition.
 - **External services** — hands your compounds to third-party tools
   (e.g. OPERA) for comparison.
 
@@ -138,19 +142,15 @@ page lists them in an expander). Each issue has a **severity** and a
 - **error** — the input is malformed or unsupported; treat the output
   with caution (it will not match the Fortran AIOMFAC reference).
 
-**Common codes**
+**General codes** (apply to any SMILES / composition input)
 
 | Code | Severity | Meaning |
 |---|---|---|
+| `INVALID_SMILES` | error | RDKit could not parse the SMILES. |
 | `UNMATCHED_ATOMS` | warning | Some atoms have no SMARTS match — the method behaves as if those groups were absent (silent truncation). |
-| `EXTENSION_SUBGROUP` | warning | Uses an aerosysprop-only subgroup (281–285) that the reference Fortran AIOMFAC drops. |
-| `MR_PARAM_MISSING` | error | A required organic-group ↔ ion interaction parameter is not defined for this mixture. |
 | `COMPOSITION_SUM` | warning | Mass / mole fractions don't sum to ≈ 1. |
 | `COMPOSITION_VALUE` | error | A fraction is outside [0, 1] or the vector length is wrong. |
 | `NO_WATER` | warning | An electrolyte mixture without water as a component. |
-| `HIGH_CONCENTRATION` | warning | A salt is above ~30 % mass fraction (outside the well-fitted range). |
-| `BISULFATE_NEEDED` | warning | H₂SO₄ present — the bisulfate equilibrium (HSO₄⁻ ⇌ H⁺ + SO₄²⁻) is **not** yet modelled, so these results will differ from the reference. |
-| `INVALID_SMILES` | error | RDKit could not parse the SMILES. |
 
 **Strict modes (in code).** When you call the methods from Python, a
 `strict=` argument controls how issues surface:
@@ -159,10 +159,46 @@ page lists them in an expander). Each issue has a **severity** and a
 - `'raise'` — raise `ValueError` on any issue;
 - `'silent'` — skip the pre-flight check entirely.
 
-You can also pre-screen inputs without computing anything — see the next
-tab.
+You can also pre-screen inputs without computing anything — see the
+**Use from Python** tab.
 """
     )
+
+    # Method-specific diagnostic caveats, pulled from the mixture-method
+    # registry so each method documents its own codes.
+    method_diags = [m for m in MIXTURE_METHODS if m.diagnostics_notes]
+    if method_diags:
+        st.markdown('**Method-specific notes**')
+        for m in method_diags:
+            st.markdown(f'*{m.name}*')
+            for note in m.diagnostics_notes:
+                st.markdown(f'- {note}')
+
+
+# ---------------------------------------------------------------------------
+# Mixture methods (registry-driven — grows as methods are added)
+# ---------------------------------------------------------------------------
+with tab_mixture:
+    st.subheader('Mixture-property methods')
+    st.markdown(
+        'The **Mixture properties** page is a family of methods that act on a '
+        'whole mixture rather than each compound independently. Each method '
+        'below documents what it does, when to use it, and how to call it '
+        'from Python. (Detailed equations and validation live in each '
+        "method's own reference document.)"
+    )
+    for m in MIXTURE_METHODS:
+        badge = '' if m.status == 'available' else '  *(coming soon)*'
+        st.markdown(f'### {m.name}{badge}')
+        st.markdown(m.summary)
+        if m.when_to_use:
+            st.markdown(f'**When to use.** {m.when_to_use}')
+        if m.python_example:
+            st.markdown('**From Python**')
+            st.code(m.python_example, language='python')
+        if m.reference_doc:
+            st.caption(f'Detailed reference: `{m.reference_doc}`')
+        st.divider()
 
 
 # ---------------------------------------------------------------------------
@@ -208,25 +244,9 @@ results = run_all(
         language='python',
     )
 
-    st.markdown('**Mixture activity coefficients (AIOMFAC)**')
-    st.code(
-        """from aerosysprop.methods.activity_coefficients import (
-    aiomfac_sr_from_smiles,   # non-electrolyte (organic + water)
-    aiomfac_from_smiles,      # full SR + MR + LR with salts
-)
-
-# Non-electrolyte: gamma of water + ethanol at 50:50 mole fraction
-g = aiomfac_sr_from_smiles(['O', 'CCO'], [0.5, 0.5], 298.15)
-
-# Electrolyte: water + ethanol + NaCl from mass fractions
-res = aiomfac_from_smiles(['O', 'CCO'], ['NaCl'], [0.75, 0.20, 0.05], 298.15)
-res.gamma_neutral   # mole-fraction basis (water, ethanol)
-res.gamma_cation    # molality basis (Na+)
-res.gamma_anion     # molality basis (Cl-)
-res.gamma_mean      # mean ionic gamma_pm per salt
-res.diagnostics     # the same report shown in the app
-""",
-        language='python',
+    st.markdown(
+        '**Mixture properties** — each mixture-property method documents its '
+        'own Python entry points in the **Mixture methods** tab.'
     )
 
     st.markdown('**Pre-flight diagnostics without computing**')

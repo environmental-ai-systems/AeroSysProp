@@ -31,18 +31,19 @@ ensure_session_state()
 _SALT_NAMES = sorted(set(data.AIOMFAC_SALT_NAME.values()))
 
 
+from aerosysprop.mixture_methods import available_methods, method_by_name
+
+_AVAILABLE = available_methods()
+
 with st.sidebar:
     st.title('Mixture properties')
     st.divider()
     st.subheader('Method')
-    method = st.selectbox(
+    method_name = st.selectbox(
         'Mixture-property method',
-        options=['AIOMFAC activity coefficients'],
-        help=(
-            'AIOMFAC: short-range modified UNIFAC + middle-range organic-ion / '
-            'ion-ion + long-range Debye–Hückel. Further mixture-property '
-            'methods can be added here.'
-        ),
+        options=[m.name for m in _AVAILABLE],
+        help='Pick the mixture-property method. See the Documentation page '
+             'for what each method does.',
     )
     st.divider()
     st.subheader('Settings')
@@ -55,14 +56,19 @@ with st.sidebar:
     st.divider()
     sidebar_session_loader()
 
+method = method_by_name(method_name)
 
 st.header('Mixture properties')
 st.markdown(
     'Predict properties of a **mixture** rather than each compound '
-    'independently. The active method is **AIOMFAC activity coefficients** '
-    '(short-range modified UNIFAC + middle-range + long-range Debye–Hückel): '
-    'every species\' activity coefficient depends on the whole composition.'
+    'independently. Every species\' result depends on the whole composition.'
 )
+st.markdown(f'**Active method: {method.name}.** {method.summary}')
+
+# The composition/results workflow below is currently shared by all mixture
+# methods (they all take neutral components + optional salts at a given
+# composition). If a future method needs a different input shape, branch on
+# method.id here.
 
 # ---------------------------------------------------------------------------
 # Step 1 — neutral components
