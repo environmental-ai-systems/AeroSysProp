@@ -108,6 +108,8 @@ pages = [
             title='Mixture properties'),
     st.Page('views/external_services.py',
             title='External services'),
+    st.Page('views/documentation.py',
+            title='Documentation'),
 ]
 
 pg = st.navigation(pages)
