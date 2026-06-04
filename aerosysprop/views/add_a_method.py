@@ -117,15 +117,22 @@ def my_method(compound):
         language='python',
     )
 
-    st.markdown('**2. Register it** in `aerosysprop/batch.py` (four small edits)')
+    st.markdown('**2. Register it** — add one `PropertyMethod` entry to '
+                '`PROPERTY_METHODS` in `aerosysprop/batch.py`')
     st.code(
-        """# METHOD_META[id] = (label, unit, group, deps)
-METHOD_META['bp_mymethod'] = ('My Method (2026)', 'K', 'Boiling Point',
-                              frozenset())          # frozenset({BP_ANY}) if it needs a boiling point
-
-ALL_METHODS.append('bp_mymethod')                   # display / column ordering
-METHOD_GROUPS['Boiling Point'].append('bp_mymethod')  # which sidebar group it appears under
-_OUTPUT_KEYS['bp_mymethod'] = ('bp_mymethod_K',)    # output column name(s)
+        """# aerosysprop/batch.py — append to the PROPERTY_METHODS registry.
+# All the lookup tables (METHOD_META, ALL_METHODS, METHOD_GROUPS,
+# _OUTPUT_KEYS, …) are derived from this list automatically.
+PropertyMethod(
+    id='bp_mymethod',
+    label='My Method (2026)',
+    unit='K',
+    group='Boiling Point',              # appears under this sidebar group
+    output_keys=('bp_mymethod_K',),     # result column name(s)
+    # deps=frozenset({BP_ANY}),         # if it needs *a* boiling point
+    # bp_dependent=True,                # if its output changes with the BP source
+    # bp_short='MyBP',                  # only for boiling-point methods used as a source
+)
 """,
         language='python',
     )
@@ -265,11 +272,9 @@ with tab_check:
         """
 - [ ] Implement the function in the relevant `methods/` module (RDKit mol in, scalar out)
 - [ ] Add any new SMARTS / parameter files to `data/` and load them in `data/__init__.py`
-- [ ] `METHOD_META[id] = (label, unit, group, deps)`
-- [ ] Append the id to `ALL_METHODS` and to the right `METHOD_GROUPS` group
-- [ ] `_OUTPUT_KEYS[id] = (column_name, …)`
+- [ ] Add one `PropertyMethod(...)` entry to `PROPERTY_METHODS` in `batch.py` (id, label, unit, group, output_keys, and `deps` / `bp_dependent` if it needs a boiling point)
 - [ ] Wire the calculation into `_run_one` in `batch.py`
-- [ ] If boiling-point-dependent: `deps=frozenset({BP_ANY})`, add to `_BP_DEPENDENT_KEYS`, compute inside the per-BP loop
+- [ ] For boiling-point-dependent methods, compute inside the per-BP loop of `_run_one` (the `bp_dependent=True` flag handles the column suffixing)
 - [ ] Add a test (and a fixture if there are reference values)
 - [ ] Save / restart the app and confirm the checkbox appears and runs
 """

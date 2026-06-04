@@ -35,64 +35,89 @@ _MP_CONTEXT = multiprocessing.get_context(
 # ---------------------------------------------------------------------------
 # Method registry
 # ---------------------------------------------------------------------------
+#
+# Single-component property methods are described once, here, as PropertyMethod
+# entries. The legacy lookup tables the rest of the app consumes
+# (METHOD_META, ALL_METHODS, METHOD_GROUPS, _OUTPUT_KEYS, …) are *derived* from
+# this registry below, so adding a method is a single PropertyMethod entry plus
+# its compute wiring in _run_one — the UI and CSV/columns follow automatically
+# and unchanged.
 
-# Sentinel used in METHOD_META deps to mean "whichever boiling point method
-# the user has chosen" — resolved to the actual method ID at runtime.
+from dataclasses import dataclass, field
+
+# Sentinel used in a method's deps to mean "whichever boiling point method the
+# user has chosen" — resolved to the actual method ID at runtime.
 BP_ANY = 'bp_any'
 
-# The three boiling point methods, for validation
-BP_METHODS = frozenset({'bp_joback', 'bp_stein', 'bp_nannoolal'})
+
+@dataclass(frozen=True)
+class PropertyMethod:
+    """One single-component property method."""
+    id: str                          # stable identifier, e.g. 'bp_nannoolal'
+    label: str                       # display label
+    unit: str                        # unit string
+    group: str                       # UI group (e.g. 'Boiling Point')
+    output_keys: tuple               # result column name(s)
+    deps: frozenset = frozenset()    # direct dependencies; use BP_ANY for "a boiling point"
+    bp_dependent: bool = False       # output changes with the boiling-point source
+    bp_short: str = ''               # short label, only for boiling-point methods used as a source
+
+
+# The registry — order defines display order and CSV column order.
+PROPERTY_METHODS = [
+    PropertyMethod('bp_joback',    'Joback & Reid (1987)',   'K', 'Boiling Point',
+                   ('bp_joback_K',),    bp_short='Joback'),
+    PropertyMethod('bp_stein',     'Stein & Brown (1994)',   'K', 'Boiling Point',
+                   ('bp_stein_K',),     bp_short='Stein'),
+    PropertyMethod('bp_nannoolal', 'Nannoolal et al. (2004)', 'K', 'Boiling Point',
+                   ('bp_nannoolal_K',), bp_short='Nannoolal'),
+    PropertyMethod('vp_nannoolal', 'Nannoolal et al. (2008)', 'log₁₀(atm)', 'Vapour Pressure',
+                   ('vp_nannoolal_log10atm',), deps=frozenset({BP_ANY}), bp_dependent=True),
+    PropertyMethod('vp_myrdal',    'Myrdal & Yalkowsky (1997)', 'log₁₀(atm)', 'Vapour Pressure',
+                   ('vp_myrdal_log10atm',), deps=frozenset({BP_ANY}), bp_dependent=True),
+    PropertyMethod('vp_evaporation',  'EVAPORATION (Compernolle 2011)', 'log₁₀(atm)', 'Vapour Pressure',
+                   ('vp_evaporation_log10atm',)),
+    PropertyMethod('vp_evaporation2', 'EVAPORATION revised', 'log₁₀(atm)', 'Vapour Pressure',
+                   ('vp_evaporation2_log10atm',)),
+    PropertyMethod('vp_simpol',    'SIMPOL.1 (Pankow & Asher 2008)', 'log₁₀(atm)', 'Vapour Pressure',
+                   ('vp_simpol_log10atm',)),
+    PropertyMethod('cp_nannoolal', 'Nannoolal et al. (2004)', 'K / bar', 'Critical Properties',
+                   ('tc_nannoolal_K', 'pc_nannoolal_bar'), deps=frozenset({BP_ANY}), bp_dependent=True),
+    PropertyMethod('density_girolami', 'Girolami (1994)', 'g/cc', 'Liquid Density',
+                   ('density_girolami_gcc',)),
+    PropertyMethod('density_schroeder', 'Schroeder', 'g/cc', 'Liquid Density',
+                   ('density_schroeder_gcc',), deps=frozenset({'cp_nannoolal'}), bp_dependent=True),
+    PropertyMethod('density_le_bas', 'Le Bas', 'g/cc', 'Liquid Density',
+                   ('density_le_bas_gcc',), deps=frozenset({'cp_nannoolal'}), bp_dependent=True),
+    PropertyMethod('density_tyn_calus', 'Tyn & Calus', 'g/cc', 'Liquid Density',
+                   ('density_tyn_calus_gcc',), deps=frozenset({'cp_nannoolal'}), bp_dependent=True),
+]
+
+PROPERTY_METHOD_BY_ID = {m.id: m for m in PROPERTY_METHODS}
+
+
+# ---- Derived lookup tables (kept for backward compatibility) ---------------
+# These are generated from PROPERTY_METHODS so existing callers (the Streamlit
+# pages, tests, external code) see exactly the same values as before.
+
+# The boiling-point methods, usable as a source for dependent methods.
+BP_METHODS = frozenset(m.id for m in PROPERTY_METHODS if m.group == 'Boiling Point')
 
 # (display label, unit string, property group, direct dependencies)
-# Use BP_ANY for any method that needs *a* boiling point — not a specific one.
 METHOD_META = {
-    'bp_joback':         ('Joback & Reid (1987)',            'K',           'Boiling Point',       frozenset()),
-    'bp_stein':          ('Stein & Brown (1994)',             'K',           'Boiling Point',       frozenset()),
-    'bp_nannoolal':      ('Nannoolal et al. (2004)',          'K',           'Boiling Point',       frozenset()),
-    'vp_nannoolal':      ('Nannoolal et al. (2008)',          'log₁₀(atm)', 'Vapour Pressure',     frozenset({BP_ANY})),
-    'vp_myrdal':         ('Myrdal & Yalkowsky (1997)',        'log₁₀(atm)', 'Vapour Pressure',     frozenset({BP_ANY})),
-    'vp_evaporation':    ('EVAPORATION (Compernolle 2011)',   'log₁₀(atm)', 'Vapour Pressure',     frozenset()),
-    'vp_evaporation2':   ('EVAPORATION revised',             'log₁₀(atm)', 'Vapour Pressure',     frozenset()),
-    'vp_simpol':         ('SIMPOL.1 (Pankow & Asher 2008)',  'log₁₀(atm)', 'Vapour Pressure',     frozenset()),
-    'cp_nannoolal':      ('Nannoolal et al. (2004)',          'K / bar',     'Critical Properties', frozenset({BP_ANY})),
-    'density_girolami':  ('Girolami (1994)',                  'g/cc',        'Liquid Density',      frozenset()),
-    'density_schroeder': ('Schroeder',                        'g/cc',        'Liquid Density',      frozenset({'cp_nannoolal'})),
-    'density_le_bas':    ('Le Bas',                           'g/cc',        'Liquid Density',      frozenset({'cp_nannoolal'})),
-    'density_tyn_calus': ('Tyn & Calus',                     'g/cc',        'Liquid Density',      frozenset({'cp_nannoolal'})),
+    m.id: (m.label, m.unit, m.group, m.deps) for m in PROPERTY_METHODS
 }
 
 # Canonical ordering for display and CSV columns
-ALL_METHODS = [
-    'bp_joback', 'bp_stein', 'bp_nannoolal',
-    'vp_nannoolal', 'vp_myrdal', 'vp_evaporation', 'vp_evaporation2', 'vp_simpol',
-    'cp_nannoolal',
-    'density_girolami', 'density_schroeder', 'density_le_bas', 'density_tyn_calus',
-]
+ALL_METHODS = [m.id for m in PROPERTY_METHODS]
 
-# Methods grouped for UI display
-METHOD_GROUPS = {
-    'Boiling Point':       ['bp_joback', 'bp_stein', 'bp_nannoolal'],
-    'Vapour Pressure':     ['vp_nannoolal', 'vp_myrdal', 'vp_evaporation', 'vp_evaporation2', 'vp_simpol'],
-    'Critical Properties': ['cp_nannoolal'],
-    'Liquid Density':      ['density_girolami', 'density_schroeder', 'density_le_bas', 'density_tyn_calus'],
-}
+# Methods grouped for UI display (group order = first appearance in registry)
+METHOD_GROUPS = {}
+for _m in PROPERTY_METHODS:
+    METHOD_GROUPS.setdefault(_m.group, []).append(_m.id)
 
 # Output column names produced by each method
-_OUTPUT_KEYS = {
-    'bp_joback':         ('bp_joback_K',),
-    'bp_stein':          ('bp_stein_K',),
-    'bp_nannoolal':      ('bp_nannoolal_K',),
-    'vp_nannoolal':      ('vp_nannoolal_log10atm',),
-    'vp_myrdal':         ('vp_myrdal_log10atm',),
-    'vp_evaporation':    ('vp_evaporation_log10atm',),
-    'vp_evaporation2':   ('vp_evaporation2_log10atm',),
-    'vp_simpol':         ('vp_simpol_log10atm',),
-    'cp_nannoolal':      ('tc_nannoolal_K', 'pc_nannoolal_bar'),
-    'density_girolami':  ('density_girolami_gcc',),
-    'density_schroeder': ('density_schroeder_gcc',),
-    'density_le_bas':    ('density_le_bas_gcc',),
-    'density_tyn_calus': ('density_tyn_calus_gcc',),
-}
+_OUTPUT_KEYS = {m.id: m.output_keys for m in PROPERTY_METHODS}
 
 _CSV_FIELDS = ['name', 'smiles'] + [
     col for m in ALL_METHODS for col in _OUTPUT_KEYS[m]
@@ -100,22 +125,13 @@ _CSV_FIELDS = ['name', 'smiles'] + [
 
 # Short labels used to suffix output columns when a calculation is run across
 # more than one boiling-point source.
-_BP_SHORT = {
-    'bp_joback': 'Joback',
-    'bp_stein': 'Stein',
-    'bp_nannoolal': 'Nannoolal',
-}
+_BP_SHORT = {m.id: m.bp_short for m in PROPERTY_METHODS if m.bp_short}
 
 # Methods whose output depends on the chosen boiling-point source. When more
 # than one source is selected, their columns are produced once per source with
 # a '__bp<Source>' suffix; with a single source the column names are unchanged.
 _BP_DEPENDENT_KEYS = {
-    'vp_nannoolal':      ('vp_nannoolal_log10atm',),
-    'vp_myrdal':         ('vp_myrdal_log10atm',),
-    'cp_nannoolal':      ('tc_nannoolal_K', 'pc_nannoolal_bar'),
-    'density_schroeder': ('density_schroeder_gcc',),
-    'density_le_bas':    ('density_le_bas_gcc',),
-    'density_tyn_calus': ('density_tyn_calus_gcc',),
+    m.id: m.output_keys for m in PROPERTY_METHODS if m.bp_dependent
 }
 
 

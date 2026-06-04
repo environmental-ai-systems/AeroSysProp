@@ -11,6 +11,8 @@ from rdkit import Chem
 from aerosysprop.batch import (
     ALL_METHODS, _OUTPUT_KEYS, resolve_methods, run_all,
     resolved_output_columns,
+    PROPERTY_METHODS, PROPERTY_METHOD_BY_ID, PropertyMethod,
+    METHOD_META, METHOD_GROUPS, BP_METHODS,
 )
 from aerosysprop import db
 
@@ -24,6 +26,56 @@ SMILES = [
 
 def _mols():
     return [(name, Chem.MolFromSmiles(smi)) for name, smi in SMILES]
+
+
+# ---------------------------------------------------------------------------
+# PropertyMethod registry — derived tables must stay consistent with it
+# ---------------------------------------------------------------------------
+
+class TestPropertyRegistry:
+
+    def test_registry_nonempty(self):
+        assert PROPERTY_METHODS
+        assert all(isinstance(m, PropertyMethod) for m in PROPERTY_METHODS)
+
+    def test_all_methods_matches_registry_order(self):
+        assert ALL_METHODS == [m.id for m in PROPERTY_METHODS]
+
+    def test_method_meta_derived(self):
+        for m in PROPERTY_METHODS:
+            assert METHOD_META[m.id] == (m.label, m.unit, m.group, m.deps)
+
+    def test_output_keys_derived(self):
+        for m in PROPERTY_METHODS:
+            assert _OUTPUT_KEYS[m.id] == m.output_keys
+
+    def test_method_groups_derived_and_ordered(self):
+        # every method appears under its declared group, in registry order
+        for m in PROPERTY_METHODS:
+            assert m.id in METHOD_GROUPS[m.group]
+        # group order = first appearance in the registry
+        seen = []
+        for m in PROPERTY_METHODS:
+            if m.group not in seen:
+                seen.append(m.group)
+        assert list(METHOD_GROUPS) == seen
+
+    def test_bp_methods_are_the_boiling_point_group(self):
+        assert BP_METHODS == frozenset(
+            m.id for m in PROPERTY_METHODS if m.group == 'Boiling Point'
+        )
+
+    def test_lookup_by_id(self):
+        assert PROPERTY_METHOD_BY_ID['bp_nannoolal'].label == 'Nannoolal et al. (2004)'
+
+    def test_bp_dependent_flag_consistency(self):
+        # density methods depend on cp_nannoolal, which is bp_dependent ->
+        # they must be flagged bp_dependent too
+        for mid in ('vp_nannoolal', 'vp_myrdal', 'cp_nannoolal',
+                    'density_schroeder', 'density_le_bas', 'density_tyn_calus'):
+            assert PROPERTY_METHOD_BY_ID[mid].bp_dependent
+        for mid in ('bp_joback', 'vp_simpol', 'density_girolami'):
+            assert not PROPERTY_METHOD_BY_ID[mid].bp_dependent
 
 
 # ---------------------------------------------------------------------------
