@@ -29,6 +29,7 @@ for _parent in _pathlib.Path(__file__).resolve().parents:
             _sys.path.insert(0, str(_parent))
         break
 
+import base64
 import time
 
 import streamlit as st
@@ -53,17 +54,40 @@ _LOGO_STATIC = _ASSETS / 'aerosysprop_logo_static.png'
 _SPLASH_SECONDS = 7.3
 
 
+def _data_uri(path, mime):
+    b64 = base64.b64encode(path.read_bytes()).decode('ascii')
+    return f'data:{mime};base64,{b64}'
+
+
+# Enlarge the persistent top-left logo (st.logo's built-in sizes top out at
+# 'large', which is still fairly small for a wide wordmark).
+st.markdown(
+    '<style>[data-testid="stLogo"]{height:3.2rem;width:auto;}</style>',
+    unsafe_allow_html=True,
+)
+
+
 # ---------------------------------------------------------------------------
 # Opening page — play the animated logo once per session, then continue.
 # ---------------------------------------------------------------------------
 if not st.session_state.get('_intro_played', False):
     if _LOGO_GIF.exists():
-        # Centre the animated logo; it streams to the browser and plays while
-        # the script waits, after which we flip the flag and rerun into the app.
-        left, mid, right = st.columns([1, 3, 1])
-        with mid:
-            st.image(str(_LOGO_GIF), width=720)
-            st.caption('Loading AeroSysProp…')
+        # Embed the GIF as a base64 <img> so the browser plays the animation.
+        # (st.image renders only the first frame of an animated GIF.) The
+        # element streams to the browser and animates while the script waits,
+        # then we flip the flag and rerun into the app.
+        st.markdown(
+            f'''
+            <div style="display:flex;flex-direction:column;align-items:center;
+                        justify-content:center;min-height:60vh;">
+                <img src="{_data_uri(_LOGO_GIF, "image/gif")}"
+                     style="width:min(720px,80vw);height:auto;" />
+                <p style="margin-top:1rem;color:#888;font-size:0.9rem;">
+                    Loading AeroSysProp…</p>
+            </div>
+            ''',
+            unsafe_allow_html=True,
+        )
         time.sleep(_SPLASH_SECONDS)
     st.session_state['_intro_played'] = True
     st.rerun()
