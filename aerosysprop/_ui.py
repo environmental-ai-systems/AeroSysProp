@@ -19,6 +19,7 @@ from rdkit import Chem
 
 from aerosysprop import db
 from aerosysprop.io import (
+    detect_columns,
     read_smiles_db,
     read_smiles_sdf,
     read_smiles_txt,
@@ -169,10 +170,9 @@ def example_file_downloads(key_prefix=''):
         width='stretch', key=f'{key_prefix}ex_sdf',
     )
     st.caption(
-        'The **SMILES list** loads with the default upload settings. The '
-        '**Named** files (comma- or tab-separated `name,SMILES`) need '
-        '"SMILES column" = 1 and "Name column" = 0 when uploading. The '
-        '**SDF** loads directly; names come from each molecule title.'
+        'All of these load automatically — for text/CSV files the SMILES '
+        'column is detected for you (with a manual override if it ever gets '
+        'it wrong). SDF names come from each molecule title.'
     )
 
 
@@ -268,19 +268,44 @@ def load_compounds_panel(state_key='mols', key_prefix='', help_text=None):
             type=['txt', 'csv', 'tsv', 'prop', 'sdf', 'db'],
             key=f'{key_prefix}file_upload',
         )
-        col_smiles, col_name = st.columns(2)
-        smiles_col_idx = col_smiles.number_input(
-            'SMILES column (0-based, text files only)', value=0, min_value=0,
-            key=f'{key_prefix}smiles_col',
-        )
-        name_col_idx = col_name.number_input(
-            'Name column (-1 = none, text files only)', value=-1, min_value=-1,
-            key=f'{key_prefix}name_col',
-        )
+
+        # For text/CSV files, auto-detect which column holds the SMILES (the
+        # column that parses as valid molecules) and which holds the name, so
+        # the user never has to think about column indices. A friendly
+        # override is offered in case the detection is wrong.
+        smiles_col, name_col = 0, None
+        if uploaded is not None:
+            suffix = '.' + uploaded.name.rsplit('.', 1)[-1].lower()
+            if suffix in ('.txt', '.csv', '.tsv', '.prop'):
+                text = uploaded.getvalue().decode('utf-8', errors='replace')
+                det_s, det_n, ncols = detect_columns(text.splitlines())
+                if ncols <= 1:
+                    st.caption('Detected a single column of SMILES.')
+                    smiles_col, name_col = 0, None
+                else:
+                    name_msg = (f'names in column {det_n + 1}'
+                                if det_n is not None else 'no name column')
+                    st.success(
+                        f'Detected SMILES in column {det_s + 1}, {name_msg}.'
+                    )
+                    with st.expander('Wrong columns? Set them manually'):
+                        smiles_col = st.number_input(
+                            'Which column has the SMILES? (1 = first column)',
+                            min_value=1, value=det_s + 1,
+                            key=f'{key_prefix}smiles_col',
+                        ) - 1
+                        name_choice = st.number_input(
+                            'Which column has the name? (0 = no name column)',
+                            min_value=0,
+                            value=(det_n + 1 if det_n is not None else 0),
+                            key=f'{key_prefix}name_col',
+                        )
+                        name_col = (name_choice - 1) if name_choice >= 1 else None
+
         if uploaded and st.button('Load file', key=f'{key_prefix}load_file'):
             suffix = '.' + uploaded.name.rsplit('.', 1)[-1].lower()
             with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                tmp.write(uploaded.read())
+                tmp.write(uploaded.getvalue())
                 tmp_path = tmp.name
             try:
                 if suffix == '.sdf':
@@ -288,9 +313,9 @@ def load_compounds_panel(state_key='mols', key_prefix='', help_text=None):
                 elif suffix == '.db':
                     mols = read_smiles_db(tmp_path)
                 else:
-                    kwargs = {'smiles_col': int(smiles_col_idx)}
-                    if name_col_idx >= 0:
-                        kwargs['name_col'] = int(name_col_idx)
+                    kwargs = {'smiles_col': int(smiles_col)}
+                    if name_col is not None:
+                        kwargs['name_col'] = int(name_col)
                     mols = read_smiles_txt(tmp_path, **kwargs)
                 st.session_state[state_key] = mols
                 st.success(f'{len(mols)} molecule(s) loaded from {uploaded.name}.')

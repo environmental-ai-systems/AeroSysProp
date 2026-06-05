@@ -49,6 +49,61 @@ def _mol_from_smiles(smiles, name):
     return (name, mol)
 
 
+def _split_line(line, delimiter=None):
+    """Split one line into columns. With delimiter=None, auto-detect:
+    tab > comma > whitespace (SMILES tokens contain none of these)."""
+    if delimiter is None:
+        if '\t' in line:
+            return [p.strip() for p in line.split('\t')]
+        if ',' in line:
+            return [p.strip() for p in line.split(',')]
+        return line.split()
+    return [p.strip() for p in line.split(delimiter)]
+
+
+def detect_columns(lines, delimiter=None, comment='#', sample=50):
+    """Inspect delimited text and decide which column holds the SMILES.
+
+    ``lines`` is any iterable of raw text lines (e.g. a file object or the
+    splitlines() of uploaded content). The column whose cells most often
+    parse as valid SMILES is taken as the SMILES column; the first other
+    column becomes the name column.
+
+    Returns ``(smiles_col, name_col, ncols)`` — both indices 0-based,
+    ``name_col`` is ``None`` for single-column input, ``ncols`` is the widest
+    row seen (0 if the input had no data lines).
+    """
+    rows = []
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith(comment):
+            continue
+        rows.append(_split_line(line, delimiter))
+        if len(rows) >= sample:
+            break
+    if not rows:
+        return 0, None, 0
+    ncols = max(len(r) for r in rows)
+    if ncols == 1:
+        return 0, None, 1
+    # Probing each cell as a SMILES is expected to fail for name columns;
+    # silence RDKit's parse-error logging for the duration so it doesn't spam
+    # the console, then restore it.
+    from rdkit import RDLogger
+    RDLogger.DisableLog('rdApp.error')
+    try:
+        valid = [0] * ncols
+        for r in rows:
+            for c in range(min(len(r), ncols)):
+                if r[c] and Chem.MolFromSmiles(r[c]) is not None:
+                    valid[c] += 1
+    finally:
+        RDLogger.EnableLog('rdApp.error')
+    smiles_col = max(range(ncols), key=lambda c: valid[c])
+    name_col = next((c for c in range(ncols) if c != smiles_col), None)
+    return smiles_col, name_col, ncols
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -101,17 +156,7 @@ def read_smiles_txt(path, smiles_col=1, name_col=0, delimiter=None, comment='#')
             line = line.strip()
             if not line or line.startswith(comment):
                 continue
-            if delimiter is None:
-                # Auto-detect: tab > comma > whitespace. SMILES never contain
-                # these characters, so detection is unambiguous.
-                if '\t' in line:
-                    parts = [p.strip() for p in line.split('\t')]
-                elif ',' in line:
-                    parts = [p.strip() for p in line.split(',')]
-                else:
-                    parts = line.split()
-            else:
-                parts = [p.strip() for p in line.split(delimiter)]
+            parts = _split_line(line, delimiter)
             if len(parts) == 1:
                 smiles = parts[0]
                 name = smiles

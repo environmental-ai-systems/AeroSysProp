@@ -11,7 +11,7 @@ from aerosysprop._ui import (
     _example_smiles_txt, _example_named_txt, _example_named_csv,
     _example_sdf, _EXAMPLE_COMPOUNDS,
 )
-from aerosysprop.io import read_smiles_txt, read_smiles_sdf
+from aerosysprop.io import read_smiles_txt, read_smiles_sdf, detect_columns
 
 
 def _write(data, suffix):
@@ -108,3 +108,49 @@ def test_explicit_delimiter_overrides_autodetect():
     finally:
         os.unlink(path)
     assert Chem.MolToSmiles(mols[0][1]) == 'CCO'
+
+
+# ---- column auto-detection (detect_columns) -------------------------------
+
+def test_detect_single_smiles_column():
+    assert detect_columns(['O', 'CCO', 'CC(=O)O']) == (0, None, 1)
+
+
+def test_detect_name_then_smiles():
+    lines = ['water,O', 'ethanol,CCO', 'acetic_acid,CC(=O)O']
+    assert detect_columns(lines) == (1, 0, 2)
+
+
+def test_detect_smiles_then_name():
+    lines = ['O,water', 'CCO,ethanol', 'CC(=O)O,acetic_acid']
+    assert detect_columns(lines) == (0, 1, 2)
+
+
+def test_detect_smiles_in_third_column():
+    lines = ['1,water,O', '2,ethanol,CCO', '3,acetic_acid,CC(=O)O']
+    s, n, ncols = detect_columns(lines)
+    assert s == 2 and ncols == 3
+
+
+def test_detect_skips_comment_and_blank_lines():
+    lines = ['# header comment', '', 'water\tO', 'ethanol\tCCO']
+    assert detect_columns(lines) == (1, 0, 2)
+
+
+def test_detect_empty_input():
+    assert detect_columns(['# only a comment', '']) == (0, None, 0)
+
+
+def test_detect_then_read_roundtrip():
+    """The detected columns must actually load the file."""
+    content = 'glycerol,OCC(O)CO\nlevoglucosan,OC[C@H]1OC2OC1C(O)C2O\n'
+    path = _write(content.encode(), '.csv')
+    try:
+        s, n, _ = detect_columns(content.splitlines())
+        kwargs = {'smiles_col': s}
+        if n is not None:
+            kwargs['name_col'] = n
+        mols = read_smiles_txt(path, **kwargs)
+    finally:
+        os.unlink(path)
+    assert [nm for nm, _ in mols] == ['glycerol', 'levoglucosan']
