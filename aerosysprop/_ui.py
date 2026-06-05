@@ -134,40 +134,46 @@ molecules are named `mol_1`, `mol_2`, etc.
 A `.db` file previously created by clicking **Save session**. Loading one in
 the sidebar reloads all previously stored compounds and results.
 """)
+        example_file_downloads(key_prefix='help_')
 
-        st.markdown('**Download example files** to try the loaders:')
-        c1, c2, c3, c4 = st.columns(4)
-        c1.download_button(
-            'SMILES list (.txt)',
-            data=_example_smiles_txt(),
-            file_name='example_smiles.txt', mime='text/plain',
-            width='stretch', key='ex_smiles_txt',
-        )
-        c2.download_button(
-            'Named (.csv)',
-            data=_example_named_csv(),
-            file_name='example_named.csv', mime='text/csv',
-            width='stretch', key='ex_named_csv',
-        )
-        c3.download_button(
-            'Named (.txt, tab)',
-            data=_example_named_txt(),
-            file_name='example_named.txt', mime='text/plain',
-            width='stretch', key='ex_named_txt',
-        )
-        c4.download_button(
-            'SDF (.sdf)',
-            data=_example_sdf(),
-            file_name='example_compounds.sdf',
-            mime='chemical/x-mdl-sdfile',
-            width='stretch', key='ex_sdf',
-        )
-        st.caption(
-            'The **SMILES list** loads with the default upload settings. The '
-            '**Named** files (comma- or tab-separated `name,SMILES`) need '
-            '"SMILES column" = 1 and "Name column" = 0 when uploading. The '
-            '**SDF** loads directly; names come from each molecule title.'
-        )
+
+def example_file_downloads(key_prefix=''):
+    """Render download buttons for ready-made example upload files. Shown both
+    in the Upload tab (so a template is right where you upload) and in the
+    format-help expander."""
+    st.markdown('**Need a template? Download an example file:**')
+    c1, c2, c3, c4 = st.columns(4)
+    c1.download_button(
+        'SMILES list (.txt)',
+        data=_example_smiles_txt(),
+        file_name='example_smiles.txt', mime='text/plain',
+        width='stretch', key=f'{key_prefix}ex_smiles_txt',
+    )
+    c2.download_button(
+        'Named (.csv)',
+        data=_example_named_csv(),
+        file_name='example_named.csv', mime='text/csv',
+        width='stretch', key=f'{key_prefix}ex_named_csv',
+    )
+    c3.download_button(
+        'Named (.txt, tab)',
+        data=_example_named_txt(),
+        file_name='example_named.txt', mime='text/plain',
+        width='stretch', key=f'{key_prefix}ex_named_txt',
+    )
+    c4.download_button(
+        'SDF (.sdf)',
+        data=_example_sdf(),
+        file_name='example_compounds.sdf',
+        mime='chemical/x-mdl-sdfile',
+        width='stretch', key=f'{key_prefix}ex_sdf',
+    )
+    st.caption(
+        'The **SMILES list** loads with the default upload settings. The '
+        '**Named** files (comma- or tab-separated `name,SMILES`) need '
+        '"SMILES column" = 1 and "Name column" = 0 when uploading. The '
+        '**SDF** loads directly; names come from each molecule title.'
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -255,6 +261,8 @@ def load_compounds_panel(state_key='mols', key_prefix='', help_text=None):
                 st.success(f'{len(mols)} molecule(s) loaded.')
 
     with tab_upload:
+        example_file_downloads(key_prefix=f'{key_prefix}up_')
+        st.divider()
         uploaded = st.file_uploader(
             'Upload a compound file',
             type=['txt', 'csv', 'tsv', 'prop', 'sdf', 'db'],
