@@ -52,6 +52,44 @@ def ensure_session_state(extra_defaults=None):
 # File-format guidance
 # ---------------------------------------------------------------------------
 
+# A small atmospherically-relevant set used to generate the downloadable
+# example files offered in the format-help expander.
+_EXAMPLE_COMPOUNDS = [
+    ('water',         'O'),
+    ('ethanol',       'CCO'),
+    ('acetic_acid',   'CC(=O)O'),
+    ('glycerol',      'OCC(O)CO'),
+    ('levoglucosan',  'OC[C@H]1OC2OC1C(O)C2O'),
+    ('pinonic_acid',  'CC(=O)C1CCC(C1(C)C)CC(=O)O'),
+]
+
+
+def _example_smiles_txt():
+    """One SMILES per line — loads with the default upload settings."""
+    lines = ['# One SMILES per line. Upload with "SMILES column" = 0 (default).']
+    lines += [smi for _, smi in _EXAMPLE_COMPOUNDS]
+    return ('\n'.join(lines) + '\n').encode()
+
+
+def _example_named_txt():
+    """name <TAB> SMILES — set "SMILES column" = 1, "Name column" = 0."""
+    lines = ['# name <TAB> SMILES. Upload with "SMILES column" = 1, "Name column" = 0.']
+    lines += [f'{name}\t{smi}' for name, smi in _EXAMPLE_COMPOUNDS]
+    return ('\n'.join(lines) + '\n').encode()
+
+
+def _example_sdf():
+    """A small SDF (with 2D coordinates and molecule names)."""
+    from rdkit.Chem import AllChem
+    blocks = []
+    for name, smi in _EXAMPLE_COMPOUNDS:
+        mol = Chem.MolFromSmiles(smi)
+        AllChem.Compute2DCoords(mol)
+        mol.SetProp('_Name', name)
+        blocks.append(Chem.MolToMolBlock(mol) + '$$$$\n')
+    return ''.join(blocks).encode()
+
+
 def format_help():
     with st.expander('📋 Supported file formats', expanded=False):
         st.markdown("""
@@ -89,6 +127,34 @@ molecules are named `mol_1`, `mol_2`, etc.
 A `.db` file previously created by clicking **Save session**. Loading one in
 the sidebar reloads all previously stored compounds and results.
 """)
+
+        st.markdown('**Download example files** to try the loaders:')
+        c1, c2, c3 = st.columns(3)
+        c1.download_button(
+            'SMILES list (.txt)',
+            data=_example_smiles_txt(),
+            file_name='example_smiles.txt', mime='text/plain',
+            width='stretch', key='ex_smiles_txt',
+        )
+        c2.download_button(
+            'Named list (.txt)',
+            data=_example_named_txt(),
+            file_name='example_named.txt', mime='text/plain',
+            width='stretch', key='ex_named_txt',
+        )
+        c3.download_button(
+            'SDF (.sdf)',
+            data=_example_sdf(),
+            file_name='example_compounds.sdf',
+            mime='chemical/x-mdl-sdfile',
+            width='stretch', key='ex_sdf',
+        )
+        st.caption(
+            'The **SMILES list** loads with the default upload settings. The '
+            '**Named list** is tab-separated `name⇥SMILES` — set "SMILES '
+            'column" = 1 and "Name column" = 0 when uploading it. The **SDF** '
+            'loads directly; names come from each molecule title.'
+        )
 
 
 # ---------------------------------------------------------------------------
