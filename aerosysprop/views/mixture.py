@@ -92,6 +92,23 @@ components = load_compounds_panel(
     ),
 )
 
+# Soft guard: this page treats the loaded compounds as ONE coupled mixture
+# (unlike the single-component page, which predicts each compound separately).
+# There is no hard limit — AIOMFAC scales to tens of components in a few
+# milliseconds — but a very large list usually means a single-component set
+# was loaded here by mistake, and the composition editor below becomes
+# unwieldy.
+_MIX_SOFT_LIMIT = 50
+if len(components) > _MIX_SOFT_LIMIT:
+    st.warning(
+        f'{len(components)} components loaded. This page computes the '
+        'activity coefficients of **one mixture** containing all of them — '
+        'it is not a per-compound batch (that is the Single-component page). '
+        'AIOMFAC will still run, but mixtures usually have a handful to a few '
+        'dozen components, and the composition table below will be long.',
+        icon='⚠️',
+    )
+
 # ---------------------------------------------------------------------------
 # Step 2 — salts
 # ---------------------------------------------------------------------------

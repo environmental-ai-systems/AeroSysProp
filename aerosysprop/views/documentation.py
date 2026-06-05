@@ -93,9 +93,49 @@ stored results are available again.
 | `mixtures` | one row per saved AIOMFAC mixture calculation (name, temperature, basis, salts) |
 | `mixture_species` | per-species activity coefficients for each mixture (neutral / cation / anion / mean-ionic) |
 
-Because results are stored *long-form* (one row per value, not one column
-per method), you can keep adding methods to an existing `.db` over time
-without changing its structure, and query any subset later.
+**What "long-form" means.** Results are stored *one row per value*, **not**
+one column per method. So adding a new method does **not** add a column or
+change the table shape — it just inserts more rows. Concretely, a
+single-component run for two compounds with two methods produces four rows
+in `results`:
+
+| compound_id | method | temperature | value |
+|---|---|---|---|
+| 1 | `bp_nannoolal_K` | 298.15 | 351.4 |
+| 1 | `vp_simpol_log10atm` | 298.15 | −3.12 |
+| 2 | `bp_nannoolal_K` | 298.15 | 390.8 |
+| 2 | `vp_simpol_log10atm` | 298.15 | −4.05 |
+
+Run a *third* method next week and you simply get two more rows (one per
+compound) — same table, no schema change. (`compound_id` points into the
+`compounds` table, which holds the name + SMILES.) To get the familiar
+"one column per method" view, pivot on query:
+`results.pivot(index='compound_id', columns='method', values='value')`.
+
+**Mixtures are stored the same way, in two tables.** A mixture
+calculation is one row in `mixtures` (the conditions) plus one row per
+species in `mixture_species` (the activity coefficients). E.g. water +
+ethanol + NaCl:
+
+`mixtures`
+
+| id | name | temperature | basis | salts |
+|---|---|---|---|---|
+| 1 | mixture_1 | 298.15 | mass | NaCl |
+
+`mixture_species`
+
+| mixture_id | species | kind | fraction | gamma |
+|---|---|---|---|---|
+| 1 | water | neutral | 0.75 | 1.001 |
+| 1 | ethanol | neutral | 0.20 | 1.187 |
+| 1 | cation 202 | cation | — | 0.741 |
+| 1 | anion 242 | anion | — | 0.738 |
+| 1 | NaCl (mean ionic) | salt_mean | — | 0.739 |
+
+A second mixture is another `mixtures` row plus its own species rows.
+Single-component results and mixture results live in separate tables in
+the same `.db`, so one file can hold both.
 
 **It's just SQLite.** The `.db` is a standard SQLite database — open it
 with any SQLite browser, `sqlite3` on the command line, or pandas:

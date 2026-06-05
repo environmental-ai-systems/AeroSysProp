@@ -40,20 +40,30 @@ with tab_how:
     st.subheader('How the app discovers methods')
     st.markdown(
         """
-The app does **not** hardcode its method lists in the pages. Each page
-builds itself from a **registry** that is read fresh on every run:
+The app does **not** hardcode its method lists in the pages. Each kind of
+method has a **registry** — a plain Python list, in code, where every
+method is described by one entry (its id, display label, units, group,
+output columns, …). The pages read that list when they run and build
+themselves from it. "Registering" a method just means adding an entry to
+the list.
 
-- **Single-component methods** come from constants in
-  `aerosysprop/batch.py` (`METHOD_META`, `METHOD_GROUPS`, …). The
-  single-component page renders one checkbox per registered method.
-- **Mixture methods** come from the `MIXTURE_METHODS` registry in
-  `aerosysprop/mixture_methods.py`. The mixture page builds its method
-  picker, and the Documentation page builds its "Mixture methods" tab,
-  from this list.
+There are two registries:
 
-So **adding a method is a code change** — you implement the calculation
-and add it to the relevant registry. You do *not* wire it into the UI by
-hand: once it's registered, the relevant page shows it automatically the
+- **Single-component methods** → the `PROPERTY_METHODS` list in
+  `aerosysprop/batch.py`. Each entry is a `PropertyMethod(...)`. The
+  single-component page loops over this list and draws one checkbox per
+  method, grouped by the entry's `group` field. (For backward
+  compatibility the older lookup tables — `METHOD_META`, `METHOD_GROUPS`,
+  `ALL_METHODS`, `_OUTPUT_KEYS` — are now *generated from* this one list,
+  so you only edit the list.)
+- **Mixture methods** → the `MIXTURE_METHODS` list in
+  `aerosysprop/mixture_methods.py`. Each entry is a `MixtureMethod(...)`.
+  The mixture page builds its method picker from it, and the
+  Documentation page builds its "Mixture methods" tab from it.
+
+So **adding a method is a code change**: you implement the calculation and
+add one entry to the relevant registry. You do *not* wire it into the UI
+by hand — once the entry is there, the page shows it automatically the
 next time the script runs.
 """
     )
