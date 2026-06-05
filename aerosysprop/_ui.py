@@ -78,6 +78,13 @@ def _example_named_txt():
     return ('\n'.join(lines) + '\n').encode()
 
 
+def _example_named_csv():
+    """name,SMILES (comma-separated) — set "SMILES column" = 1, "Name column" = 0."""
+    lines = ['# name,SMILES (comma-separated). Upload with "SMILES column" = 1, "Name column" = 0.']
+    lines += [f'{name},{smi}' for name, smi in _EXAMPLE_COMPOUNDS]
+    return ('\n'.join(lines) + '\n').encode()
+
+
 def _example_sdf():
     """A small SDF (with 2D coordinates and molecule names)."""
     from rdkit.Chem import AllChem
@@ -95,7 +102,7 @@ def format_help():
         st.markdown("""
 | Format | Extensions | Structure |
 |---|---|---|
-| **Plain text** | `.txt` `.csv` `.tsv` `.prop` | One SMILES per line, or two columns: `name\\tSMILES` |
+| **Plain text** | `.txt` `.csv` `.tsv` `.prop` | One SMILES per line, or two columns (`name,SMILES` or `name⇥SMILES`); comma, tab and whitespace are all detected automatically |
 | **SDF** | `.sdf` | Standard MDL Structure-Data File — exported from ChemDraw, MarvinSketch, PubChem, etc. |
 | **Session database** | `.db` | SQLite file previously saved from AeroSysProp |
 
@@ -129,7 +136,7 @@ the sidebar reloads all previously stored compounds and results.
 """)
 
         st.markdown('**Download example files** to try the loaders:')
-        c1, c2, c3 = st.columns(3)
+        c1, c2, c3, c4 = st.columns(4)
         c1.download_button(
             'SMILES list (.txt)',
             data=_example_smiles_txt(),
@@ -137,12 +144,18 @@ the sidebar reloads all previously stored compounds and results.
             width='stretch', key='ex_smiles_txt',
         )
         c2.download_button(
-            'Named list (.txt)',
+            'Named (.csv)',
+            data=_example_named_csv(),
+            file_name='example_named.csv', mime='text/csv',
+            width='stretch', key='ex_named_csv',
+        )
+        c3.download_button(
+            'Named (.txt, tab)',
             data=_example_named_txt(),
             file_name='example_named.txt', mime='text/plain',
             width='stretch', key='ex_named_txt',
         )
-        c3.download_button(
+        c4.download_button(
             'SDF (.sdf)',
             data=_example_sdf(),
             file_name='example_compounds.sdf',
@@ -151,9 +164,9 @@ the sidebar reloads all previously stored compounds and results.
         )
         st.caption(
             'The **SMILES list** loads with the default upload settings. The '
-            '**Named list** is tab-separated `name⇥SMILES` — set "SMILES '
-            'column" = 1 and "Name column" = 0 when uploading it. The **SDF** '
-            'loads directly; names come from each molecule title.'
+            '**Named** files (comma- or tab-separated `name,SMILES`) need '
+            '"SMILES column" = 1 and "Name column" = 0 when uploading. The '
+            '**SDF** loads directly; names come from each molecule title.'
         )
 
 

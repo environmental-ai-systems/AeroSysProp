@@ -74,7 +74,10 @@ def read_smiles_txt(path, smiles_col=1, name_col=0, delimiter=None, comment='#')
     name_col : int
         Column index (0-based) for the compound name/ID.  Default 0.
     delimiter : str or None
-        Column separator.  ``None`` splits on any whitespace.
+        Column separator. ``None`` (default) auto-detects per line: a tab if
+        present, else a comma if present, else any whitespace. (SMILES tokens
+        never contain commas, tabs or spaces, so this is unambiguous.) Pass an
+        explicit string to force a specific separator.
     comment : str
         Lines whose first non-whitespace character matches this string are
         ignored.
@@ -98,7 +101,17 @@ def read_smiles_txt(path, smiles_col=1, name_col=0, delimiter=None, comment='#')
             line = line.strip()
             if not line or line.startswith(comment):
                 continue
-            parts = line.split(delimiter)
+            if delimiter is None:
+                # Auto-detect: tab > comma > whitespace. SMILES never contain
+                # these characters, so detection is unambiguous.
+                if '\t' in line:
+                    parts = [p.strip() for p in line.split('\t')]
+                elif ',' in line:
+                    parts = [p.strip() for p in line.split(',')]
+                else:
+                    parts = line.split()
+            else:
+                parts = [p.strip() for p in line.split(delimiter)]
             if len(parts) == 1:
                 smiles = parts[0]
                 name = smiles
