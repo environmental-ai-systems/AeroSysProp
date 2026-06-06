@@ -71,6 +71,30 @@ def test_conservation_and_equilibrium_residual(wf):
     assert abs(resid) < 1e-6
 
 
+# ---- robustness with organics present (no oscillation / stall) ------------
+
+@pytest.mark.parametrize('smiles,wtf', [
+    (['O', 'CCO'],        [0.6, 0.3, 0.1]),          # ethanol
+    (['O', 'OCC(O)CO'],   [0.5, 0.4, 0.1]),          # glycerol
+    (['O', 'CC(=O)O'],    [0.6, 0.3, 0.1]),          # acetic acid
+    (['O', 'OCC(O)CO'],   [0.2, 0.7, 0.1]),          # organic-rich
+    (['O', 'CCO', 'CC(=O)O'], [0.4, 0.3, 0.2, 0.1]),  # two organics
+])
+def test_converges_with_organics(smiles, wtf):
+    # The bisulfate solve is a bracketed bisection (not a fixed-point iteration),
+    # so organic interactions shift the result but cannot cause it to oscillate or
+    # fail to converge: the equilibrium residual must still hit ~0.
+    s = AIOMFAC([_component_from_smiles(x) for x in smiles], salts=['H2SO4'])
+    iH, iS, iB = s._idx_H, s._idx_SO4, s._idx_HSO4
+    c2 = s._solve_bisulfate(s._composition(wtf), 298.15)
+    mH, mS, mB = c2['SMC'][iH], c2['SMA'][iS], c2['SMA'][iB]
+    assert mH > 0 and mS > 0 and mB > 0
+    _, lc, la = s._ln_gamma_all(c2, 298.15)
+    resid = (lc[iH] + la[iS] - la[iB]) + np.log(mH * mS / mB) \
+        - _lnK_bisulfate(298.15)
+    assert abs(resid) < 1e-6
+
+
 # ---- physical dilution trend ----------------------------------------------
 
 def test_dissociation_increases_on_dilution():

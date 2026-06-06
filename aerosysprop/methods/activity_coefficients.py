@@ -1008,8 +1008,12 @@ class AIOMFAC:
         # is bracketed. Bisection (no scipy dependency).
         lo, hi = xmax * 1e-12, xmax * (1.0 - 1e-12)
         flo, fhi = diffK(lo), diffK(hi)
-        if flo * fhi > 0.0:
-            return comp                          # non-physical edge: keep reference
+        if not (np.isfinite(flo) and np.isfinite(fhi)) or flo * fhi > 0.0:
+            # No bracketed sign change (or non-finite activity coefficients from a
+            # degenerate composition) -> keep the fully-dissociated reference
+            # rather than risk a meaningless root. Bisection below is otherwise
+            # unconditionally convergent.
+            return comp
         for _ in range(80):
             mid = 0.5 * (lo + hi)
             fm = diffK(mid)
