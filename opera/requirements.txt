@@ -1,0 +1,6 @@
+# Dependencies for the OPERA HTTP wrapper (opera/server.py).
+# OPERA itself + MATLAB Runtime are installed in the Dockerfile, not via pip.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pandas>=2.0
+pydantic>=2.0

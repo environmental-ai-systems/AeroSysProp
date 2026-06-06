@@ -672,10 +672,20 @@ docker compose start app           # start it again later
 it along with the compose network, leaving only the built image cached for next
 time. To reclaim that image too: `docker image rm aerosysprop-app:latest`.
 
-See [`aerosysprop/Docker/README.md`](aerosysprop/Docker/README.md) for details,
-including the planned **OPERA** integration, which runs as a *separate* container
-networked to the app (so the app stays native while OPERA runs as its x86_64
-image).
+See [`aerosysprop/Docker/README.md`](aerosysprop/Docker/README.md) for details.
+
+### Optional external tools (OPERA)
+
+Third-party predictive tools such as [OPERA](https://github.com/NIEHS/OPERA) are
+**optional, externally-managed** integrations — AeroSysProp never requires them.
+OPERA runs as a *separate* container (or wherever you already have it installed),
+networked to the app, so the app stays native while OPERA runs as its x86_64
+image. If you already have OPERA you don't need our container at all; if you don't,
+the `--profile opera` container builds it (MATLAB Runtime bundled) and, on Apple
+Silicon, Docker + Rosetta handle the x86 emulation automatically. The full
+decision tree (already-installed vs. containerised, and the Rosetta story) is in
+[`opera/EXTERNAL_TOOLS.md`](opera/EXTERNAL_TOOLS.md); service setup is in
+[`opera/README.md`](opera/README.md).
 
 ---
 

@@ -1,0 +1,9 @@
+# OPERA installers are large (~2 GB) and distributed by NIEHS under their own
+# terms — do NOT commit them to this repo. Drop the downloaded release here:
+#
+#   OPERA2.9_CL_mcr.tar.xz   (Linux command-line build, bundles MATLAB Runtime v912)
+#   from https://github.com/NIEHS/OPERA/releases
+#
+# The Dockerfile picks it up from this folder at build time.
+*
+!.gitignore

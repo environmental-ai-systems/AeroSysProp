@@ -25,6 +25,7 @@ Service status values
 ``'coming_soon'``
     Placeholder — shown in the UI but not yet functional.
 """
+import os
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
@@ -40,9 +41,23 @@ class ExternalService:
     export_filename: str = ''          # suggested download filename
     export_format_note: str = ''       # shown to user above the download button
     install_notes: str = ''            # shown when status == 'file_export'
+    # Optional HTTP service (e.g. an OPERA container exposing /predict). When
+    # ``service_url_env`` is set the UI offers a "Run via service" panel that
+    # POSTs SMILES to ``<url>/predict``. The URL is read from the named
+    # environment variable, falling back to ``default_service_url`` — so the
+    # same code works whether the app runs natively (localhost) or in a
+    # container on the compose network (service name).
+    service_url_env: str = ''
+    default_service_url: str = ''
     # Filled in once the CLI interface has been verified against a real install:
     # subprocess_cmd: Optional[Callable[[str, str], List[str]]] = None
     # Arguments: (input_smi_path, output_dir) -> argv list
+
+    def service_url(self) -> str:
+        """Resolved base URL of the backing HTTP service, or '' if none."""
+        if not self.service_url_env:
+            return ''
+        return os.environ.get(self.service_url_env, self.default_service_url)
 
 
 REGISTRY: List[ExternalService] = [
@@ -62,6 +77,12 @@ REGISTRY: List[ExternalService] = [
         ),
         homepage='https://github.com/NIEHS/OPERA',
         status='file_export',
+        # Optional OPERA HTTP service (opera/ container). When it is running,
+        # the External Services page can POST SMILES and show results inline.
+        # Native app -> localhost; containerised app -> the `opera` compose
+        # service (overridden via the OPERA_URL env var in docker-compose.yml).
+        service_url_env='OPERA_URL',
+        default_service_url='http://localhost:8601',
         export_filename='aerosysprop_for_opera.smi',
         export_format_note=(
             'OPERA accepts a plain SMILES file — one compound per line, '
