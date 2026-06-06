@@ -356,13 +356,15 @@ by AIOMFAC convention, is normally the first component.
 **Salts.** On the mixture page, inorganic salts are chosen from the
 AIOMFAC catalog (NaCl, (NH₄)₂SO₄, NH₄NO₃, …). They dissociate into ions;
 activity coefficients are returned per ion plus a mean ionic value per
-salt. Sulfuric acid / bisulfate systems are not yet supported (flagged by
-the `BISULFATE_NEEDED` diagnostic).
+salt. Sulfuric acid is handled too: the bisulfate equilibrium
+(HSO₄⁻ ⇌ H⁺ + SO₄²⁻) is solved by default, so H₂SO₄ systems report
+per-ion results including HSO₄⁻ (the `BISULFATE_NEEDED` diagnostic notes
+this; pass `bisulfate=False` to force full dissociation).
 
 **Reproducibility.** Activity-coefficient outputs are validated against
 the public Fortran AIOMFAC reference to ~5 × 10⁻⁵ relative error across
 thousands of mixtures. Where the Python port deviates (e.g. unsupported
-subgroups, bisulfate), the diagnostics tell you.
+subgroups, or cross-cation triple-ion terms), the diagnostics tell you.
 
 **Methods documentation.** Details of the individual prediction methods
 (Nannoolal, SIMPOL, EVAPORATION, AIOMFAC SR / MR / LR, …) — their

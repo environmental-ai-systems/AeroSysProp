@@ -79,8 +79,8 @@ MIXTURE_METHODS: List[MixtureMethod] = [
             '`EXTENSION_SUBGROUP` — an aerosysprop-only subgroup (281–285) '
             'that the reference Fortran AIOMFAC drops.',
             '`BISULFATE_NEEDED` — H₂SO₄ present; the bisulfate equilibrium '
-            '(HSO₄⁻ ⇌ H⁺ + SO₄²⁻) is not yet modelled, so results will '
-            'differ from the reference.',
+            '(HSO₄⁻ ⇌ H⁺ + SO₄²⁻) is solved by default, so results include '
+            'HSO₄⁻ (pass `bisulfate=False` to force full dissociation).',
             '`HIGH_CONCENTRATION` — a salt above ~30 % mass fraction, outside '
             'the well-fitted range.',
         ],

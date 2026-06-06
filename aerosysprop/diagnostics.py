@@ -531,10 +531,11 @@ def diagnose_aiomfac(smiles, salts, mass_fractions, T_K=None):
     if has_H2SO4:
         report.add(
             'warning', BISULFATE_NEEDED,
-            'H2SO4 in mixture — Fortran AIOMFAC solves the bisulfate '
-            'equilibrium HSO4- <-> H+ + SO4-- iteratively; the Python port '
-            'treats H2SO4 as fully dissociated to 2 H+ + SO4--, so gammas '
-            'will not match Fortran.',
+            'H2SO4 in mixture — the bisulfate equilibrium HSO4- <-> H+ + SO4-- '
+            'is solved by default, so per-ion results now include HSO4- (pass '
+            'bisulfate=False to force full dissociation to 2 H+ + SO4--). Note: '
+            'if a second cation is also present, cross-cation triple-ion (Qcca) '
+            'terms still differ from Fortran (see QCCA_NEEDED).',
         )
     if has_NH4 and has_H:
         report.add(

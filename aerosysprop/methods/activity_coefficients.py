@@ -319,9 +319,10 @@ import functools
 
 
 @functools.lru_cache(maxsize=128)
-def _cached_aiomfac_system(smiles_tuple, salts_tuple):
+def _cached_aiomfac_system(smiles_tuple, salts_tuple, dissociate_bisulfate=True):
     neutrals = [_component_from_smiles(s) for s in smiles_tuple]
-    return AIOMFAC(neutrals, salts=list(salts_tuple) if salts_tuple else None)
+    return AIOMFAC(neutrals, salts=list(salts_tuple) if salts_tuple else None,
+                   dissociate_bisulfate=dissociate_bisulfate)
 
 
 @functools.lru_cache(maxsize=128)
@@ -488,6 +489,39 @@ def _component_molar_mass(subgroups):
     return sum(count * data.AIOMFAC_MASS[sg] for sg, count in subgroups.items())
 
 
+# ---------------------------------------------------------------------------
+# Bisulfate dissociation equilibrium  HSO4- <-> H+ + SO4--
+# ---------------------------------------------------------------------------
+# Temperature-dependent dissociation constant K_HSO4(T) from the Knopf et al.
+# (2003) parameterization, exactly as in Fortran AIOMFAC
+# (SubModDissociationEquil.f90). Valid ~179-474 K.
+_BS_T0    = 298.15
+_BS_DH0   = -1.8554748598e4
+_BS_CP0   = -2.05594443486e2
+_BS_DCPDT = -9.94992864240e-1
+_BS_FE1   = 1.0 / 8.314472
+_BS_FE2   = _BS_DH0 - _BS_CP0 * _BS_T0 + 0.5 * _BS_DCPDT * _BS_T0 * _BS_T0
+_BS_FE3   = 1.0 / _BS_T0
+_BS_FE4   = _BS_CP0 - _BS_DCPDT * _BS_T0
+# AIOMFAC ion ids involved in the equilibrium.
+_ION_H, _ION_HSO4, _ION_SO4 = 205, 248, 261
+
+
+def _lnK_bisulfate(T_K):
+    """``ln`` of the HSO4- <-> H+ + SO4-- dissociation constant at ``T_K``
+    (Knopf et al. 2003; matches Fortran AIOMFAC). Clamped to the valid T range.
+    At 298.15 K this returns -4.54916799587 (K ~= 0.01057)."""
+    T = min(max(float(T_K), 180.0), 473.0)
+    return (
+        -4.54916799587
+        - _BS_FE1 * (
+            _BS_FE2 * (1.0 / T - _BS_FE3)
+            - _BS_FE4 * np.log(T / _BS_T0)
+            - 0.5 * _BS_DCPDT * (T - _BS_T0)
+        )
+    )
+
+
 class AIOMFAC:
     """Full AIOMFAC activity-coefficient calculation: SR + MR + LR.
 
@@ -518,7 +552,7 @@ class AIOMFAC:
     array([...])
     """
 
-    def __init__(self, neutral_components, salts=None):
+    def __init__(self, neutral_components, salts=None, dissociate_bisulfate=True):
         self.neutral_components = [dict(c) for c in neutral_components]
         self.n_neutral = len(self.neutral_components)
         self.salt_names = list(salts) if salts else []
@@ -542,6 +576,24 @@ class AIOMFAC:
         self.n_anion  = len(self.anion_ids)
         self._cation_idx = {cid: i for i, cid in enumerate(self.cation_ids)}
         self._anion_idx  = {aid: i for i, aid in enumerate(self.anion_ids)}
+
+        # Bisulfate equilibrium: when H+ (205) and SO4-- (261) coexist, the model
+        # must also carry HSO4- (248) so the equilibrium HSO4- <-> H+ + SO4-- can
+        # be solved (HSO4- is already fully parameterized in the ion data). Add it
+        # to the anion set; the per-trial molality split is solved in gamma().
+        self.dissociate_bisulfate = bool(
+            dissociate_bisulfate
+            and _ION_H in self._cation_idx
+            and _ION_SO4 in self._anion_idx
+        )
+        if self.dissociate_bisulfate and _ION_HSO4 not in self._anion_idx:
+            self.anion_ids.append(_ION_HSO4)
+            self._anion_idx[_ION_HSO4] = len(self.anion_ids) - 1
+            self.n_anion = len(self.anion_ids)
+        if self.dissociate_bisulfate:
+            self._idx_H    = self._cation_idx[_ION_H]
+            self._idx_HSO4 = self._anion_idx[_ION_HSO4]
+            self._idx_SO4  = self._anion_idx[_ION_SO4]
 
         # Charges and absolute charges, per cation/anion index
         self.ZC = np.array(
@@ -887,6 +939,94 @@ class AIOMFAC:
 
         return gnmrln, gcmrln, gamrln
 
+    # ---- combined contributions & bisulfate equilibrium ---------------------
+    def _ln_gamma_all(self, comp, T_K):
+        """Combined SR+LR+MR ln activity coefficients for ``comp``: returns
+        (neutral [mole-fraction basis], cation, anion [both molality basis])."""
+        ln_gamma_SR = self.sr.ln_gamma(comp['X_sr'], T_K)
+        gn_sr = ln_gamma_SR[: self.n_neutral]
+        gc_sr = ln_gamma_SR[self.n_neutral : self.n_neutral + self.n_cation]
+        ga_sr = ln_gamma_SR[self.n_neutral + self.n_cation :]
+        gn_lr, gc_lr, ga_lr = self._ln_gamma_LR(T_K, comp['SI'])
+        gn_mr, gc_mr, ga_mr = self._ln_gamma_MR(comp)
+        ln_gamma_neutral = gn_sr + gn_lr + gn_mr
+        # Ions: subtract Tmolal to convert mole-fraction basis -> molality.
+        Tmolal = np.log(
+            _M_WATER / comp['meanSolventMW']
+            + _M_WATER * comp['SumIonMolalities']
+        )
+        ln_gamma_cation = gc_sr + gc_lr + gc_mr - Tmolal
+        ln_gamma_anion  = ga_sr + ga_lr + ga_mr - Tmolal
+        return ln_gamma_neutral, ln_gamma_cation, ln_gamma_anion
+
+    def _update_ionic(self, comp, SMC, SMA):
+        """Return a composition dict with new ion molalities and the derived
+        ionic-strength / SR mole-fraction quantities recomputed (the neutral-only
+        quantities are unchanged by the bisulfate split)."""
+        c2 = dict(comp)
+        c2['SMC'] = SMC
+        c2['SMA'] = SMA
+        c2['SI'] = 0.5 * (SMA * self.ZA ** 2).sum() + 0.5 * (SMC * self.ZC ** 2).sum()
+        c2['Z']  = (SMA * self.ZA).sum() + (SMC * self.ZC).sum()
+        c2['SumIonMolalities'] = SMC.sum() + SMA.sum()
+        sm = comp['mNeutral'].sum() + c2['SumIonMolalities']
+        c2['X_sr'] = np.concatenate([comp['mNeutral'], SMC, SMA]) / sm
+        return c2
+
+    def _solve_bisulfate(self, comp, T_K):
+        """Partition sulfate between SO4-- and HSO4- by solving the equilibrium
+        HSO4- <-> H+ + SO4-- self-consistently with the activity coefficients.
+
+        ``comp`` enters as the fully-dissociated reference (HSO4- molality 0).
+        Returns a new composition dict at the equilibrium ion molalities, found by
+        driving ``ln(m_H m_SO4 / m_HSO4) + (lnγ_H + lnγ_SO4 - lnγ_HSO4) = lnK``.
+        Conservation: m_H = H_tot - x, m_SO4 = SO4_tot - x, m_HSO4 = x.
+        """
+        iH, iHSO4, iSO4 = self._idx_H, self._idx_HSO4, self._idx_SO4
+        SMC0, SMA0 = comp['SMC'], comp['SMA']
+        H_tot   = SMC0[iH]   + SMA0[iHSO4]      # proton balance
+        SO4_tot = SMA0[iSO4] + SMA0[iHSO4]      # total sulfate
+        if H_tot <= 0.0 or SO4_tot <= 0.0:
+            return comp
+        lnK = _lnK_bisulfate(T_K)
+        xmax = min(H_tot, SO4_tot)
+
+        def diffK(x):
+            SMC = SMC0.copy()
+            SMA = SMA0.copy()
+            SMC[iH]    = H_tot - x
+            SMA[iSO4]  = SO4_tot - x
+            SMA[iHSO4] = x
+            _, lc, la = self._ln_gamma_all(self._update_ionic(comp, SMC, SMA), T_K)
+            return (
+                (lc[iH] + la[iSO4] - la[iHSO4])
+                + np.log((H_tot - x) * (SO4_tot - x) / x)
+                - lnK
+            )
+
+        # As x->0+ the log term -> +inf (f>0); as x->xmax- -> -inf (f<0): a root
+        # is bracketed. Bisection (no scipy dependency).
+        lo, hi = xmax * 1e-12, xmax * (1.0 - 1e-12)
+        flo, fhi = diffK(lo), diffK(hi)
+        if flo * fhi > 0.0:
+            return comp                          # non-physical edge: keep reference
+        for _ in range(80):
+            mid = 0.5 * (lo + hi)
+            fm = diffK(mid)
+            if fm == 0.0 or (hi - lo) <= xmax * 1e-13:
+                break
+            if (fm > 0.0) == (flo > 0.0):
+                lo, flo = mid, fm
+            else:
+                hi = mid
+        x = 0.5 * (lo + hi)
+        SMC = SMC0.copy()
+        SMA = SMA0.copy()
+        SMC[iH]    = H_tot - x
+        SMA[iSO4]  = SO4_tot - x
+        SMA[iHSO4] = x
+        return self._update_ionic(comp, SMC, SMA)
+
     # ---- public API ----------------------------------------------------------
     def gamma(self, mass_fractions, T_K):
         """Return activity coefficients for the configured system.
@@ -912,28 +1052,14 @@ class AIOMFAC:
         comp = self._composition(mass_fractions)
         T_K = float(T_K)
 
-        # SR for all species (neutrals + cations + anions)
-        ln_gamma_SR = self.sr.ln_gamma(comp['X_sr'], T_K)
-        gn_sr = ln_gamma_SR[: self.n_neutral]
-        gc_sr = ln_gamma_SR[self.n_neutral : self.n_neutral + self.n_cation]
-        ga_sr = ln_gamma_SR[self.n_neutral + self.n_cation :]
+        # Solve the bisulfate equilibrium (updating the ion molalities) before
+        # evaluating the final activity coefficients, when applicable.
+        if self.dissociate_bisulfate:
+            comp = self._solve_bisulfate(comp, T_K)
 
-        # LR (Debye-Hueckel)
-        gn_lr, gc_lr, ga_lr = self._ln_gamma_LR(T_K, comp['SI'])
-        # MR (org-ion + ion-ion binary; skipping triple-ion and ccc terms)
-        gn_mr, gc_mr, ga_mr = self._ln_gamma_MR(comp)
-
-        # Combine (Fortran ModCalcActCoeff.f90:168-176)
-        ln_gamma_neutral = gn_sr + gn_lr + gn_mr
-
-        # For ions: subtract Tmolal to convert mole-fraction-basis -> molality.
-        # Tmolal = log(M_water/meanSolventMW + M_water * SumIonMolalities)
-        Tmolal = np.log(
-            _M_WATER / comp['meanSolventMW']
-            + _M_WATER * comp['SumIonMolalities']
-        )
-        ln_gamma_cation = gc_sr + gc_lr + gc_mr - Tmolal
-        ln_gamma_anion  = ga_sr + ga_lr + ga_mr - Tmolal
+        # Combined SR + LR + MR (Fortran ModCalcActCoeff.f90:168-176).
+        ln_gamma_neutral, ln_gamma_cation, ln_gamma_anion = \
+            self._ln_gamma_all(comp, T_K)
 
         gamma_n = np.exp(ln_gamma_neutral)
         gamma_c = np.exp(ln_gamma_cation)
@@ -958,7 +1084,8 @@ class AIOMFAC:
         )
 
 
-def aiomfac_from_smiles(smiles, salts, mass_fractions, T_K, strict='warn'):
+def aiomfac_from_smiles(smiles, salts, mass_fractions, T_K, strict='warn',
+                        bisulfate=True):
     """Full AIOMFAC entry point taking SMILES + salt names + mass fractions.
 
     Wraps :class:`AIOMFAC` with SMILES-based neutral-component decomposition.
@@ -980,6 +1107,11 @@ def aiomfac_from_smiles(smiles, salts, mass_fractions, T_K, strict='warn'):
         ``warnings.warn`` for each issue and proceeds; ``'raise'`` raises
         ``ValueError`` if any issue is detected; ``'silent'`` skips the
         pre-flight check. See :mod:`aerosysprop.diagnostics`.
+    bisulfate : bool, default True
+        When True and both H+ and SO4-- are present (e.g. H2SO4), solve the
+        bisulfate dissociation equilibrium HSO4- <-> H+ + SO4-- so the results
+        include HSO4- with its equilibrium molality (matching Fortran AIOMFAC's
+        treatment). Set False to force full dissociation to 2 H+ + SO4--.
 
     Returns
     -------
@@ -991,7 +1123,8 @@ def aiomfac_from_smiles(smiles, salts, mass_fractions, T_K, strict='warn'):
         from aerosysprop.diagnostics import diagnose_aiomfac, apply_strict
         report = diagnose_aiomfac(smiles, salts, mass_fractions, T_K)
         apply_strict(report, strict)
-    system = _cached_aiomfac_system(tuple(smiles), tuple(salts) if salts else ())
+    system = _cached_aiomfac_system(tuple(smiles), tuple(salts) if salts else (),
+                                    bool(bisulfate))
     result = system.gamma(mass_fractions, T_K)
     # Attach the pre-flight diagnostic report so users can introspect issues
     # alongside the numeric outputs (e.g. ``result.diagnostics.warnings``).
