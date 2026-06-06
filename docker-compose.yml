@@ -1,0 +1,52 @@
+# AeroSysProp — container orchestration
+# =====================================
+# Phase 1 (now): run the app on its own.
+#
+#     docker compose up --build app          # -> http://localhost:8501
+#     docker compose down                    # stop and remove
+#
+# Phase 2 (later): add an OPERA prediction service in its OWN container. The app
+# and OPERA stay separate images and talk over this compose network — either by
+# a shared file drop-box (the ./.docker-exchange volume below) or by a thin HTTP
+# wrapper around the OPERA command line. Because they communicate over the
+# network/volume, the app can stay native (arm64/amd64) while OPERA runs as the
+# x86_64 image it requires. A commented stub is sketched at the bottom so the
+# wiring is obvious when we get there.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: aerosysprop/Docker/Dockerfile
+    image: aerosysprop-app:latest
+    container_name: aerosysprop-app
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+    # Optional: a shared drop-box for exchanging .smi inputs / prediction CSVs
+    # with the OPERA service in phase 2. Uncomment together with the `opera`
+    # service below.
+    # volumes:
+    #   - ./.docker-exchange:/exchange
+
+  # ---------------------------------------------------------------------------
+  # OPERA prediction service — PLACEHOLDER, not built yet.
+  #
+  # OPERA ships as an x86_64 MATLAB-Runtime command-line tool, so this service
+  # is pinned to linux/amd64 and will run under emulation on Apple Silicon.
+  # Before fleshing this out we need to confirm an OPERA Linux build actually
+  # runs on this machine (see aerosysprop/Docker/README.md, "Phase 2").
+  #
+  # opera:
+  #   build:
+  #     context: ./opera          # a future ./opera/Dockerfile (MATLAB Runtime + OPERA CL)
+  #     dockerfile: Dockerfile
+  #   image: aerosysprop-opera:latest
+  #   platform: linux/amd64       # OPERA is x86_64 only -> emulated on Apple Silicon
+  #   container_name: aerosysprop-opera
+  #   volumes:
+  #     - ./.docker-exchange:/exchange   # app drops input.smi here; OPERA writes results here
+  #   # If wrapped as a small HTTP service instead of file-drop:
+  #   # ports:
+  #   #   - "8601:8601"
+  #   restart: unless-stopped

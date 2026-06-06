@@ -1,0 +1,33 @@
+# Build context trimming for the app image.
+# Keep this in sync with what the running app actually needs: the aerosysprop
+# package (incl. assets/, data/, methods/ package-data) and pyproject.toml.
+
+# Version control / project docs (not needed at runtime)
+.git
+.gitignore
+/README.md
+/LICENSE
+
+# Python caches and build artefacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Tests and their large reference fixtures (not used by the app)
+/tests/
+aerosysprop/tests/
+
+# Local session databases and OS/editor cruft
+*.db
+.DS_Store
+.vscode/
+.idea/
+
+# Docker bookkeeping / runtime exchange dirs
+.docker-exchange/
+.docker-data/

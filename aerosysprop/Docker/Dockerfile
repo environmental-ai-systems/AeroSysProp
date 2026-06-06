@@ -1,50 +1,66 @@
-# Use the official Ubuntu base image
-FROM ubuntu:latest
+# syntax=docker/dockerfile:1
+#
+# AeroSysProp — Streamlit application image
+# =========================================
+# A small, self-contained image that runs the AeroSysProp web UI (single
+# component properties + AIOMFAC mixture activity coefficients).
+#
+# All runtime dependencies (rdkit, numpy, pandas, streamlit, tqdm) install
+# cleanly from PyPI wheels, so there is no need for conda or a GitHub clone —
+# the build copies the local source tree straight in.
+#
+# Build context is the REPOSITORY ROOT (see docker-compose.yml), so the COPY
+# paths below are relative to the repo root, not to this Docker/ folder.
+#
+#   # from the repo root:
+#   docker compose up --build app          # -> http://localhost:8501
+#   # or without compose:
+#   docker build -f aerosysprop/Docker/Dockerfile -t aerosysprop-app .
+#   docker run --rm -p 8501:8501 aerosysprop-app
+#
+# Note on architecture: this image builds natively for your host (arm64 on
+# Apple Silicon, amd64 on Intel). The future OPERA service is x86_64-only and
+# lives in its own container — the two talk over the docker-compose network, so
+# they do NOT need to share a CPU architecture.
 
-# Set the maintainer label
+FROM python:3.12-slim
+
 LABEL maintainer="david.topping@manchester.ac.uk"
+LABEL org.opencontainers.image.title="AeroSysProp app"
+LABEL org.opencontainers.image.description="Streamlit UI for AeroSysProp single-component properties and AIOMFAC mixture activity coefficients"
+LABEL org.opencontainers.image.source="https://github.com/loftytopping/AeroSysProp"
 
-# Update the package list and install required packages
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    bzip2 \
+# RDKit's manylinux wheels dlopen a couple of X11 shared libraries at import
+# time even for headless use; install just those.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libxrender1 \
+        libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install Miniconda (smaller, sufficient for conda envs)
-RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o miniconda.sh \
-    && bash miniconda.sh -b -p /opt/conda \
-    && rm miniconda.sh
+# Streamlit is a long-lived server: keep Python output unbuffered and run it
+# headless on all interfaces inside the container.
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    STREAMLIT_SERVER_HEADLESS=true \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
+    STREAMLIT_SERVER_PORT=8501 \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 
-# Set the PATH environment variable to include the conda installation
-ENV PATH=/opt/conda/bin:$PATH
+WORKDIR /app
 
-# add the repo host to know_hosts, only run once
-RUN mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+# Copy the packaging metadata and the package itself, then install. Runtime
+# dependencies are declared in pyproject.toml's [project.dependencies], so a
+# plain `pip install .` pulls everything needed.
+COPY pyproject.toml ./
+COPY aerosysprop ./aerosysprop
+RUN pip install .
 
-# Clone the GitHub repository
-RUN --mount=type=ssh,id=github \ 
-git clone git@github.com:loftytopping/AeroSysProp.git /opt/AeroSysProp
+EXPOSE 8501
 
-# Set the working directory
-WORKDIR /opt/AeroSysProp
+# Streamlit exposes a readiness endpoint; use it for the container healthcheck.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
+    CMD python -c "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=3).read()==b'ok' else 1)"
 
-# Create the conda environment from the environment file
-RUN conda env create -f /opt/AeroSysProp/environment.yml
-
-# Activate the conda environment and ensure it's available in the Docker container
-RUN echo "conda activate $(head -1 /opt/AeroSysProp/environment.yml | cut -d ' ' -f 2)" >> ~/.bashrc \
-    && /opt/conda/bin/conda init bash
-
-# docker build --ssh github=~/.ssh/id_rsa_github -t your-image-name .
-
-# (Optional) Run any setup scripts or commands required by your repository
-# RUN ./setup.sh
-
-# Expose any ports your application needs
-# EXPOSE 8080
-
-# Define the default command to run your application
-CMD ["bash"]
-
-
+# The entry script bootstraps sys.path, so running it directly works whether or
+# not the package is installed.
+CMD ["streamlit", "run", "aerosysprop/app.py"]

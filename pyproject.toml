@@ -6,6 +6,16 @@ build-backend = "setuptools.build_meta"
 name = "aerosysprop"
 version = "0.1.0"
 requires-python = ">=3.9"
+dependencies = [
+    "rdkit",
+    "numpy",
+    "pandas",
+    "streamlit",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
 
 [tool.setuptools.packages.find]
 where = ["."]

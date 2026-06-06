@@ -425,13 +425,34 @@ python aerosysprop/tests/generate_fixtures.py
 
 ## Web interface
 
-AeroSysProp ships a [Streamlit](https://streamlit.io/) multipage app.
-Launch it with:
+AeroSysProp ships a [Streamlit](https://streamlit.io/) multipage app. There are
+two ways to run it — pick whichever suits you:
+
+**A. Your own Python environment** (primary path)
+
+Using the conda environment:
 
 ```bash
 conda activate AeroSysProp
 streamlit run aerosysprop/app.py
 ```
+
+…or any plain virtual environment — the runtime dependencies are declared in
+`pyproject.toml`, so an editable install pulls them in:
+
+```bash
+pip install -e .
+streamlit run aerosysprop/app.py
+```
+
+**B. Docker** (optional, one command)
+
+```bash
+docker compose up --build app      # → http://localhost:8501
+```
+
+See the [Docker](#docker) section for details. Either way the app opens at
+<http://localhost:8501>.
 
 The sidebar navigates between three workflows, reflecting the fact that
 single-component and mixture predictions have fundamentally different
@@ -620,22 +641,41 @@ for the full diagnostic and fingerprint API.
 
 ## Docker
 
-A Dockerfile is provided for containerised use:
+Docker is an **optional** way to run the web app — running it in your own Python
+environment (see [Web interface](#web-interface)) is fully supported and remains
+the primary path. Use Docker when you want a one-command, dependency-free launch.
+
+This builds a small, self-contained image (Python + RDKit + Streamlit installed
+from PyPI wheels — no conda, no GitHub clone) and serves the app on port 8501.
+The image builds natively for your machine (`arm64` on Apple Silicon, `amd64` on
+Intel).
+
+**Start** (from the repository root):
 
 ```bash
-# Build (requires SSH access to the GitHub repo during the build)
-docker build --ssh github=~/.ssh/id_rsa_github -t aerosysprop aerosysprop/Docker/
-
-# Run interactively
-docker run -it aerosysprop bash
+docker compose up --build app      # build + run in the foreground; Ctrl-C to stop
+# or run it in the background:
+docker compose up -d --build app   # → http://localhost:8501
+docker compose logs -f app         # follow the logs of a background container
 ```
 
-Inside the container, activate the environment and use the library as normal:
+**Stop / close** the app:
 
 ```bash
-conda activate AeroSysProp
-python -c "from aerosysprop.methods import boiling_points; print('ready')"
+docker compose down                # stop AND remove the container + network
+# or, to stop without removing (keeps it for a quick restart):
+docker compose stop app
+docker compose start app           # start it again later
 ```
+
+`docker compose down` is the clean shutdown — it stops the container and removes
+it along with the compose network, leaving only the built image cached for next
+time. To reclaim that image too: `docker image rm aerosysprop-app:latest`.
+
+See [`aerosysprop/Docker/README.md`](aerosysprop/Docker/README.md) for details,
+including the planned **OPERA** integration, which runs as a *separate* container
+networked to the app (so the app stays native while OPERA runs as its x86_64
+image).
 
 ---
 
