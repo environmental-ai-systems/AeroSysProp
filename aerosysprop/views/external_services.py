@@ -183,6 +183,27 @@ else:
                             'down` (or `docker compose stop opera`).'
                         )
 
+                    # Optional endpoint subset — fewer models = faster big runs.
+                    selected_codes = []
+                    if run_ready and service.endpoint_options:
+                        _label_to_code = {lbl: code for lbl, code, _ in
+                                          service.endpoint_options}
+                        _picked = st.multiselect(
+                            'Endpoints to predict (leave empty = all)',
+                            options=[lbl for lbl, _, _ in service.endpoint_options],
+                            key=f'eps_{service.id}',
+                            help='Pick a subset to speed up large runs — OPERA '
+                                 'loads fewer models. Empty = all endpoints.',
+                        )
+                        selected_codes = [_label_to_code[l] for l in _picked]
+                        if selected_codes:
+                            st.caption('Will request `-e '
+                                       + ' '.join(selected_codes) + '`')
+                        with st.expander('ⓘ What these endpoints mean'):
+                            st.markdown('\n'.join(
+                                f'- **{lbl}** — {desc}'
+                                for lbl, _, desc in service.endpoint_options))
+
                     # --- Run as an asynchronous job with live progress ---
                     # Large inputs can take many minutes in OPERA, so we submit a
                     # background job and poll it rather than holding one long
@@ -196,12 +217,12 @@ else:
                                  use_container_width=True):
                         names = [name for name, _ in mols]
                         smis = [Chem.MolToSmiles(mol) for _, mol in mols]
+                        body = {'smiles': smis, 'names': names}
+                        if selected_codes:
+                            body['endpoints'] = selected_codes
                         try:
-                            r = requests.post(
-                                f'{svc_url}/jobs',
-                                json={'smiles': smis, 'names': names},
-                                timeout=10,
-                            )
+                            r = requests.post(f'{svc_url}/jobs', json=body,
+                                              timeout=10)
                             r.raise_for_status()
                             st.session_state[job_key] = r.json()['id']
                             st.rerun()

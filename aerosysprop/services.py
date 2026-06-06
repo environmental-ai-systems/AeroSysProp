@@ -49,6 +49,11 @@ class ExternalService:
     # container on the compose network (service name).
     service_url_env: str = ''
     default_service_url: str = ''
+    # Optional endpoint catalogue for services that can compute a subset of
+    # outputs. Each item is ``(label, code, description)``; ``code`` is passed
+    # through to the service (for OPERA, mapped to its ``-e`` flag). Empty
+    # selection => all.
+    endpoint_options: List[tuple] = field(default_factory=list)
     # Filled in once the CLI interface has been verified against a real install:
     # subprocess_cmd: Optional[Callable[[str, str], List[str]]] = None
     # Arguments: (input_smi_path, output_dir) -> argv list
@@ -58,6 +63,33 @@ class ExternalService:
         if not self.service_url_env:
             return ''
         return os.environ.get(self.service_url_env, self.default_service_url)
+
+
+# OPERA endpoint catalogue: ``(label, OPERA -e code, one-line description)``.
+# Codes are case-insensitive (see OPERA's help.txt). Selecting a subset speeds up
+# large runs because OPERA loads fewer models. Individual endpoints first, then
+# convenience groups.
+_OPERA_ENDPOINTS = [
+    ('Boiling point (BP)', 'BP', 'Normal boiling point (°C).'),
+    ('Melting point (MP)', 'MP', 'Melting point (°C).'),
+    ('Vapour pressure (logVP)', 'VP', 'log₁₀ vapour pressure (log mmHg, 25 °C).'),
+    ('Water solubility (logWS)', 'WS', 'log₁₀ water solubility (log mol/L, 25 °C).'),
+    ("Henry's law (logHL)", 'HL', "log₁₀ Henry's law constant (log atm·m³/mol)."),
+    ('Octanol–water (LogP)', 'logP', 'Octanol–water partition coefficient (log).'),
+    ('LogD (pH 5.5/7.4)', 'logD', 'Octanol–water distribution coeff. at pH 5.5 and 7.4.'),
+    ('pKa', 'pKa', 'Strongest acidic / basic dissociation constants.'),
+    ('Octanol–air (LogKOA)', 'KOA', 'Octanol–air partition coefficient (log).'),
+    ('Atmospheric OH rate (logOH)', 'AOH', 'OH-radical reaction rate (log cm³/molecule·s).'),
+    ('Bioconcentration (logBCF)', 'BCF', 'Fish bioconcentration factor (log L/kg).'),
+    ('Soil adsorption (logKoc)', 'Koc', 'Organic-carbon adsorption coefficient (log L/kg).'),
+    ('Biodegradation half-life', 'BioDeg', 'Biotransformation half-life (log days).'),
+    ('Ready biodegradability', 'RB', 'Ready-biodegradability class (yes/no).'),
+    ('HPLC retention time (RT)', 'RT', 'Reversed-phase HPLC retention time (min).'),
+    ('▸ Group: all physicochemical', 'PC', 'Every physicochemical endpoint above in one pass.'),
+    ('▸ Group: all environmental fate', 'EF', 'AOH, BCF, biodegradation, Koc and KM together.'),
+    ('▸ Group: all toxicity', 'Tox', 'Estrogen/androgen receptor (CERAPP/CoMPARA) + acute oral toxicity (CATMoS).'),
+    ('▸ Group: all ADME', 'ADME', 'Fraction unbound, intrinsic clearance and Caco-2 permeability.'),
+]
 
 
 REGISTRY: List[ExternalService] = [
@@ -83,6 +115,7 @@ REGISTRY: List[ExternalService] = [
         # service (overridden via the OPERA_URL env var in docker-compose.yml).
         service_url_env='OPERA_URL',
         default_service_url='http://localhost:8601',
+        endpoint_options=_OPERA_ENDPOINTS,
         export_filename='aerosysprop_for_opera.smi',
         export_format_note=(
             'OPERA accepts a plain SMILES file — one compound per line, '
