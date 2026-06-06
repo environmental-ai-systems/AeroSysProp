@@ -97,6 +97,18 @@ else:
                 with st.expander('Installation and usage instructions'):
                     st.markdown(service.install_notes)
 
+                # Methodology / interpretation note for QSAR services.
+                if service.endpoint_options:
+                    st.info(
+                        f'{service.name} predictions are **QSAR-model estimates**. '
+                        f'Consult the [{service.name} documentation]'
+                        f'({service.homepage}) for the model methodologies, '
+                        'training data and references, and check each endpoint\'s '
+                        'applicability-domain (`AD`, `AD_index`) and confidence '
+                        '(`Conf_index`) columns before relying on a value.',
+                        icon='📚',
+                    )
+
                 # ---- Run via an HTTP service (e.g. the OPERA container) ----
                 svc_url = service.service_url()
                 if svc_url:

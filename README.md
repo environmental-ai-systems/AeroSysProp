@@ -684,8 +684,10 @@ image. If you already have OPERA you don't need our container at all; if you don
 the `--profile opera` container builds it (MATLAB Runtime bundled) and, on Apple
 Silicon, Docker + Rosetta handle the x86 emulation automatically. The full
 decision tree (already-installed vs. containerised, and the Rosetta story) is in
-[`opera/EXTERNAL_TOOLS.md`](opera/EXTERNAL_TOOLS.md); service setup is in
-[`opera/README.md`](opera/README.md).
+[`opera/EXTERNAL_TOOLS.md`](opera/EXTERNAL_TOOLS.md). Service setup, **calling the
+service from another Python application** (synchronous and asynchronous HTTP), the
+result-reliability columns (`AD` / `Conf_index`) and OPERA's methodology
+references are in [`opera/README.md`](opera/README.md).
 
 ---
 

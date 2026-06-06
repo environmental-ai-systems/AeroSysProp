@@ -37,6 +37,86 @@ a live progress bar and Cancel instead of one long request that would time out.
 Endpoint selection (`endpoints: ["logP","BP",...]`) maps to OPERA's `-e`; omit
 for all endpoints.
 
+## Understanding the output & methodology
+
+OPERA predictions are **QSAR-model estimates, not measurements**. For each
+endpoint the output carries reliability indicators you should check before using
+a value:
+
+- `*_pred` — the predicted value (units per endpoint; see the in-app endpoint
+  descriptions or OPERA's bundled `help.txt`).
+- `*_predRange` — a prediction interval.
+- `AD_*` — applicability-domain flag (`1` = inside the model's domain, `0` =
+  outside → treat with caution).
+- `AD_index_*` — continuous similarity-to-training-set measure (0–1).
+- `Conf_index_*` — accuracy/confidence estimate (0–1).
+
+For the model methodologies, training data, validation and intended use, consult
+the **OPERA documentation** and the primary references (also in `help.txt`):
+
+- Mansouri et al., *SAR & QSAR Env. Res.* (2016) — <https://doi.org/10.1080/1062936X.2016.1253611>
+- Mansouri et al., *J. Cheminform.* (2018) — <https://doi.org/10.1186/s13321-018-0263-1>
+- Mansouri et al., *J. Cheminform.* (2019) — <https://doi.org/10.1186/s13321-019-0384-1>
+- CATMoS acute toxicity, Mansouri et al., *EHP* (2021) — <https://doi.org/10.1289/EHP8495>
+- CompTox Chemistry Dashboard — <https://comptox.epa.gov/dashboard>
+- Project home — <https://github.com/NIEHS/OPERA>
+
+The app shows a short version of this note on the OPERA tab.
+
+## Calling OPERA from Python
+
+AeroSysProp's own property/AIOMFAC methods are a Python library (see the main
+README's *Quick start*). The **external services are reached over HTTP**, so any
+language can call them. Point at the running service — native app:
+`http://localhost:8601`; inside the compose network: `http://opera:8601`; or a
+remote host you manage.
+
+Synchronous (small batches):
+
+```python
+import requests
+BASE = "http://localhost:8601"
+r = requests.post(f"{BASE}/predict", timeout=600, json={
+    "smiles": ["CCO", "CC(=O)O"],
+    "names":  ["ethanol", "acetic_acid"],
+    # "endpoints": ["BP", "VP", "logP", "WS"],   # optional subset (-> OPERA -e)
+})
+r.raise_for_status()
+data = r.json()                        # {"n", "columns", "records"}
+print(data["records"][0]["BP_pred"])   # -> 78
+```
+
+Asynchronous (recommended for large inputs — won't time out):
+
+```python
+import time, requests
+BASE = "http://localhost:8601"
+
+jid = requests.post(f"{BASE}/jobs", timeout=30,
+                    json={"smiles": smiles_list, "names": names}).json()["id"]
+
+while True:
+    s = requests.get(f"{BASE}/jobs/{jid}",
+                     params={"results": "false"}, timeout=30).json()
+    print(s["status"], s["n_done"], "/", s["n_total"], "-", s.get("message"))
+    if s["status"] in ("done", "error", "cancelled"):
+        break
+    time.sleep(5)
+
+if s["status"] == "done":
+    import pandas as pd
+    full = requests.get(f"{BASE}/jobs/{jid}", timeout=120).json()
+    df = pd.DataFrame(full["records"])
+    print(df[["MoleculeID", "BP_pred", "LogVP_pred"]])
+
+# requests.delete(f"{BASE}/jobs/{jid}")   # cancel a running job
+```
+
+Notes: add `"format": "csv"` to a `/predict` body to get CSV text (`r.text`)
+instead of JSON. A `503` means OPERA isn't installed in the service — check
+`/health` (`opera_available`). The same pattern works for any future HTTP
+service added to `aerosysprop/services.py`.
+
 ## Files
 
 | File | Purpose |
