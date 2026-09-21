@@ -9,6 +9,7 @@ dependencies:
   - tqdm
   - numpy
   - pandas
+  - pyyaml
   - streamlit
   - pip
   - pip:

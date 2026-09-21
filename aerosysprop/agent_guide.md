@@ -36,6 +36,10 @@ Results carry diagnostics per method. The important codes:
 * **Batch your calls.** One call with 50 SMILES is far better than 50 calls.
 * **Mixtures.** Water is `"O"`. With salts, give `mass_fractions` for the neutral components first, then the salts, in the same order as the `smiles` and `salts` lists. Neutral-component activity coefficients are on a mole-fraction basis; ion coefficients are on a molality basis.
 
+## Provenance
+
+Every result includes a `provenance` block. Each method has a label such as `vp_simpol@1 (3f9a1c2b7d40)`: the method ID, its parameter set version and a fingerprint of the parameter files. The method's card, summarised under `card` in `list_methods`, gives its publication status. When reporting values in anything a person may cite, include the provenance label, and say when a method is `published-with-modifications` or `in-house` rather than presenting it as the literature method. A `PARAMETERS_CHANGED` warning means the installed parameter files differ from the approved version.
+
 ## What this server will not do
 
 It cannot write files, save results or change a session database, and it can only read files inside the directory the user configured. If a user wants results saved, return them and let the user save them through the AeroSysProp app or their own code.

@@ -41,7 +41,7 @@ import numpy as np
 from rdkit import Chem, rdBase
 from rdkit.Chem import rdMolDescriptors
 
-from aerosysprop import __version__, batch, data, db
+from aerosysprop import __version__, batch, data, db, method_cards
 from aerosysprop import io as asp_io
 from aerosysprop.diagnostics import (
     DiagnosticReport,
@@ -289,10 +289,12 @@ def list_methods() -> dict:
                                  for d in m.deps),
             'uses_boiling_point_source': m.bp_dependent,
             'has_coverage_diagnostic': m.id in _DIAG_PATH,
+            'card': method_cards.summary(m.id),
         })
     mixture = [{
         'id': m.id, 'name': m.name, 'status': m.status, 'summary': m.summary,
         'when_to_use': m.when_to_use, 'diagnostic_notes': m.diagnostics_notes,
+        'card': method_cards.summary(m.id),
     } for m in MIXTURE_METHODS]
     return {
         'aerosysprop_version': __version__,
@@ -308,6 +310,10 @@ def list_methods() -> dict:
             'Methods that need a boiling point use the chosen boiling point '
             'source; results can differ substantially between sources.',
             'Temperatures are in kelvin.',
+            'Each method has a card giving its publication status '
+            '(published, published-with-modifications or in-house), references '
+            'and known deviations from the source paper. Results carry a '
+            'provenance label (method@parameter_set_version plus a fingerprint).',
         ],
     }
 
@@ -413,6 +419,13 @@ def _molecule_summary(mol) -> dict:
     }
 
 
+def _provenance(method_ids) -> tuple:
+    methods = {m: method_cards.provenance(m) for m in method_ids}
+    notes = [{'severity': 'warning', 'code': 'PARAMETERS_CHANGED', 'message':
+              f'{m}: {p["warning"]}'} for m, p in methods.items() if p.get('warning')]
+    return {'software': method_cards.software_provenance(), 'methods': methods}, notes
+
+
 def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
                        bp_sources=None, include_diagnostics=True) -> dict:
     """Predict single-component properties for one or more molecules.
@@ -475,6 +488,7 @@ def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
             if diag:
                 rec['diagnostics'] = diag
 
+    provenance, prov_notes = _provenance(resolved)
     return {
         'temperature_K': T,
         'boiling_point_sources': bp,
@@ -486,7 +500,8 @@ def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
             'invalid_smiles': sum(1 for r in records if 'error' in r),
             'with_diagnostic_warnings': sum(1 for r in records if r.get('diagnostics')),
         },
-        'warnings': notes,
+        'warnings': notes + prov_notes,
+        'provenance': provenance,
         'interpretation': (
             'Values are group-contribution estimates. Where a molecule lists '
             'diagnostics for a method, that method does not recognise some of '
@@ -608,7 +623,8 @@ def activity_coefficients(smiles, temperature_K=298.15, mole_fractions=None,
             'ions': 'molality basis, infinite dilution in water reference',
         },
         'diagnostics': _issues(report),
-        'warnings': notes,
+        'warnings': notes + _provenance(['aiomfac'])[1],
+        'provenance': _provenance(['aiomfac'])[0],
     }
 
 

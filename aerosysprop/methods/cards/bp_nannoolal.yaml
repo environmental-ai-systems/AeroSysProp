@@ -1,0 +1,53 @@
+# Method card: bp_nannoolal
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: bp_nannoolal
+name: Nannoolal et al. boiling point
+property: normal boiling point
+output_unit: K
+status: published-with-modifications
+model:
+  summary: First- and second-order group contributions plus group interaction terms.
+  references:
+  - citation: Nannoolal et al. (2004), Fluid Phase Equilib. 226, 45-63
+    doi: 10.1016/j.fluid.2004.09.001
+    role: source method
+    verified: false
+  - citation: Topping et al. (2016), UManSysProp v1.0, Geosci. Model Dev. 9, 899-914
+    doi: 10.5194/gmd-9-899-2016
+    role: implementation this code descends from
+    verified: false
+  inputs:
+  - SMILES
+parameter_set:
+  version: 1
+  files:
+    data/composition.smarts: 6c850360075e4f18c4d243c33f6c79241149138b6058ffa057f3eb9027069d04
+    data/nannoolal_primary.smarts: 61d64d0084ade3f6308bb82f0718be30ed7321eeba5a1141bde86d42f14140a1
+    data/nannoolal_secondary.smarts: f70193fab182ed49bc7e2e84229d637d3c4ee7428acca57b2a8fa0df10816d76
+    data/nannoolal_primary.data: 8dd89ac07db4d07cb2bd0d137b7cb5565086788ee6b54fd1477ecd20c6a04d97
+    data/nannoolal_secondary.data: 52a57899ba309b85aedf3c707f7d60fe664f573d0fdb9bd2b01dac15a670c856
+    data/nannoolal_bp_interactions.matrix: 9bd506bccd2347a161e4656b7488b7305060096c1cea78ea98a80580d4f48246
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- Groups for hydroperoxides (301) and peroxyacids (302) and PAN-related interaction terms (groups.py,
+  IDs 2001 to 2004) are additions for atmospheric compounds and are not in the original Nannoolal papers.
+  Origin to confirm (probably the UManSysProp extension).
+- Interaction terms treat hydroperoxides as alcohols and peroxyacids as carboxylic acids (groups.nannoolal_interactions).
+group_interpretation:
+- 'Hydroperoxides are treated as alcohols and peroxyacids as carboxylic acids in the interaction terms (groups.nannoolal_interactions).'
+known_limitations: []
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.

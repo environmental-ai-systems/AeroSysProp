@@ -10,6 +10,7 @@ dependencies = [
     "rdkit",
     "numpy",
     "pandas",
+    "pyyaml",
     "tqdm",
 ]
 
@@ -35,5 +36,6 @@ aerosysprop = [
     "data/*.smarts",
     "data/*.matrix",
     "methods/*.md",
+    "methods/cards/*.yaml",
     "agent_guide.md",
 ]

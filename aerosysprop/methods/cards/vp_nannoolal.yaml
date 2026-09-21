@@ -1,0 +1,56 @@
+# Method card: vp_nannoolal
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: vp_nannoolal
+name: Nannoolal et al. vapour pressure
+property: pure-component vapour pressure
+output_unit: log10(atm)
+status: published-with-modifications
+model:
+  summary: Vapour pressure curve anchored at the normal boiling point, slope from group contributions.
+  references:
+  - citation: Nannoolal et al. (2008), Fluid Phase Equilib. 269, 117-133
+    doi: 10.1016/j.fluid.2008.04.020
+    role: source method
+    verified: false
+  - citation: Topping et al. (2016), UManSysProp v1.0, Geosci. Model Dev. 9, 899-914
+    doi: 10.5194/gmd-9-899-2016
+    role: implementation this code descends from
+    verified: false
+  inputs:
+  - SMILES
+  - temperature (K)
+  - boiling point (K) from the chosen boiling point source
+parameter_set:
+  version: 1
+  files:
+    data/composition.smarts: 6c850360075e4f18c4d243c33f6c79241149138b6058ffa057f3eb9027069d04
+    data/nannoolal_primary.smarts: 61d64d0084ade3f6308bb82f0718be30ed7321eeba5a1141bde86d42f14140a1
+    data/nannoolal_secondary.smarts: f70193fab182ed49bc7e2e84229d637d3c4ee7428acca57b2a8fa0df10816d76
+    data/nannoolal_primary.data: 8dd89ac07db4d07cb2bd0d137b7cb5565086788ee6b54fd1477ecd20c6a04d97
+    data/nannoolal_secondary.data: 52a57899ba309b85aedf3c707f7d60fe664f573d0fdb9bd2b01dac15a670c856
+    data/nannoolal_vp_interactions.matrix: 927a27975c7bbbf94cca9ec8811477f02c65cb0d5390af9128993ac314e11fc5
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- Groups for hydroperoxides (301) and peroxyacids (302) and PAN-related interaction terms (groups.py,
+  IDs 2001 to 2004) are additions for atmospheric compounds and are not in the original Nannoolal papers.
+  Origin to confirm (probably the UManSysProp extension).
+- Interaction terms treat hydroperoxides as alcohols and peroxyacids as carboxylic acids (groups.nannoolal_interactions).
+group_interpretation:
+- 'Hydroperoxides are treated as alcohols and peroxyacids as carboxylic acids in the interaction terms (groups.nannoolal_interactions).'
+known_limitations:
+- Result depends strongly on the boiling point source; compare sources for multifunctional compounds.
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.

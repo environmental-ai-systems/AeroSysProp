@@ -1,0 +1,47 @@
+# Method card: density_schroeder
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: density_schroeder
+name: Schroeder (with Rackett-type temperature correction)
+property: liquid density
+output_unit: g/cm3
+status: published-with-modifications
+model:
+  summary: Molar volume at the boiling point from Schroeder increments, extrapolated to temperature with
+    a Rackett-type equation using critical properties.
+  references:
+  - citation: Schroeder method, as described in Poling, Prausnitz and O'Connell, The Properties of Gases
+      and Liquids (5th ed., 2001)
+    doi: null
+    role: source method
+    verified: false
+  inputs:
+  - SMILES
+  - temperature (K)
+  - critical properties from cp_nannoolal
+parameter_set:
+  version: 1
+  files:
+    data/schroeder.smarts: 25b2c17ba3b2113d82a5b807e5f4116b355a97307ce766a8981e91de42d2d24b
+    data/schroeder.data: eefac1bf4253ba5b8f5c9cb5279af41e72377639287b3a0973a6f3991202bd15
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- The temperature correction always uses the Nannoolal boiling point (liquid_densities._generic), while
+  the critical properties follow the chosen boiling point source. With a non-Nannoolal source the result
+  mixes two boiling points. Flagged for core team decision.
+group_interpretation: []
+known_limitations: []
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.

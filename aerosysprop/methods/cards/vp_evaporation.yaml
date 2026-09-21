@@ -1,0 +1,49 @@
+# Method card: vp_evaporation
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: vp_evaporation
+name: EVAPORATION (as ported)
+property: pure-component vapour pressure
+output_unit: log10(atm)
+status: published-with-modifications
+model:
+  summary: log10 P = A + B / T^1.5 with A and B from group contributions, including non-additivity corrections
+    for crowded functional groups.
+  references:
+  - citation: Compernolle, Ceulemans and Muller (2011), Atmos. Chem. Phys. 11, 9431-9450
+    doi: 10.5194/acp-11-9431-2011
+    role: source method
+    verified: false
+  - citation: Topping et al. (2016), UManSysProp v1.0, Geosci. Model Dev. 9, 899-914
+    doi: 10.5194/gmd-9-899-2016
+    role: implementation this code descends from
+    verified: false
+  inputs:
+  - SMILES
+  - temperature (K)
+parameter_set:
+  version: 1
+  files:
+    data/evaporation.smarts: b08c7413970f5f753f181297293b6f4a3b9d91214dd39893b6557af55eb18db3
+    data/evaporation.data: f477453f7f4a7a2ce3f0bdd47c4133240e68300c29439dd6e2040c30b897d64a
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- Parameter set 1 of the EVAPORATION model. Its SMARTS include a vinyl alcohol (enol) term following the
+  MCM usage, which differs from the published method; see vp_evaporation2 for the revised set.
+group_interpretation: []
+known_limitations:
+- Nitro groups and several nitrogen functionalities are not covered (reported as UNMATCHED_ATOMS).
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.

@@ -1,0 +1,46 @@
+# Method card: density_girolami
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: density_girolami
+name: Girolami
+property: liquid density at 298 K
+output_unit: g/cm3
+status: published-with-modifications
+model:
+  summary: Molar volume from atomic volume increments by periodic row, with percentage increases for hydrogen
+    bonding groups and rings (capped at 30%).
+  references:
+  - citation: Girolami (1994), J. Chem. Educ. 71, 962
+    doi: 10.1021/ed071p962
+    role: source method
+    verified: false
+  inputs:
+  - SMILES
+parameter_set:
+  version: 1
+  files:
+    data/composition.smarts: 6c850360075e4f18c4d243c33f6c79241149138b6058ffa057f3eb9027069d04
+    data/girolami.smarts: e9d1fe5e5ee4cfe5eddb6a9d43c3b2a6b1d95bc901c1fda4d2cb40a3c49024e7
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- Hydroperoxide and peroxyacid groups receive the same 10% increase as hydroxyl and carboxylic acid groups;
+  these are additions not in the 1994 paper.
+- Volume increments and multipliers are in the code (methods/liquid_densities.py), not a data file, so
+  they are covered by the software version rather than the parameter fingerprint.
+group_interpretation: []
+known_limitations:
+- 'No temperature dependence: the same value is returned at every temperature.'
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.
