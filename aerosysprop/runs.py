@@ -186,13 +186,14 @@ def start_batch_run(input_path: Optional[str] = None, smiles=None, names=None, m
         raise ApiError('TOO_MANY_MOLECULES',
                        f'{len(pairs)} molecules requested; the batch limit is {MAX_BATCH}.',
                        hint='Split the input, or raise AEROSYSPROP_MAX_BATCH.')
-    method_ids = api._normalise_methods(methods)
+    method_ids, requested_sets, request_notes = api._normalise_request(methods)
     bp = api._normalise_bp_sources(bp_sources)
     T, notes = api._check_temperature(temperature_K)
     resolved = [m for m in batch.ALL_METHODS
                 if m in batch.resolve_methods(method_ids or batch.ALL_METHODS, bp_sources=bp)]
-    provenance, prov_notes = api._provenance(resolved)
-    request_key = _request_key(pairs, input_info, resolved, T, bp, provenance)
+    _, sets = batch.normalise_parameter_sets(resolved, requested_sets)
+    provenance, prov_notes = api._provenance(resolved, sets)
+    request_key = _request_key(pairs, input_info, resolved, T, bp, provenance, sets)
     if not force_new:
         existing = _find_identical(root, request_key)
         if existing is not None:
@@ -223,13 +224,14 @@ def start_batch_run(input_path: Optional[str] = None, smiles=None, names=None, m
                 'input': input_info,
                 'methods_requested': method_ids or 'all',
                 'methods_run': resolved,
+                'parameter_sets': {k: list(v) for k, v in sets.items()},
                 'temperature_K': T,
                 'boiling_point_sources': bp,
                 'include_diagnostics': bool(include_diagnostics),
                 'request_key': request_key,
             },
             'provenance': provenance,
-            'warnings': notes + prov_notes,
+            'warnings': request_notes + notes + prov_notes,
             'outputs': {},
             'summary': None,
         }
@@ -237,18 +239,19 @@ def start_batch_run(input_path: Optional[str] = None, smiles=None, names=None, m
         _jobs[run_id] = {'status': 'running', 'done': 0, 'total': len(pairs),
                          'started': time.time()}
     threading.Thread(target=_execute, name=f'aerosysprop-run-{run_id}', daemon=True,
-                     args=(d, pairs, method_ids, T, bp, include_diagnostics, manifest)).start()
+                     args=(d, pairs, method_ids, T, bp, include_diagnostics, manifest, sets)).start()
     return {'run_id': run_id, 'status': 'running', 'reused': False, 'molecules': len(pairs),
             'folder': str(d), 'methods_run': resolved,
             'next': 'Call batch_run_status with this run_id until status is complete.'}
 
 
-def _request_key(pairs, input_info, resolved, T, bp, provenance) -> str:
+def _request_key(pairs, input_info, resolved, T, bp, provenance, sets=None) -> str:
     """Fingerprint of everything that determines a run's results."""
     h = hashlib.sha256()
     for n, smi in pairs:
         h.update(f'{n}\t{smi}\n'.encode())
     key = {'molecules': h.hexdigest(), 'methods': resolved, 'temperature_K': T,
+           'parameter_sets': {k: list(v) for k, v in (sets or {}).items()},
            'bp_sources': bp, 'software': provenance['software'],
            'method_labels': {m: p.get('label') for m, p in provenance['methods'].items()},
            'parameters_match_cards': all(p.get('parameters_match_card', False)
@@ -278,7 +281,7 @@ def _folder_size(d: Path) -> int:
     return sum(f.stat().st_size for f in d.rglob('*') if f.is_file())
 
 
-def _execute(d: Path, pairs, method_ids, T, bp, include_diagnostics, manifest):
+def _execute(d: Path, pairs, method_ids, T, bp, include_diagnostics, manifest, sets=None):
     run_id = manifest['run_id']
     job = _jobs[run_id]
 
@@ -289,8 +292,10 @@ def _execute(d: Path, pairs, method_ids, T, bp, include_diagnostics, manifest):
         names = [n for n, _ in pairs]
         smiles = [s for _, s in pairs]
         resolved, records, columns = api._compute(smiles, names, method_ids, T, bp,
-                                                  include_diagnostics, progress)
-        value_cols = [c for c in batch.resolved_output_columns(set(resolved), bp) if c in columns]
+                                                  include_diagnostics, progress,
+                                                  parameter_sets=sets)
+        value_cols = [c for c in batch.resolved_output_columns(set(resolved), bp, sets)
+                      if c in columns]
         value_cols += [c for c in columns if c not in value_cols]
         n_diag = _write_outputs(d, records, value_cols)
         manifest['outputs'] = {
@@ -370,7 +375,7 @@ def _column_groups(value_cols):
     key_to_method = {k: m for m in batch.PROPERTY_METHODS for k in m.output_keys}
     groups = {}
     for c in value_cols:
-        base = c.split('__bp', 1)[0]
+        base = c.split('__', 1)[0]  # strip __bp<source> and __set<n> suffixes
         m = key_to_method.get(base)
         if m is None:
             continue
@@ -501,6 +506,11 @@ def _write_crate(d: Path, m: dict):
         {'@id': '#param-bp-sources', '@type': 'PropertyValue', 'name': 'boiling point sources',
          'value': ', '.join(req['boiling_point_sources'])},
     ]
+    if req.get('parameter_sets'):
+        params.append({'@id': '#param-parameter-sets', '@type': 'PropertyValue',
+                       'name': 'parameter sets',
+                       'value': ', '.join(f'{k}@{v}' for k, vs in req['parameter_sets'].items()
+                                          for v in vs)})
     inp = req['input']
     params.append({'@id': '#param-input', '@type': 'PropertyValue', 'name': 'input',
                    'value': (f'{inp["path"]} (sha256 {inp["sha256"]})' if inp['kind'] == 'file'

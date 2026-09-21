@@ -82,7 +82,7 @@ def test_predict_reports_coverage_diagnostics():
     # A nitro group is outside several methods' group sets.
     out = _strict_json(api.predict_properties(['CC[N+](=O)[O-]'], methods=['vapour_pressure']))
     diag = out['results'][0]['diagnostics']
-    assert {'vp_evaporation', 'vp_simpol'} <= set(diag)
+    assert {'vp_evaporation@2', 'vp_simpol'} <= set(diag)
     assert diag['vp_simpol'][0]['code'] == 'UNMATCHED_ATOMS'
     assert out['summary']['with_diagnostic_warnings'] == 1
 
@@ -259,3 +259,32 @@ def test_opera_unknown_endpoint(monkeypatch):
     with pytest.raises(api.ApiError) as e:
         api.opera_predict(['CCO'], endpoints=['NOPE'])
     assert e.value.code == 'UNKNOWN_ENDPOINT'
+
+
+def test_parameter_sets_default_and_choice():
+    out = api.predict_properties(['CCO'], methods=['vp_evaporation'])
+    assert out['parameter_sets'] == {'vp_evaporation': [2]}
+    assert 'vp_evaporation_log10atm__set2' in out['results'][0]['values']
+    assert 'vp_evaporation@2' in out['provenance']['methods']
+    both = api.predict_properties(['CCO'], methods=['vp_evaporation@1', 'vp_evaporation@2'])
+    assert set(both['provenance']['methods']) >= {'vp_evaporation@1', 'vp_evaporation@2'}
+    assert {'vp_evaporation_log10atm__set1', 'vp_evaporation_log10atm__set2'} <= set(
+        both['results'][0]['values'])
+
+
+def test_deprecated_method_id_gives_notice():
+    out = api.predict_properties(['CCO'], methods=['vp_evaporation2'])
+    assert any(n['code'] == 'DEPRECATED_METHOD_ID' for n in out['warnings'])
+    assert 'vp_evaporation_log10atm__set2' in out['results'][0]['values']
+
+
+def test_unknown_parameter_set():
+    with pytest.raises(api.ApiError) as e:
+        api.predict_properties(['CCO'], methods=['vp_evaporation@9'])
+    assert e.value.code == 'UNKNOWN_PARAMETER_SET'
+
+
+def test_list_methods_shows_parameter_sets():
+    m = next(x for x in api.list_methods()['single_component_methods'] if x['id'] == 'vp_evaporation')
+    assert [p['set'] for p in m['parameter_sets']] == [1, 2]
+    assert [p['default'] for p in m['parameter_sets']] == [False, True]

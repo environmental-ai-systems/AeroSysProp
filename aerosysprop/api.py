@@ -213,8 +213,9 @@ _DIAG_PATH = {
     'bp_nannoolal':      'aerosysprop.methods.boiling_points.nannoolal',
     'vp_nannoolal':      'aerosysprop.methods.vapour_pressures.nannoolal',
     'vp_myrdal':         'aerosysprop.methods.vapour_pressures.myrdal_and_yalkowsky',
-    'vp_evaporation':    'aerosysprop.methods.vapour_pressures.evaporation',
-    'vp_evaporation2':   'aerosysprop.methods.vapour_pressures.evaporation2',
+    # Methods with several parameter sets are keyed '<id>@<set>'.
+    'vp_evaporation@1':  'aerosysprop.methods.vapour_pressures.evaporation',
+    'vp_evaporation@2':  'aerosysprop.methods.vapour_pressures.evaporation2',
     'vp_simpol':         'aerosysprop.methods.vapour_pressures.simpol',
     'cp_nannoolal':      'aerosysprop.methods.critical_properties.nannoolal',
     'density_girolami':  'aerosysprop.methods.liquid_densities.girolami',
@@ -239,18 +240,48 @@ _UNIT_SUFFIX = {'_K': 'K', '_bar': 'bar', '_log10atm': 'log10(atm)', '_gcc': 'g/
 
 
 def _unit_for(column: str) -> str:
-    base = column.split('__bp', 1)[0]
+    base = column.split('__', 1)[0]
     for suffix, unit in _UNIT_SUFFIX.items():
         if base.endswith(suffix):
             return unit
     return ''
 
 
-def _normalise_methods(methods) -> Optional[list]:
+def _normalise_request(methods) -> tuple:
+    """Parse a method request into ``(method_ids, parameter_sets, notices)``.
+
+    Accepts method IDs, property-group names, ``'<id>@<set>'`` to choose a
+    parameter set (e.g. ``'vp_evaporation@1'``), and deprecated IDs such as
+    ``'vp_evaporation2'`` (reported in ``notices``). ``method_ids`` is None for
+    all methods.
+    """
+    sets, notices = {}, []
     if methods is None or methods == 'all' or (isinstance(methods, (list, tuple)) and not methods):
-        return None
+        _, sets = batch.normalise_parameter_sets(None)
+        return None, sets, notices
     out = []
+
+    def add_set(mid, v):
+        sets[mid] = tuple(dict.fromkeys(sets.get(mid, ()) + (v,)))
+
     for m in _as_str_list(methods, 'methods'):
+        if m in batch.DEPRECATED_METHOD_IDS:
+            new_id, v = batch.DEPRECATED_METHOD_IDS[m]
+            notices.append({'severity': 'warning', 'code': 'DEPRECATED_METHOD_ID',
+                            'message': f'{m!r} is now parameter set {v} of {new_id!r}; '
+                                       f'request it as "{new_id}@{v}".'})
+            add_set(new_id, v)
+            m = new_id
+        elif '@' in m:
+            mid, _, v = m.partition('@')
+            pm = batch.PROPERTY_METHOD_BY_ID.get(mid)
+            if pm is None or not v.isdigit() or int(v) not in pm.parameter_sets:
+                raise ApiError('UNKNOWN_PARAMETER_SET', f'Unknown method or parameter set {m!r}.',
+                               hint='Call list_methods: methods with several parameter sets list them.',
+                               details={'multi_set_methods': {k: list(x.parameter_sets) for k, x
+                                                              in batch.MULTI_SET_METHODS.items()}})
+            add_set(mid, int(v))
+            m = mid
         if m in batch.PROPERTY_METHOD_BY_ID:
             if m not in out:
                 out.append(m)
@@ -265,7 +296,26 @@ def _normalise_methods(methods) -> Optional[list]:
                  '"vapour_pressure" or "boiling_point" select every method in that group.',
             details={'valid_method_ids': batch.ALL_METHODS,
                      'valid_groups': sorted(set(_GROUP_ALIASES))})
-    return out
+    _, sets = batch.normalise_parameter_sets(out, sets)
+    return out, sets, notices
+
+
+def _normalise_methods(methods) -> Optional[list]:
+    return _normalise_request(methods)[0]
+
+
+def _method_keys(method_ids, sets=None, all_sets=False) -> list:
+    """Method IDs as used for diagnostics and provenance: '<id>@<set>' for
+    methods with several parameter sets, the plain ID otherwise."""
+    keys = []
+    for mid in method_ids:
+        pm = batch.MULTI_SET_METHODS.get(mid)
+        if pm is None:
+            keys.append(mid)
+        else:
+            versions = pm.parameter_sets if all_sets else (sets or {}).get(mid, (pm.default_set,))
+            keys.extend(f'{mid}@{v}' for v in versions)
+    return keys
 
 
 def _normalise_bp_sources(bp_sources) -> list:
@@ -293,11 +343,17 @@ def list_methods() -> dict:
             'id': m.id,
             'label': m.label,
             'property': m.group,
-            'output_columns': {c: _unit_for(c) for c in m.output_keys},
+            'output_columns': ({c + batch.set_suffix(v): _unit_for(c) for v in m.parameter_sets
+                                for c in m.output_keys} if len(m.parameter_sets) > 1
+                               else {c: _unit_for(c) for c in m.output_keys}),
             'depends_on': sorted('a boiling point source' if d == batch.BP_ANY else d
                                  for d in m.deps),
             'uses_boiling_point_source': m.bp_dependent,
-            'has_coverage_diagnostic': m.id in _DIAG_PATH,
+            'has_coverage_diagnostic': any(k in _DIAG_PATH for k in _method_keys([m.id], all_sets=True)),
+            **({'parameter_sets': [{'set': v, 'label': lab, 'default': v == m.default_set,
+                                    'request_as': f'{m.id}@{v}'}
+                                   for v, lab in zip(m.parameter_sets, m.parameter_set_labels)]}
+               if len(m.parameter_sets) > 1 else {}),
             'card': method_cards.summary(m.id),
         })
     mixture = [{
@@ -319,6 +375,10 @@ def list_methods() -> dict:
             'Methods that need a boiling point use the chosen boiling point '
             'source; results can differ substantially between sources.',
             'Temperatures are in kelvin.',
+            'Some methods have several parameter sets (same equations, different '
+            'group definitions or coefficients). Request one with "<id>@<set>", e.g. '
+            '"vp_evaporation@1"; plain "<id>" uses the default set. Their output columns '
+            'always end in "__set<n>".',
             'Each method has a card giving its publication status '
             '(published, published-with-modifications or in-house), references '
             'and known deviations from the source paper. Results carry a '
@@ -430,7 +490,7 @@ def _molecule_summary(mol) -> dict:
 
 
 def _compute(smiles, names, method_ids, T, bp, include_diagnostics=True,
-             progress_callback=None):
+             progress_callback=None, parameter_sets=None):
     """Shared calculation core for predict_properties and batch runs.
 
     Returns ``(methods_run, records, columns)``: the resolved method IDs in
@@ -438,6 +498,8 @@ def _compute(smiles, names, method_ids, T, bp, include_diagnostics=True,
     """
     resolved_set = batch.resolve_methods(method_ids or batch.ALL_METHODS, bp_sources=bp)
     resolved = [m for m in batch.ALL_METHODS if m in resolved_set]
+    _, sets = batch.normalise_parameter_sets(resolved, parameter_sets)
+    diag_keys = _method_keys(resolved, sets)
 
     records, mols = [], []
     for i, (smi, name) in enumerate(zip(smiles, names)):
@@ -461,7 +523,7 @@ def _compute(smiles, names, method_ids, T, bp, include_diagnostics=True,
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             rows = batch.run_all(
-                mols, methods=method_ids, temperature=T, bp_sources=bp,
+                mols, methods=method_ids, temperature=T, bp_sources=bp, parameter_sets=sets,
                 progress_callback=progress_callback or (lambda *_: None), **pool)
         by_key = {key: row for (key, _), row in zip(mols, rows)}
 
@@ -478,13 +540,15 @@ def _compute(smiles, names, method_ids, T, bp, include_diagnostics=True,
         if failed:
             rec['not_computed'] = failed
         if include_diagnostics:
-            diag = _method_diagnostics(rec['canonical_smiles'], resolved)
+            diag = _method_diagnostics(rec['canonical_smiles'], diag_keys)
             if diag:
                 rec['diagnostics'] = diag
     return resolved, records, columns
 
 
-def _provenance(method_ids) -> tuple:
+def _provenance(method_ids, sets=None) -> tuple:
+    """Provenance for methods; multi-set methods are expanded to '<id>@<set>'."""
+    method_ids = _method_keys(method_ids, sets) if sets is not None else method_ids
     methods = {m: method_cards.provenance(m) for m in method_ids}
     notes = [{'severity': 'warning', 'code': 'PARAMETERS_CHANGED', 'message':
               f'{m}: {p["warning"]}'} for m, p in methods.items() if p.get('warning')]
@@ -509,16 +573,20 @@ def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
             raise ApiError('INVALID_ARGUMENT', 'names must be the same length as smiles.')
     else:
         names = list(smiles)
-    method_ids = _normalise_methods(methods)
+    method_ids, sets, request_notes = _normalise_request(methods)
     bp = _normalise_bp_sources(bp_sources)
     T, notes = _check_temperature(temperature_K)
+    notes = request_notes + notes
 
-    resolved, records, columns = _compute(smiles, names, method_ids, T, bp, include_diagnostics)
-    provenance, prov_notes = _provenance(resolved)
+    resolved, records, columns = _compute(smiles, names, method_ids, T, bp, include_diagnostics,
+                                          parameter_sets=sets)
+    _, sets = batch.normalise_parameter_sets(resolved, sets)
+    provenance, prov_notes = _provenance(resolved, sets)
     return {
         'temperature_K': T,
         'boiling_point_sources': bp,
         'methods_run': resolved,
+        'parameter_sets': {k: list(v) for k, v in sets.items()},
         'columns': columns,
         'results': records,
         'summary': {
@@ -541,7 +609,8 @@ def diagnose_smiles(smiles, methods=None, include_aiomfac=True) -> dict:
     smiles = _as_str_list(smiles, 'smiles')
     _check_count(len(smiles))
     method_ids = _normalise_methods(methods) or list(batch.ALL_METHODS)
-    checked = [m for m in method_ids if m in _DIAG_PATH]
+    keys = _method_keys(method_ids, all_sets=True)
+    checked = [k for k in keys if k in _DIAG_PATH]
     if include_aiomfac:
         checked.append('aiomfac')
     results = []
@@ -555,7 +624,7 @@ def diagnose_smiles(smiles, methods=None, include_aiomfac=True) -> dict:
             results.append(rec)
             continue
         rec.update(_molecule_summary(mol))
-        diag = _method_diagnostics(rec['canonical_smiles'], method_ids)
+        diag = _method_diagnostics(rec['canonical_smiles'], keys)
         if include_aiomfac:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
@@ -567,7 +636,7 @@ def diagnose_smiles(smiles, methods=None, include_aiomfac=True) -> dict:
         results.append(rec)
     return {'results': results,
             'methods_checked': checked,
-            'methods_without_coverage_check': [m for m in method_ids if m not in _DIAG_PATH]}
+            'methods_without_coverage_check': [k for k in keys if k not in _DIAG_PATH]}
 
 
 # ---------------------------------------------------------------------------

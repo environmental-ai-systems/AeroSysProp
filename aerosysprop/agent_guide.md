@@ -42,6 +42,8 @@ Results carry diagnostics per method. The important codes:
 
 Every result includes a `provenance` block. Each method has a label such as `vp_simpol@1 (3f9a1c2b7d40)`: the method ID, its parameter set version and a fingerprint of the parameter files. The method's card, summarised under `card` in `list_methods`, gives its publication status. When reporting values in anything a person may cite, include the provenance label, and say when a method is `published-with-modifications` or `in-house` rather than presenting it as the literature method. A `PARAMETERS_CHANGED` warning means the installed parameter files differ from the approved version.
 
+Some methods have more than one parameter set: the same equations with different group definitions. `list_methods` lists them under `parameter_sets`. EVAPORATION has two; set 2 is the default. Request a set with `"<id>@<n>"` (for example `"vp_evaporation@1"`, or both sets to compare them). Output columns always carry the set, as in `vp_evaporation_log10atm__set2`, and provenance labels read `vp_evaporation@2 (...)`. Always say which set a value came from. The old ID `vp_evaporation2` still works but returns a `DEPRECATED_METHOD_ID` warning.
+
 ## Batch runs
 
 `predict_properties` returns every value, which is only practical for a few tens of molecules. For larger sets use `start_batch_run` (up to 100,000 molecules; the full MCM of about 5,800 species takes around 40 s on 4 cores). It writes a new run folder containing `results.csv`, `diagnostics.csv`, `run.json` (the full provenance manifest, with a fingerprint of each output file) and `ro-crate-metadata.json` (the same provenance in the RO-Crate community standard). Then:

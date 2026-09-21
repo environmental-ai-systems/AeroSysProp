@@ -252,7 +252,7 @@ All functions return **log₁₀(P / atm)**. `T` is temperature in K.
 | `nannoolal(mol, T, bp)` | Nannoolal *et al.* (2008) | Yes |
 | `myrdal_and_yalkowsky(mol, T, bp)` | Myrdal & Yalkowsky (1997) | Yes |
 | `evaporation(mol, T)` | EVAPORATION (Compernolle *et al.*, 2011) | No |
-| `evaporation2(mol, T)` | EVAPORATION with revised alcohol terms | No |
+| `evaporation2(mol, T)` | EVAPORATION parameter set 2 (revised alcohol terms; the default in the app and API) | No |
 | `simpol(mol, T)` | SIMPOL.1 (Pankow & Asher, 2008) | No |
 
 ### Critical properties — `aerosysprop.methods.critical_properties`
@@ -475,6 +475,21 @@ multi-select: pick one source for the usual behaviour, or several to
 compare the sensitivity of the dependent predictions to the
 boiling-point choice — each dependent column is then reported once per
 source (e.g. `vp_nannoolal_log10atm__bpStein`).
+
+Some methods have more than one **parameter set**: the same equations
+with different group definitions. EVAPORATION has two. Set 1 is the
+original port, with an MCM-style enol term; set 2 (the default) revises
+the alcohol terms to match the published method. Tick EVAPORATION and
+choose one or both sets underneath it. The column always names the set
+(`vp_evaporation_log10atm__set2`), so results from different sets can't
+be confused. The sets give the same value for most molecules; on the MCM
+they differ for 91 of 5,809 species (enols), by about 0.9 log units.
+From Python, pass `parameter_sets={'vp_evaporation': [1, 2]}` to
+`run_all`; through the agent API, request `"vp_evaporation@1"`. The old
+method ID `vp_evaporation2` still works as an alias for set 2 but is
+deprecated. Session databases saved before this change hold columns
+named `vp_evaporation_log10atm` (set 1) and `vp_evaporation2_log10atm`
+(set 2).
 
 A **session database** (`.db`) loaded in the sidebar is shared across
 all three pages — compounds, single-component results, and saved

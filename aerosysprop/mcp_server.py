@@ -65,6 +65,8 @@ diagnose_smiles first.
 means the method ignored part of the molecule, so its value may be unreliable; \
 say so when reporting it.
 4. Vapour pressures are log10(atm). Temperatures are kelvin.
+4a. Where a method has several parameter sets, its columns end in __set<n>. \
+Name the set when reporting a value, and request another with "<id>@<n>".
 5. For mixtures with salts, call list_salts for accepted names and give \
 mass fractions (neutrals first, then salts).
 6. For more than about 50 molecules, use start_batch_run instead of \
@@ -138,7 +140,11 @@ def predict_properties(
         description='Method IDs from list_methods (e.g. "vp_simpol", "bp_nannoolal") '
                     'or property names ("boiling_point", "vapour_pressure", '
                     '"critical_properties", "liquid_density"). Omit to run all methods. '
-                    'Dependencies such as the boiling point are added automatically.')] = None,
+                    'Dependencies such as the boiling point are added automatically. '
+                    'Some methods have several parameter sets (list_methods shows them): '
+                    'add "@<set>" to choose one, e.g. "vp_evaporation@1"; without it the '
+                    'default set is used. Output columns always name the set, e.g. '
+                    'vp_evaporation_log10atm__set2.')] = None,
     temperature_K: Temperature = 298.15,
     bp_sources: Annotated[Optional[list[str]], Field(
         description='Boiling point method(s) feeding the vapour pressure, critical '

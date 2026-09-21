@@ -253,3 +253,21 @@ def test_compact_diagnostics_file(dirs):
     assert rows[0]['code'] == 'UNMATCHED_ATOMS' and 'unmatched heavy atom' in rows[0]['detail']
     m = json.loads((out / rid / 'run.json').read_text())
     assert 'UNMATCHED_ATOMS' in m['diagnostic_codes']
+
+
+def test_parameter_sets_in_batch_run(dirs):
+    _, out = dirs
+    st = _wait(runs.start_batch_run(smiles=['CCO', 'OC=CC(=O)O'],
+                                    methods=['vp_evaporation@1', 'vp_evaporation@2'])['run_id'])
+    assert st['status'] == 'complete', st
+    m = json.loads((out / st['run_id'] / 'run.json').read_text())
+    assert m['request']['parameter_sets'] == {'vp_evaporation': [1, 2]}
+    assert {'vp_evaporation@1', 'vp_evaporation@2'} <= set(m['provenance']['methods'])
+    rows = runs.read_batch_results(st['run_id'])['rows']
+    assert {'vp_evaporation_log10atm__set1', 'vp_evaporation_log10atm__set2'} <= set(rows[0])
+    # the two sets estimate the same quantity, so their spread is reported
+    assert 'Vapour Pressure (log10(atm))' in st['summary']['method_spread']
+    # a different set is a different request: no reuse
+    other = runs.start_batch_run(smiles=['CCO', 'OC=CC(=O)O'], methods=['vp_evaporation@1'])
+    assert other['reused'] is False
+    _wait(other['run_id'])
