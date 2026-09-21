@@ -148,8 +148,9 @@ def predict_properties(
     names: Annotated[Optional[list[str]], Field(
         description='Optional labels for the molecules, same length as smiles.')] = None,
     include_diagnostics: Annotated[bool, Field(
-        description='Attach matcher-coverage diagnostics to each molecule. Leave on '
-                    'unless the list is very large.')] = True,
+        description='Attach matcher-coverage diagnostics to each molecule. Leave on: '
+                    'with it off, a molecule showing no diagnostics has simply not been '
+                    'checked, and must not be reported as unproblematic.')] = True,
 ) -> dict:
     """Estimate pure-component properties (boiling point K, vapour pressure
     log10(atm), critical temperature K and pressure bar, liquid density g/cm3)
@@ -310,8 +311,6 @@ def start_batch_run(
         description='Boiling point source(s), as for predict_properties.')] = None,
     label: Annotated[Optional[str], Field(
         description='Short label for the run folder name, e.g. "mcm vapour pressure".')] = None,
-    include_diagnostics: Annotated[bool, Field(
-        description='Check each molecule against each method\'s groups.')] = True,
 ) -> dict:
     """Start a background batch run for a large set of molecules (up to 100,000).
     Results are written to a new run folder (results.csv, diagnostics.csv and a
@@ -321,7 +320,6 @@ def start_batch_run(
     return runs.start_batch_run(input_path=input_path, smiles=smiles, names=names,
                                 methods=methods, temperature_K=temperature_K,
                                 bp_sources=bp_sources, label=label,
-                                include_diagnostics=include_diagnostics,
                                 requested_by='aerosysprop-mcp')
 
 

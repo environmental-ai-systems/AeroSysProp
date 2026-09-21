@@ -146,7 +146,7 @@ def _pid_alive(pid) -> Optional[bool]:
 # ---------------------------------------------------------------------------
 
 def start_batch_run(input_path: Optional[str] = None, smiles=None, names=None, methods=None,
-                    temperature_K=298.15, bp_sources=None, include_diagnostics=True,
+                    temperature_K=298.15, bp_sources=None,
                     label: Optional[str] = None, requested_by: Optional[str] = None,
                     smiles_column: Optional[int] = None, name_column: Optional[int] = None,
                     table: str = 'compounds') -> dict:
@@ -154,7 +154,12 @@ def start_batch_run(input_path: Optional[str] = None, smiles=None, names=None, m
 
     Give either ``input_path`` (a file in the data directory) or ``smiles``
     (with optional ``names``). Poll :func:`batch_run_status` for progress.
+
+    Diagnostics are always computed for batch runs: the summary's split
+    between clean and flagged molecules depends on them, so switching them
+    off would make every closed-shell molecule look clean.
     """
+    include_diagnostics = True
     root = _output_root()
     if (input_path is None) == (smiles is None):
         raise ApiError('INVALID_ARGUMENT', 'Give exactly one of input_path or smiles.')

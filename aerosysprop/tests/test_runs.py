@@ -207,3 +207,10 @@ def test_ro_crate_metadata(dirs):
     assert labels and labels[0].startswith('vp_simpol@1 (')
     for part in g['./']['hasPart']:
         assert (out / rid / part['@id']).is_file()
+
+
+def test_batch_runs_always_compute_diagnostics(dirs):
+    import inspect
+    assert 'include_diagnostics' not in inspect.signature(runs.start_batch_run).parameters
+    st = _wait(runs.start_batch_run(smiles=['CCO', 'CC[N+](=O)[O-]'], methods=['vp_simpol'])['run_id'])
+    assert st['summary']['coverage']['clean'] == 1  # nitroethane is flagged, not counted as clean
