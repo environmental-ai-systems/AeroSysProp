@@ -149,8 +149,13 @@ def start_batch_run(input_path: Optional[str] = None, smiles=None, names=None, m
                     temperature_K=298.15, bp_sources=None,
                     label: Optional[str] = None, requested_by: Optional[str] = None,
                     smiles_column: Optional[int] = None, name_column: Optional[int] = None,
-                    table: str = 'compounds') -> dict:
+                    table: str = 'compounds', force_new: bool = False) -> dict:
     """Start a batch run in the background and return its run ID at once.
+
+    If a completed run with an identical request already exists (same input,
+    methods, temperature, boiling point sources, parameter versions and
+    software version), it is returned instead of computing a duplicate; pass
+    ``force_new=True`` to run again regardless.
 
     Give either ``input_path`` (a file in the data directory) or ``smiles``
     (with optional ``names``). Poll :func:`batch_run_status` for progress.
@@ -187,6 +192,14 @@ def start_batch_run(input_path: Optional[str] = None, smiles=None, names=None, m
     resolved = [m for m in batch.ALL_METHODS
                 if m in batch.resolve_methods(method_ids or batch.ALL_METHODS, bp_sources=bp)]
     provenance, prov_notes = api._provenance(resolved)
+    request_key = _request_key(pairs, input_info, resolved, T, bp, provenance)
+    if not force_new:
+        existing = _find_identical(root, request_key)
+        if existing is not None:
+            return {'run_id': existing.name, 'status': 'complete', 'reused': True,
+                    'molecules': len(pairs), 'folder': str(existing), 'methods_run': resolved,
+                    'next': ('An identical completed run already exists, so no new run was made. '
+                             'Call batch_run_status with this run_id for its summary.')}
 
     with _lock:
         busy = [rid for rid, j in _jobs.items() if j['status'] == 'running']
@@ -213,6 +226,7 @@ def start_batch_run(input_path: Optional[str] = None, smiles=None, names=None, m
                 'temperature_K': T,
                 'boiling_point_sources': bp,
                 'include_diagnostics': bool(include_diagnostics),
+                'request_key': request_key,
             },
             'provenance': provenance,
             'warnings': notes + prov_notes,
@@ -224,9 +238,44 @@ def start_batch_run(input_path: Optional[str] = None, smiles=None, names=None, m
                          'started': time.time()}
     threading.Thread(target=_execute, name=f'aerosysprop-run-{run_id}', daemon=True,
                      args=(d, pairs, method_ids, T, bp, include_diagnostics, manifest)).start()
-    return {'run_id': run_id, 'status': 'running', 'molecules': len(pairs),
+    return {'run_id': run_id, 'status': 'running', 'reused': False, 'molecules': len(pairs),
             'folder': str(d), 'methods_run': resolved,
             'next': 'Call batch_run_status with this run_id until status is complete.'}
+
+
+def _request_key(pairs, input_info, resolved, T, bp, provenance) -> str:
+    """Fingerprint of everything that determines a run's results."""
+    h = hashlib.sha256()
+    for n, smi in pairs:
+        h.update(f'{n}\t{smi}\n'.encode())
+    key = {'molecules': h.hexdigest(), 'methods': resolved, 'temperature_K': T,
+           'bp_sources': bp, 'software': provenance['software'],
+           'method_labels': {m: p.get('label') for m, p in provenance['methods'].items()},
+           'parameters_match_cards': all(p.get('parameters_match_card', False)
+                                         for p in provenance['methods'].values()
+                                         if p.get('documented'))}
+    return hashlib.sha256(json.dumps(key, sort_keys=True).encode()).hexdigest()
+
+
+def _find_identical(root: Path, request_key: str) -> Optional[Path]:
+    """A completed, unaltered run with the same request key, if one exists."""
+    for d in sorted((p for p in root.iterdir() if p.is_dir() and _RUN_ID.match(p.name)),
+                    key=lambda p: p.name, reverse=True):
+        try:
+            m = _read_manifest(d)
+        except (OSError, ValueError):
+            continue
+        if m.get('status') != 'complete' or m['request'].get('request_key') != request_key:
+            continue
+        outputs = m.get('outputs', {})
+        if all((d / f).is_file() and _sha256(d / f) == o.get('sha256')
+               for f, o in outputs.items()):
+            return d
+    return None
+
+
+def _folder_size(d: Path) -> int:
+    return sum(f.stat().st_size for f in d.rglob('*') if f.is_file())
 
 
 def _execute(d: Path, pairs, method_ids, T, bp, include_diagnostics, manifest):
@@ -250,6 +299,7 @@ def _execute(d: Path, pairs, method_ids, T, bp, include_diagnostics, manifest):
             DIAGNOSTICS_FILE: {'rows': n_diag, 'sha256': _sha256(d / DIAGNOSTICS_FILE)},
         }
         manifest['summary'] = _summarise(records, value_cols, columns)
+        manifest['diagnostic_codes'] = DIAGNOSTIC_CODES
         manifest['status'] = 'complete'
     except Exception as e:  # recorded in the manifest; nothing is left half-written
         manifest['status'] = 'failed'
@@ -285,14 +335,29 @@ def _write_outputs(d: Path, records, value_cols) -> int:
     n = 0
     with open(d / DIAGNOSTICS_FILE, 'x', newline='', encoding='utf-8') as fh:
         w = csv.writer(fh)
-        w.writerow(['name', 'canonical_smiles', 'method', 'severity', 'code', 'message'])
+        # Compact form: SMILES are in results.csv, and the full wording of each
+        # code is given once in run.json (diagnostic_codes).
+        w.writerow(['name', 'method', 'severity', 'code', 'detail'])
         for r in records:
             for method, issues in sorted(r.get('diagnostics', {}).items()):
                 for i in issues:
-                    w.writerow([r['name'], r.get('canonical_smiles', ''), method,
-                                i['severity'], i['code'], i['message']])
+                    w.writerow([r['name'], method, i['severity'], i['code'], _detail(i)])
                     n += 1
     return n
+
+
+def _detail(issue) -> str:
+    unmatched = (issue.get('details') or {}).get('unmatched')
+    if unmatched:
+        return f'{len(unmatched)} unmatched heavy atom(s): ' + ','.join(str(a[1]) for a in unmatched)
+    return issue['message'][:160]
+
+
+DIAGNOSTIC_CODES = {
+    'UNMATCHED_ATOMS': 'The method\'s functional groups do not cover these heavy atoms; the '
+                       'method behaves as though they (and their groups) were absent.',
+    'INVALID_SMILES': 'RDKit could not parse the SMILES.',
+}
 
 
 # ---------------------------------------------------------------------------
@@ -619,5 +684,10 @@ def list_batch_runs(limit: int = 20) -> dict:
                      or m['request']['input'].get('molecules')
                      or m['request']['input'].get('molecules_read'),
                      'methods_run': m['request']['methods_run'],
-                     'temperature_K': m['request']['temperature_K']})
-    return {'output_folder': str(root), 'runs': runs}
+                     'temperature_K': m['request']['temperature_K'],
+                     'size_mb': round(_folder_size(d) / 1e6, 2)})
+    all_runs = [p for p in root.iterdir() if p.is_dir() and _RUN_ID.match(p.name)]
+    total = sum(_folder_size(p) for p in all_runs)
+    return {'output_folder': str(root), 'runs': runs, 'total_runs': len(all_runs),
+            'total_size_mb': round(total / 1e6, 1),
+            'note': 'Runs are never deleted automatically. To remove one, delete its folder by hand.'}

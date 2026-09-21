@@ -56,6 +56,8 @@ Every result includes a `provenance` block. Each method has a label such as `vp_
 * Agreement between methods is not evidence of accuracy; methods can share a blind spot.
 * Prefer clean-molecule statistics. If `coverage.clean_fraction` is low, say so first.
 
+An identical request (same input, methods, temperature, boiling point sources, parameter versions and software version) returns the existing completed run (`reused: true`) instead of computing a duplicate. Only pass `force_new` if the user explicitly wants a fresh run. Runs are never deleted automatically; `list_batch_runs` reports their size.
+
 Radical species (`radical_electrons > 0`; common in mechanisms such as the MCM) are usually flagged. Group-contribution methods are designed for stable molecules, so say so rather than reporting radical values as pure-component properties. If `results_match_manifest` is false, the results file has been edited since the run wrote it.
 
 ## What this server will not do

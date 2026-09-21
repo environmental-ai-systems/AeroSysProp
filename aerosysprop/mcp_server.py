@@ -311,6 +311,9 @@ def start_batch_run(
         description='Boiling point source(s), as for predict_properties.')] = None,
     label: Annotated[Optional[str], Field(
         description='Short label for the run folder name, e.g. "mcm vapour pressure".')] = None,
+    force_new: Annotated[bool, Field(
+        description='Run again even if an identical completed run exists. Leave false: '
+                    'an identical request returns the existing run, avoiding duplicates.')] = False,
 ) -> dict:
     """Start a background batch run for a large set of molecules (up to 100,000).
     Results are written to a new run folder (results.csv, diagnostics.csv and a
@@ -319,7 +322,7 @@ def start_batch_run(
     MCM (about 5,800 species) takes around 20 s on 4 cores."""
     return runs.start_batch_run(input_path=input_path, smiles=smiles, names=names,
                                 methods=methods, temperature_K=temperature_K,
-                                bp_sources=bp_sources, label=label,
+                                bp_sources=bp_sources, label=label, force_new=force_new,
                                 requested_by='aerosysprop-mcp')
 
 
@@ -377,8 +380,8 @@ def list_batch_runs(
     limit: Annotated[int, Field(description='How many runs to list, newest first.',
                                 ge=1, le=200)] = 20,
 ) -> dict:
-    """List previous batch runs in the output folder with their status, size,
-    methods and temperature."""
+    """List previous batch runs in the output folder with their status, methods,
+    temperature and size on disk, plus the folder's total size."""
     return runs.list_batch_runs(limit=limit)
 
 

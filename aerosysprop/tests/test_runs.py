@@ -100,7 +100,7 @@ def test_every_run_gets_a_new_folder_and_earlier_runs_are_untouched(dirs):
     _, out = dirs
     a = _wait(runs.start_batch_run(smiles=['CCO'])['run_id'])['run_id']
     before = {p.name: p.read_bytes() for p in (out / a).iterdir()}
-    b = _wait(runs.start_batch_run(smiles=['CCO'])['run_id'])['run_id']
+    b = _wait(runs.start_batch_run(smiles=['CCO'], force_new=True)['run_id'])['run_id']
     assert a != b
     assert {p.name: p.read_bytes() for p in (out / a).iterdir()} == before
     assert [r['run_id'] for r in runs.list_batch_runs()['runs']] == sorted([a, b], reverse=True)
@@ -214,3 +214,42 @@ def test_batch_runs_always_compute_diagnostics(dirs):
     assert 'include_diagnostics' not in inspect.signature(runs.start_batch_run).parameters
     st = _wait(runs.start_batch_run(smiles=['CCO', 'CC[N+](=O)[O-]'], methods=['vp_simpol'])['run_id'])
     assert st['summary']['coverage']['clean'] == 1  # nitroethane is flagged, not counted as clean
+
+
+def test_identical_request_reuses_the_completed_run(dirs):
+    _, out = dirs
+    first = _wait(runs.start_batch_run(input_path='mols.txt', methods=['vp_simpol'])['run_id'])['run_id']
+    again = runs.start_batch_run(input_path='mols.txt', methods=['vp_simpol'], label='different label')
+    assert again['reused'] is True and again['run_id'] == first
+    assert len([p for p in out.iterdir() if p.is_dir()]) == 1
+    # any change to the request is a new run
+    other = runs.start_batch_run(input_path='mols.txt', methods=['vp_simpol'], temperature_K=290)
+    assert other['reused'] is False
+    _wait(other['run_id'])
+
+
+def test_altered_run_is_not_reused(dirs):
+    _, out = dirs
+    first = _wait(runs.start_batch_run(smiles=['CCO', 'CCCO'], methods=['vp_simpol'])['run_id'])['run_id']
+    f = out / first / 'results.csv'
+    f.write_text(f.read_text() + '\n')
+    again = runs.start_batch_run(smiles=['CCO', 'CCCO'], methods=['vp_simpol'])
+    assert again['reused'] is False and again['run_id'] != first
+    _wait(again['run_id'])
+
+
+def test_listing_reports_sizes(dirs):
+    _wait(runs.start_batch_run(smiles=['CCO'], methods=['vp_simpol'])['run_id'])
+    listing = runs.list_batch_runs()
+    assert listing['total_runs'] == 1 and listing['runs'][0]['size_mb'] >= 0
+    assert 'never deleted automatically' in listing['note']
+
+
+def test_compact_diagnostics_file(dirs):
+    _, out = dirs
+    rid = _wait(runs.start_batch_run(smiles=['CC[N+](=O)[O-]'], methods=['vp_simpol'])['run_id'])['run_id']
+    rows = list(csv.DictReader(open(out / rid / 'diagnostics.csv')))
+    assert list(rows[0]) == ['name', 'method', 'severity', 'code', 'detail']
+    assert rows[0]['code'] == 'UNMATCHED_ATOMS' and 'unmatched heavy atom' in rows[0]['detail']
+    m = json.loads((out / rid / 'run.json').read_text())
+    assert 'UNMATCHED_ATOMS' in m['diagnostic_codes']
