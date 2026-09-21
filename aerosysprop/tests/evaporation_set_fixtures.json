@@ -1,0 +1,1532 @@
+{
+ "temperature_K": 298.15,
+ "source": "MCM v3.3.1 (tests/SMILES/MCM331.xml)",
+ "species_checked": 5809,
+ "differing": [
+  {
+   "name": "HOCH2CO2H",
+   "smiles": "OCC(=O)O",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -5.073650688806511,
+   "set2_log10atm": -4.821404418814357,
+   "group_differences": {
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "IPRHOCO2H",
+   "smiles": "OC(=O)C(C)(C)O",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -4.608555298719393,
+   "set2_log10atm": -4.356309028727239,
+   "group_differences": {
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "C2OHOCO2H",
+   "smiles": "OCC(O)C(=O)O",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -7.5800938784331064,
+   "set2_log10atm": -7.3170959838568885,
+   "group_differences": {
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MACRNBCO2H",
+   "smiles": "O=N(=O)OCC(C)(O)C(=O)O",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -4.482432163723313,
+   "set2_log10atm": -4.2301858937311625,
+   "group_differences": {
+    "19": [
+     2,
+     4
+    ]
+   }
+  },
+  {
+   "name": "MACRNBCO3H",
+   "smiles": "O=N(=O)OCC(C)(O)C(=O)O",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -4.482432163723313,
+   "set2_log10atm": -4.2301858937311625,
+   "group_differences": {
+    "19": [
+     2,
+     4
+    ]
+   }
+  },
+  {
+   "name": "CLOHCO2H",
+   "smiles": "OC(=O)C(O)Cl",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -4.45564004012121,
+   "set2_log10atm": -4.203393770129056,
+   "group_differences": {
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "COHM2CO2H",
+   "smiles": "O=CC(C)(O)C(=O)O",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -5.247927416184416,
+   "set2_log10atm": -4.995681146192261,
+   "group_differences": {
+    "19": [
+     2,
+     4
+    ]
+   }
+  },
+  {
+   "name": "NNCATECO2",
+   "smiles": "[O]OC1(O)C(=CC2(OOC1C2ON(=O)=O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -5.23930238937171,
+   "set2_log10atm": -4.369045470694255,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "NCATECO2",
+   "smiles": "[O]OC1(O)C(=CC2(OOC1C2O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -7.742612415769229,
+   "set2_log10atm": -6.825256478367133,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MNNCATECO2",
+   "smiles": "[O]OC1(O)C(=C(N(=O)=O)C2OOC1(C)C2ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -5.525156410034133,
+   "set2_log10atm": -4.6548994913566775,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "MNCATECO2",
+   "smiles": "[O]OC1(O)C(=C(N(=O)=O)C2OOC1(C)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -8.02846643643165,
+   "set2_log10atm": -7.111110499029553,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "OXNNCATCO2",
+   "smiles": "[O]OC1(O)C(=C(C)C2(C)OOC1(N(=O)=O)C2ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -6.010228296655194,
+   "set2_log10atm": -5.139971377977739,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "OXNCATECO2",
+   "smiles": "[O]OC1(O)C(=C(C)C2(C)OOC1(N(=O)=O)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -8.513538323052714,
+   "set2_log10atm": -7.596182385650616,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MXNNCATCO2",
+   "smiles": "[O]OC1(O)C(=C(N(=O)=O)C2(C)OOC1(C)C2ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -5.811010430696552,
+   "set2_log10atm": -4.9407535120190955,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "MXNCATECO2",
+   "smiles": "[O]OC1(O)C(=C(N(=O)=O)C2(C)OOC1(C)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -8.31432045709407,
+   "set2_log10atm": -7.396964519691973,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "PXNNCATCO2",
+   "smiles": "[O]OC1(O)C(=C(C)C2(OOC1(C)C2ON(=O)=O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -6.010228296655194,
+   "set2_log10atm": -5.139971377977739,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "PXNCATECO2",
+   "smiles": "[O]OC1(O)C(=C(C)C2(OOC1(C)C2O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -8.513538323052714,
+   "set2_log10atm": -7.596182385650616,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "ENNCATECO2",
+   "smiles": "CCC12OOC(C(=C(O)C2(O)O[O])N(=O)=O)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.010228296655194,
+   "set2_log10atm": -5.139971377977739,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "ENCATECO2",
+   "smiles": "[O]OC1(O)C(=C(N(=O)=O)C2OOC1(CC)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -8.513538323052714,
+   "set2_log10atm": -7.596182385650616,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "PNNCATECO2",
+   "smiles": "CCCC12OOC(C(=C(O)C2(O)O[O])N(=O)=O)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.49530018327626,
+   "set2_log10atm": -5.625043264598803,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "PNCATECO2",
+   "smiles": "CCCC12OOC(C(=C(O)C2(O)O[O])N(=O)=O)C1O",
+   "category": "enol",
+   "set1_log10atm": -8.998610209673778,
+   "set2_log10atm": -8.08125427227168,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "IPNNCATCO2",
+   "smiles": "[O]OC1(O)C(=C(N(=O)=O)C2OOC1(C(C)C)C2ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -6.296082317317615,
+   "set2_log10atm": -5.42582539864016,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "IPNCATECO2",
+   "smiles": "[O]OC1(O)C(=C(N(=O)=O)C2OOC1(C(C)C)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -8.799392343715134,
+   "set2_log10atm": -7.882036406313037,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "T123NNCTO2",
+   "smiles": "[O]OC1(O)C(=C(N(=O)=O)C2(C)OOC1(C)C2(C)ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -6.096864451358973,
+   "set2_log10atm": -5.226607532681518,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "T123NCATO2",
+   "smiles": "[O]OC1(O)C(=C(N(=O)=O)C2(C)OOC1(C)C2(C)O)O",
+   "category": "enol",
+   "set1_log10atm": -7.945816434930611,
+   "set2_log10atm": -7.028460497528514,
+   "group_differences": {
+    "14": [
+     4,
+     5
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "T124NNCTO2",
+   "smiles": "[O]OC1(O)C(=C(C)C2(OOC1(C)C2(C)ON(=O)=O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -6.296082317317615,
+   "set2_log10atm": -5.42582539864016,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "T124NCATO2",
+   "smiles": "[O]OC1(O)C(=C(C)C2(OOC1(C)C2(C)O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -8.145034300889254,
+   "set2_log10atm": -7.227678363487158,
+   "group_differences": {
+    "14": [
+     4,
+     5
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "OTNNCATCO2",
+   "smiles": "CCC1=C(O)C(O)(O[O])C2(OOC1(C)C2ON(=O)=O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.49530018327626,
+   "set2_log10atm": -5.625043264598803,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "OTNCATECO2",
+   "smiles": "CCC1=C(O)C(O)(O[O])C2(OOC1(C)C2O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -8.998610209673778,
+   "set2_log10atm": -8.08125427227168,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MTNNCATCO2",
+   "smiles": "CCC12OOC(C)(C(=C(O)C2(O)O[O])N(=O)=O)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.296082317317615,
+   "set2_log10atm": -5.42582539864016,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "MTNCATECO2",
+   "smiles": "CCC12OOC(C)(C(=C(O)C2(O)O[O])N(=O)=O)C1O",
+   "category": "enol",
+   "set1_log10atm": -8.799392343715134,
+   "set2_log10atm": -7.882036406313037,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "PTNNCATCO2",
+   "smiles": "[O]OC1(O)C(=C(C)C2(OOC1(CC)C2ON(=O)=O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -6.49530018327626,
+   "set2_log10atm": -5.625043264598803,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "PTNCATECO2",
+   "smiles": "CCC12OOC(N(=O)=O)(C(=C(O)C2(O)O[O])C)C1O",
+   "category": "enol",
+   "set1_log10atm": -8.998610209673778,
+   "set2_log10atm": -8.08125427227168,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "NNCATECOOH",
+   "smiles": "OOC1(O)C(=CC2(OOC1C2ON(=O)=O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -8.925898500444772,
+   "set2_log10atm": -8.008542563042674,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "NNCATECO",
+   "smiles": "O=N(=O)OC1C2OOC1(C=C(O)C2([O])O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -5.438520255330356,
+   "set2_log10atm": -4.568263336652901,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "NCATECOOH",
+   "smiles": "OOC1(O)C(=CC2(OOC1C2O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -11.504080344962492,
+   "set2_log10atm": -10.558647806849946,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "NCATECO",
+   "smiles": "O=N(=O)C12OOC(C2O)C(O)([O])C(=C1)O",
+   "category": "enol",
+   "set1_log10atm": -7.941830281727874,
+   "set2_log10atm": -7.024474344325776,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MNNCATCOOH",
+   "smiles": "OOC1(O)C(=C(N(=O)=O)C2OOC1(C)C2ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -9.211752521107194,
+   "set2_log10atm": -8.294396583705096,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "MNNCATECO",
+   "smiles": "O=N(=O)OC1C2OOC1(C)C([O])(O)C(=C2N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -5.7243742759927745,
+   "set2_log10atm": -4.854117357315319,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "MNCATECOOH",
+   "smiles": "OOC1(O)C(=C(N(=O)=O)C2OOC1(C)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -11.789934365624909,
+   "set2_log10atm": -10.844501827512364,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MNCATECO",
+   "smiles": "O=N(=O)C1=C(O)C(O)([O])C2(C)OOC1C2O",
+   "category": "enol",
+   "set1_log10atm": -8.227684302390294,
+   "set2_log10atm": -7.310328364988196,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "OXNNCATOOH",
+   "smiles": "OOC1(O)C(=C(C)C2(C)OOC1(N(=O)=O)C2ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -9.696824407728256,
+   "set2_log10atm": -8.779468470326158,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "OXNNCATCO",
+   "smiles": "O=N(=O)OC1C2(C)OOC1(N(=O)=O)C([O])(O)C(=C2C)O",
+   "category": "enol",
+   "set1_log10atm": -6.209446162613839,
+   "set2_log10atm": -5.339189243936382,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "OXNCATCOOH",
+   "smiles": "OOC1(O)C(=C(C)C2(C)OOC1(N(=O)=O)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -12.275006252245976,
+   "set2_log10atm": -11.329573714133428,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "OXNCATECO",
+   "smiles": "CC1=C(O)C([O])(O)C2(OOC1(C)C2O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -8.712756189011357,
+   "set2_log10atm": -7.79540025160926,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MXNNCATOOH",
+   "smiles": "OOC1(O)C(=C(N(=O)=O)C2(C)OOC1(C)C2ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -9.497606541769613,
+   "set2_log10atm": -8.580250604367512,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "MXNNCATCO",
+   "smiles": "O=N(=O)OC1C2(C)OOC1(C)C([O])(O)C(=C2N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -6.010228296655194,
+   "set2_log10atm": -5.139971377977739,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "MXNCATCOOH",
+   "smiles": "OOC1(O)C(=C(N(=O)=O)C2(C)OOC1(C)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -12.075788386287334,
+   "set2_log10atm": -11.130355848174787,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MXNCATECO",
+   "smiles": "O=N(=O)C1=C(O)C([O])(O)C2(C)OOC1(C)C2O",
+   "category": "enol",
+   "set1_log10atm": -8.513538323052714,
+   "set2_log10atm": -7.596182385650616,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "PXNNCATOOH",
+   "smiles": "OOC1(O)C(=C(C)C2(OOC1(C)C2ON(=O)=O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -9.696824407728256,
+   "set2_log10atm": -8.779468470326158,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "PXNNCATCO",
+   "smiles": "O=N(=O)OC1C2(OOC1(C)C([O])(O)C(=C2C)O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.209446162613839,
+   "set2_log10atm": -5.339189243936382,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "PXNCATCOOH",
+   "smiles": "OOC1(O)C(=C(C)C2(OOC1(C)C2O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -12.275006252245976,
+   "set2_log10atm": -11.329573714133428,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "PXNCATECO",
+   "smiles": "O=N(=O)C12OOC(C)(C2O)C([O])(O)C(=C1C)O",
+   "category": "enol",
+   "set1_log10atm": -8.712756189011357,
+   "set2_log10atm": -7.79540025160926,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "ENNCATCOOH",
+   "smiles": "CCC12OOC(C(=C(O)C2(O)OO)N(=O)=O)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -9.696824407728256,
+   "set2_log10atm": -8.779468470326158,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "ENNCATECO",
+   "smiles": "CCC12OOC(C(=C(O)C2([O])O)N(=O)=O)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.209446162613839,
+   "set2_log10atm": -5.339189243936382,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "ENCATECOOH",
+   "smiles": "OOC1(O)C(=C(N(=O)=O)C2OOC1(CC)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -12.275006252245976,
+   "set2_log10atm": -11.329573714133428,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "ENCATECO",
+   "smiles": "CCC12OOC(C(=C(O)C2([O])O)N(=O)=O)C1O",
+   "category": "enol",
+   "set1_log10atm": -8.712756189011357,
+   "set2_log10atm": -7.79540025160926,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "PNNCATCOOH",
+   "smiles": "CCCC12OOC(C(=C(O)C2(O)OO)N(=O)=O)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -10.181896294349322,
+   "set2_log10atm": -9.264540356947222,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "PNNCATECO",
+   "smiles": "CCCC12OOC(C(=C(O)C2([O])O)N(=O)=O)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.694518049234904,
+   "set2_log10atm": -5.824261130557448,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "PNCATECOOH",
+   "smiles": "CCCC12OOC(C(=C(O)C2(O)OO)N(=O)=O)C1O",
+   "category": "enol",
+   "set1_log10atm": -12.76007813886704,
+   "set2_log10atm": -11.814645600754496,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "PNCATECO",
+   "smiles": "CCCC12OOC(C(=C(O)C2(O)[O])N(=O)=O)C1O",
+   "category": "enol",
+   "set1_log10atm": -9.197828075632422,
+   "set2_log10atm": -8.280472138230323,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "IPNNCATOOH",
+   "smiles": "OOC1(O)C(=C(N(=O)=O)C2OOC1(C(C)C)C2ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -9.982678428390676,
+   "set2_log10atm": -9.065322490988578,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "IPNNCATCO",
+   "smiles": "O=N(=O)OC1C2OOC1(C(C)C)C([O])(O)C(=C2N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -6.49530018327626,
+   "set2_log10atm": -5.625043264598803,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "IPNCATCOOH",
+   "smiles": "OOC1(O)C(=C(N(=O)=O)C2OOC1(C(C)C)C2O)O",
+   "category": "enol",
+   "set1_log10atm": -12.560860272908396,
+   "set2_log10atm": -11.615427734795851,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "IPNCATECO",
+   "smiles": "O=N(=O)C1=C(O)C(O)([O])C2(OOC1C2O)C(C)C",
+   "category": "enol",
+   "set1_log10atm": -8.998610209673778,
+   "set2_log10atm": -8.08125427227168,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "T123NNCOOH",
+   "smiles": "OOC1(O)C(=C(N(=O)=O)C2(C)OOC1(C)C2(C)ON(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -9.783460562432033,
+   "set2_log10atm": -8.866104625029937,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "T123NNCTO",
+   "smiles": "O=N(=O)OC1(C)C2(C)OOC1(C)C([O])(O)C(=C2N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -6.296082317317615,
+   "set2_log10atm": -5.42582539864016,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "T123NCTOOH",
+   "smiles": "OOC1(O)C(=C(N(=O)=O)C2(C)OOC1(C)C2(C)O)O",
+   "category": "enol",
+   "set1_log10atm": -11.685617006718477,
+   "set2_log10atm": -10.74018446860593,
+   "group_differences": {
+    "14": [
+     4,
+     5
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "T123NCATO",
+   "smiles": "O=N(=O)C1=C(O)C([O])(O)C2(C)OOC1(C)C2(C)O",
+   "category": "enol",
+   "set1_log10atm": -8.145034300889254,
+   "set2_log10atm": -7.227678363487158,
+   "group_differences": {
+    "14": [
+     4,
+     5
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "T124NNCOOH",
+   "smiles": "OOC1(O)C(=C(C)C2(OOC1(C)C2(C)ON(=O)=O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -9.982678428390676,
+   "set2_log10atm": -9.065322490988578,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "T124NNCTO",
+   "smiles": "O=N(=O)OC1(C)C2(OOC1(C)C([O])(O)C(=C2C)O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.49530018327626,
+   "set2_log10atm": -5.625043264598803,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "T124NCTOOH",
+   "smiles": "OOC1(O)C(=C(C)C2(OOC1(C)C2(C)O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -11.88483487267712,
+   "set2_log10atm": -10.939402334564573,
+   "group_differences": {
+    "14": [
+     4,
+     5
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "T124NCATO",
+   "smiles": "OC1=C(C)C2(OOC(C)(C1([O])O)C2(C)O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -8.3442521668479,
+   "set2_log10atm": -7.426896229445801,
+   "group_differences": {
+    "14": [
+     4,
+     5
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "OTNNCATOOH",
+   "smiles": "CCC1=C(O)C(O)(OO)C2(OOC1(C)C2ON(=O)=O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -10.181896294349322,
+   "set2_log10atm": -9.264540356947222,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "OTNNCATCO",
+   "smiles": "CCC1=C(O)C([O])(O)C2(OOC1(C)C2ON(=O)=O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.694518049234904,
+   "set2_log10atm": -5.824261130557448,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "OTNCATCOOH",
+   "smiles": "CCC1=C(O)C(O)(OO)C2(OOC1(C)C2O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -12.76007813886704,
+   "set2_log10atm": -11.814645600754496,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "OTNCATECO",
+   "smiles": "CCC1=C(O)C([O])(O)C2(OOC1(C)C2O)N(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -9.197828075632422,
+   "set2_log10atm": -8.280472138230323,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MTNNCATOOH",
+   "smiles": "CCC12OOC(C)(C(=C(O)C2(O)OO)N(=O)=O)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -9.982678428390676,
+   "set2_log10atm": -9.065322490988578,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "MTNNCATCO",
+   "smiles": "CCC12OOC(C)(C(=C(O)C2([O])O)N(=O)=O)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.49530018327626,
+   "set2_log10atm": -5.625043264598803,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "MTNCATCOOH",
+   "smiles": "CCC12OOC(C)(C(=C(O)C2(O)OO)N(=O)=O)C1O",
+   "category": "enol",
+   "set1_log10atm": -12.560860272908396,
+   "set2_log10atm": -11.615427734795851,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "MTNCATECO",
+   "smiles": "CCC12OOC(C)(C(=C(O)C2(O)[O])N(=O)=O)C1O",
+   "category": "enol",
+   "set1_log10atm": -8.998610209673778,
+   "set2_log10atm": -8.08125427227168,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "PTNNCATOOH",
+   "smiles": "OOC1(O)C(=C(C)C2(OOC1(CC)C2ON(=O)=O)N(=O)=O)O",
+   "category": "enol",
+   "set1_log10atm": -10.181896294349322,
+   "set2_log10atm": -9.264540356947222,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "PTNNCATCO",
+   "smiles": "CCC12OOC(N(=O)=O)(C(=C(O)C2([O])O)C)C1ON(=O)=O",
+   "category": "enol",
+   "set1_log10atm": -6.694518049234904,
+   "set2_log10atm": -5.824261130557448,
+   "group_differences": {
+    "14": [
+     2,
+     3
+    ],
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "PTNCATCOOH",
+   "smiles": "CCC12OOC(N(=O)=O)(C(=C(O)C2(O)OO)C)C1O",
+   "category": "enol",
+   "set1_log10atm": -12.76007813886704,
+   "set2_log10atm": -11.814645600754496,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "PTNCATECO",
+   "smiles": "CCC12OOC(N(=O)=O)(C(=C(O)C2([O])O)C)C1O",
+   "category": "enol",
+   "set1_log10atm": -9.197828075632422,
+   "set2_log10atm": -8.280472138230323,
+   "group_differences": {
+    "14": [
+     3,
+     4
+    ],
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "C58NO3CO2H",
+   "smiles": "OCC(C)(ON(=O)=O)C(O)C(=O)O",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -8.151801919757947,
+   "set2_log10atm": -7.888804025181729,
+   "group_differences": {
+    "19": [
+     3,
+     5
+    ]
+   }
+  },
+  {
+   "name": "INAHCO2H",
+   "smiles": "O=N(=O)OCC(O)C(C)(O)C(=O)O",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -6.910804752776723,
+   "set2_log10atm": -6.647806858200504,
+   "group_differences": {
+    "19": [
+     4,
+     6
+    ]
+   }
+  },
+  {
+   "name": "MMALNACO2H",
+   "smiles": "O=CC(C)(ON(=O)=O)C(O)C(=O)O",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -6.151792085532138,
+   "set2_log10atm": -5.899545815539982,
+   "group_differences": {
+    "19": [
+     2,
+     4
+    ]
+   }
+  },
+  {
+   "name": "C812OH",
+   "smiles": "OCC1CC(O)(C(=O)O)C1(C)C",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -8.599010760619228,
+   "set2_log10atm": -8.33601286604301,
+   "group_differences": {
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "C825OH",
+   "smiles": "OCC(CC(O)C(=O)O)C(=C)C",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -10.069233340156,
+   "set2_log10atm": -9.806235445579782,
+   "group_differences": {
+    "19": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "name": "C734OH",
+   "smiles": "OCC(CC(O)C(=O)O)C(=O)C",
+   "category": "alpha_hydroxy_acid",
+   "set1_log10atm": -10.778201615374924,
+   "set2_log10atm": -10.515203720798707,
+   "group_differences": {
+    "19": [
+     1,
+     3
+    ]
+   }
+  }
+ ],
+ "controls": [
+  {
+   "smiles": "CCO",
+   "log10atm": -1.0189748813380497
+  },
+  {
+   "smiles": "OCCO",
+   "log10atm": -3.6148249995903603
+  },
+  {
+   "smiles": "CC(=O)O",
+   "log10atm": -2.342802771028075
+  },
+  {
+   "smiles": "OC(=O)CC(=O)O",
+   "log10atm": -7.017548264643729
+  },
+  {
+   "smiles": "OCC(O)CO",
+   "log10atm": -6.111960754611418
+  },
+  {
+   "smiles": "CC(O)CC(=O)O",
+   "log10atm": -5.551906948359415
+  },
+  {
+   "smiles": "C=CCO",
+   "log10atm": -1.2706155313024672
+  }
+ ]
+}

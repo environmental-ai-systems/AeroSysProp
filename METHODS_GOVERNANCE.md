@@ -24,7 +24,7 @@ Every result from the agent API carries a provenance label such as `vp_simpol@1 
 
 Usually a new parameter set replaces the old one as the default, and the old one is kept only for reproducing past results. Where the team wants users to be able to choose between sets, the card lists them under `parameter_sets`, one marked `default: true`. Each set can be requested (`vp_evaporation@1`), and output columns always carry the set (`vp_evaporation_log10atm__set2`) so a value can never be attributed to the wrong set. Changing which set is the default changes results for anyone who does not name a set, so it needs core team approval and a note in the changelog.
 
-**Decision (2026-09):** `vp_evaporation2` has become parameter set 2 of `vp_evaporation` and is the default, because it matches the published method. `vp_evaporation2` is kept as a deprecated alias for `vp_evaporation@2`. On the MCM the two sets differ for 91 of 5,809 species (enols), by about 0.9 log units.
+**Decision (2026-09):** `vp_evaporation2` has become parameter set 2 of `vp_evaporation` and is the default, because it matches the published method. `vp_evaporation2` is kept as a deprecated alias for `vp_evaporation@2`. On the MCM the two sets differ for 91 of 5,809 species: 78 enols, by about 0.9 log units (the intended change), and 13 alpha-hydroxy carboxylic acids such as glycolic acid, by about 0.25 log units. The second group looks unintended: widening diol pattern 1902 to `[CX4,CX3]` for enols also matches the carboxylic acid carbon, so set 2 adds a diol correction to these acids. This is recorded in the method card for the core team to decide; `tests/test_evaporation_sets.py` freezes the current behaviour of both sets on all 91.
 
 ## Method cards
 
@@ -65,6 +65,7 @@ Where a source paper gives worked examples or group assignments for specific mol
 
 The draft cards record the following for decision:
 
+* Whether set 2's diol pattern 1902 should exclude carboxylic acid carbons (it currently adds a diol correction to 13 MCM alpha-hydroxy acids). A fix would be parameter set 3.
 * The Schroeder and Le Bas density temperature correction always uses the Nannoolal boiling point, while the critical properties follow the chosen boiling point source.
 * The origin of the atmospheric additions to the Nannoolal and Stein & Brown group sets.
 * The critical property citation (labelled Nannoolal et al. 2004; the method appears to be Nannoolal, Rarey and Ramjugernath 2007).

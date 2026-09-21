@@ -483,7 +483,9 @@ the alcohol terms to match the published method. Tick EVAPORATION and
 choose one or both sets underneath it. The column always names the set
 (`vp_evaporation_log10atm__set2`), so results from different sets can't
 be confused. The sets give the same value for most molecules; on the MCM
-they differ for 91 of 5,809 species (enols), by about 0.9 log units.
+they differ for 91 of 5,809 species: 78 enols, by about 0.9 log units,
+and 13 alpha-hydroxy acids, by about 0.25 log units (see
+`METHODS_GOVERNANCE.md`; the second looks like an unintended side effect).
 From Python, pass `parameter_sets={'vp_evaporation': [1, 2]}` to
 `run_all`; through the agent API, request `"vp_evaporation@1"`. The old
 method ID `vp_evaporation2` still works as an alias for set 2 but is

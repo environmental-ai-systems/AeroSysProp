@@ -326,13 +326,14 @@ class TestParameterSets:
 
     def test_sets_match_the_underlying_functions(self):
         from aerosysprop.methods import vapour_pressures
-        mol = Chem.MolFromSmiles('OC=CC(=O)O')  # an enol: the sets treat it differently
-        r = run_all([('enol', mol)], methods=['vp_evaporation'], workers=1, use_threads=True,
+        mol = Chem.MolFromSmiles('OCC(=O)O')  # glycolic acid: the sets differ
+        r = run_all([('glycolic_acid', mol)], methods=['vp_evaporation'], workers=1, use_threads=True,
                     parameter_sets={'vp_evaporation': [1, 2]})[0]
         assert r['vp_evaporation_log10atm__set1'] == pytest.approx(
             vapour_pressures.evaporation(mol, 298.15))
         assert r['vp_evaporation_log10atm__set2'] == pytest.approx(
             vapour_pressures.evaporation2(mol, 298.15))
+        assert r['vp_evaporation_log10atm__set1'] != pytest.approx(r['vp_evaporation_log10atm__set2'])
 
     def test_deprecated_id_still_works(self):
         with pytest.warns(FutureWarning):

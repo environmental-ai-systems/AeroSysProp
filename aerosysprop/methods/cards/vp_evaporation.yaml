@@ -55,14 +55,19 @@ history:
 implementation_notes:
 - Set 2 is the default because it matches the published method. Set 1 is kept so earlier results can be
   reproduced.
-group_interpretation: []
+group_interpretation:
+- Set 2 widens diol pattern 1902 to [CX4]([OX2;H1])[CX4,CX3]([OX2;H1]) so an enol OH next to an alcohol counts
+  as a diol. The [CX3] branch also matches a carboxylic acid carbon, so alpha-hydroxy acids (13 MCM species,
+  e.g. glycolic acid) receive a diol correction in set 2 (group 19 count +2, about +0.25 log10 atm). This looks
+  unintended. Needs a core team decision; a fix would be parameter set 3.
 known_limitations:
 - Nitro groups and several nitrogen functionalities are not covered (reported as UNMATCHED_ATOMS).
 validation:
   reference_outputs: tests/fixtures.json (values frozen from the current implementation)
   group_count_tests: null
-  todo: Add group assignment tests from worked examples in the source papers, and a test molecule set on
-    which the two parameter sets differ.
+  set_comparison: tests/test_evaporation_sets.py freezes values and group counts for both sets on the 91 MCM
+    species where they differ (78 enols, 13 alpha-hydroxy acids), plus controls where they agree.
+  todo: Add group assignment tests from worked examples in the source papers.
 review:
   state: draft
   approved_by: []
