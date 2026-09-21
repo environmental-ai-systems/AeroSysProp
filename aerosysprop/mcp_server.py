@@ -14,10 +14,11 @@ Run it with::
     aerosysprop-mcp                      # stdio, for Claude Desktop / Claude Code / local agents
     aerosysprop-mcp --http --port 8765   # Streamable HTTP, for networked clients
 
-Every tool is a thin wrapper over :mod:`aerosysprop.api`. The server is
-read-only by construction: it exposes no tool that writes files or
-databases. File access is limited to the directory named by the
-``AEROSYSPROP_DATA_DIR`` environment variable and is disabled if it is unset.
+Every tool is a thin wrapper over :mod:`aerosysprop.api` or
+:mod:`aerosysprop.runs`. Only batch runs write anything: each run creates a new
+folder inside ``AEROSYSPROP_OUTPUT_DIR`` (disabled if unset), and nothing is
+ever overwritten, deleted, or written to a session database. File reading is
+limited to ``AEROSYSPROP_DATA_DIR`` (disabled if unset).
 
 Nothing may be printed to stdout in this module: with the stdio transport,
 stdout carries the protocol messages.
@@ -27,6 +28,8 @@ from __future__ import annotations
 import argparse
 import functools
 import logging
+import os
+import warnings
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
@@ -42,7 +45,7 @@ except ImportError as exc:  # pragma: no cover - exercised only without the extr
         'Install it with:  pip install "aerosysprop[mcp]"'
     ) from exc
 
-from aerosysprop import __version__, api
+from aerosysprop import __version__, api, runs
 
 _PKG = Path(__file__).parent
 _GUIDE = _PKG / 'agent_guide.md'
@@ -64,6 +67,11 @@ say so when reporting it.
 4. Vapour pressures are log10(atm). Temperatures are kelvin.
 5. For mixtures with salts, call list_salts for accepted names and give \
 mass fractions (neutrals first, then salts).
+6. For more than about 50 molecules, use start_batch_run instead of \
+predict_properties: it writes a run folder (CSV plus a provenance manifest) \
+and returns a summary. Poll batch_run_status, then use read_batch_results \
+to look at flagged molecules or where methods disagree most. Tell the user \
+the run folder so they can open results.csv.
 Values are estimates, not measurements. When methods disagree, report the \
 spread rather than picking one silently. The resource aerosysprop://guide has \
 fuller guidance."""
@@ -278,6 +286,93 @@ def opera_predict(
     return api.opera_predict(smiles, names=names, endpoints=endpoints)
 
 
+_BATCH_WRITE = ToolAnnotations(read_only_hint=False, destructive_hint=False,
+                               idempotent_hint=False, open_world_hint=False)
+
+
+@server.tool(title='Start a batch run', annotations=_BATCH_WRITE)
+@_wrap
+def start_batch_run(
+    input_path: Annotated[Optional[str], Field(
+        description='A file in the data directory (from list_data_files) holding the '
+                    'molecules. Give this or smiles, not both.')] = None,
+    smiles: Annotated[Optional[list[str]], Field(
+        description='SMILES strings, when not reading from a file.')] = None,
+    names: Annotated[Optional[list[str]], Field(
+        description='Optional labels, same length as smiles.')] = None,
+    methods: Annotated[Optional[list[str]], Field(
+        description='Method IDs or property names, as for predict_properties. Omit for '
+                    'all methods.')] = None,
+    temperature_K: Temperature = 298.15,
+    bp_sources: Annotated[Optional[list[str]], Field(
+        description='Boiling point source(s), as for predict_properties.')] = None,
+    label: Annotated[Optional[str], Field(
+        description='Short label for the run folder name, e.g. "mcm vapour pressure".')] = None,
+    include_diagnostics: Annotated[bool, Field(
+        description='Check each molecule against each method\'s groups.')] = True,
+) -> dict:
+    """Start a background batch run for a large set of molecules (up to 100,000).
+    Results are written to a new run folder (results.csv, diagnostics.csv and a
+    run.json provenance manifest) in the output folder; nothing is overwritten.
+    Returns a run_id at once; poll batch_run_status until complete. The full
+    MCM (about 5,800 species) takes around 20 s on 4 cores."""
+    return runs.start_batch_run(input_path=input_path, smiles=smiles, names=names,
+                                methods=methods, temperature_K=temperature_K,
+                                bp_sources=bp_sources, label=label,
+                                include_diagnostics=include_diagnostics,
+                                requested_by='aerosysprop-mcp')
+
+
+@server.tool(title='Batch run status and summary', annotations=_READ_ONLY)
+@_wrap
+def batch_run_status(
+    run_id: Annotated[str, Field(description='The run_id from start_batch_run.')],
+) -> dict:
+    """Progress of a batch run, or once complete its summary: counts, the range of
+    every output column, how many molecules each method flagged, and the molecules
+    where methods disagree most, with provenance labels for every method."""
+    return runs.batch_run_status(run_id)
+
+
+@server.tool(title='Read batch run results', annotations=_READ_ONLY)
+@_wrap
+def read_batch_results(
+    run_id: Annotated[str, Field(description='The run_id of a completed run.')],
+    view: Annotated[Literal['rows', 'flagged', 'largest_spread'], Field(
+        description='"rows" for all molecules in order, "flagged" for molecules with '
+                    'diagnostic warnings, "largest_spread" for molecules where methods '
+                    'disagree most within a group.')] = 'rows',
+    group: Annotated[Optional[str], Field(
+        description='For largest_spread: a group name exactly as listed under '
+                    'method_spread in the run summary, e.g. "Vapour Pressure (log10(atm))".')] = None,
+    method: Annotated[Optional[str], Field(
+        description='For flagged: only molecules flagged by this method ID.')] = None,
+    columns: Annotated[Optional[list[str]], Field(
+        description='Only return these value columns (plus name and SMILES).')] = None,
+    name_contains: Annotated[Optional[str], Field(
+        description='Only molecules whose name contains this text.')] = None,
+    limit: Annotated[int, Field(description='Rows to return (at most 200).', ge=1, le=200)] = 50,
+    offset: Annotated[int, Field(description='Rows to skip, for paging.', ge=0)] = 0,
+) -> dict:
+    """Read a slice of a completed batch run without loading the whole table.
+    Also reports whether results.csv still matches the fingerprint recorded when
+    the run wrote it."""
+    return runs.read_batch_results(run_id, view=view, columns=columns, method=method,
+                                   name_contains=name_contains, group=group,
+                                   limit=limit, offset=offset)
+
+
+@server.tool(title='List batch runs', annotations=_READ_ONLY)
+@_wrap
+def list_batch_runs(
+    limit: Annotated[int, Field(description='How many runs to list, newest first.',
+                                ge=1, le=200)] = 20,
+) -> dict:
+    """List previous batch runs in the output folder with their status, size,
+    methods and temperature."""
+    return runs.list_batch_runs(limit=limit)
+
+
 # ---------------------------------------------------------------------------
 # Resources: reference documents the agent can read on demand
 # ---------------------------------------------------------------------------
@@ -313,6 +408,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
     # Logs go to stderr; stdout is reserved for the protocol on stdio.
     logging.basicConfig(level=logging.WARNING)
+    # Diagnostics are returned in results and written to diagnostics.csv, so the
+    # per-molecule UserWarnings the methods also raise would only flood the log.
+    # Setting it in the environment reaches batch-run worker processes too.
+    os.environ.setdefault('PYTHONWARNINGS', 'ignore::UserWarning')
+    warnings.simplefilter('ignore', UserWarning)
     if args.http:
         server.run('streamable-http', host=args.host, port=args.port)
     else:

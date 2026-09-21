@@ -513,8 +513,10 @@ This provides the `aerosysprop-mcp` command. By default it speaks MCP over stdio
 | `list_data_files`, `load_smiles_file` | Read molecules from files in the data directory |
 | `read_session_database` | Read results saved by the web app |
 | `opera_predict` | OPERA QSAR predictions, when the OPERA container is running |
+| `start_batch_run`, `batch_run_status` | Large runs (up to 100,000 molecules) written to a run folder, with a summary for the agent |
+| `read_batch_results`, `list_batch_runs` | Read slices of a run (flagged molecules, largest disagreements) and list earlier runs |
 
-The server is **read-only by design**. It has no tool that writes files or databases, session databases are opened in SQLite read-only mode, and file access is confined to the directory named by the `AEROSYSPROP_DATA_DIR` environment variable (file tools are disabled if it is not set). Note that this only governs what agents can do *through the server*; an agent that also has shell access is controlled by that agent's own permission settings.
+The server **never overwrites, deletes, or writes to a session database**. File reading is confined to the directory named by `AEROSYSPROP_DATA_DIR`, and session databases are opened in SQLite read-only mode. The only thing it writes is a batch run: each run creates a new folder inside `AEROSYSPROP_OUTPUT_DIR` holding `results.csv`, `diagnostics.csv` and `run.json`, a provenance manifest recording the request, each method's version label, the software version and a SHA-256 fingerprint of every output file. Either feature is disabled if its variable is not set. The full MCM v3.3.1 (5,809 species, all methods) runs in about 40 s on 4 cores. Note that this only governs what agents can do *through the server*; an agent that also has shell access is controlled by that agent's own permission settings.
 
 **Claude Desktop**: add to `claude_desktop_config.json` (use the full path to the command in your environment, e.g. from `which aerosysprop-mcp`):
 
@@ -523,7 +525,10 @@ The server is **read-only by design**. It has no tool that writes files or datab
   "mcpServers": {
     "aerosysprop": {
       "command": "/path/to/envs/AeroSysProp/bin/aerosysprop-mcp",
-      "env": { "AEROSYSPROP_DATA_DIR": "/path/to/your/smiles/files" }
+      "env": {
+        "AEROSYSPROP_DATA_DIR": "/path/to/your/smiles/files",
+        "AEROSYSPROP_OUTPUT_DIR": "/path/to/aerosysprop-runs"
+      }
     }
   }
 }
@@ -532,7 +537,8 @@ The server is **read-only by design**. It has no tool that writes files or datab
 **Claude Code**:
 
 ```bash
-claude mcp add aerosysprop -e AEROSYSPROP_DATA_DIR=/path/to/your/smiles/files -- aerosysprop-mcp
+claude mcp add aerosysprop -e AEROSYSPROP_DATA_DIR=/path/to/your/smiles/files \
+  -e AEROSYSPROP_OUTPUT_DIR=/path/to/aerosysprop-runs -- aerosysprop-mcp
 ```
 
 **Trying it without an agent**: the MCP Inspector lets you call each tool by hand:

@@ -316,7 +316,7 @@ def _run_one(args):
 
 def run_all(mols, methods=None, temperature=298.15, workers=None,
             output_csv=None, progress_callback=None, use_threads=False,
-            bp_source='bp_nannoolal', bp_sources=None):
+            bp_source='bp_nannoolal', bp_sources=None, mp_context=None):
     """
     Run property predictions on a list of molecules in parallel.
 
@@ -352,6 +352,11 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
         each dependent column is produced once per source with a
         ``'__bp<Source>'`` suffix (e.g. ``'vp_nannoolal_log10atm__bpStein'``).
         ``None`` falls back to ``[bp_source]``.
+    mp_context : multiprocessing context or None
+        How worker processes are started when ``use_threads`` is False.
+        ``None`` keeps the module default (fork on Linux and macOS). Pass
+        ``multiprocessing.get_context('spawn')`` when calling from a
+        multi-threaded host such as the MCP server, where forking is unsafe.
 
     Returns
     -------
@@ -403,7 +408,7 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
         writer.writeheader()
 
     Executor = ThreadPoolExecutor if use_threads else ProcessPoolExecutor
-    pool_kwargs = {} if use_threads else {'mp_context': _MP_CONTEXT}
+    pool_kwargs = {} if use_threads else {'mp_context': mp_context or _MP_CONTEXT}
 
     try:
         with Executor(max_workers=workers, **pool_kwargs) as pool:

@@ -14,7 +14,9 @@ EXPECTED_TOOLS = {
     'list_methods', 'list_salts', 'predict_properties', 'diagnose_smiles',
     'activity_coefficients', 'list_data_files', 'load_smiles_file',
     'read_session_database', 'opera_predict',
+    'start_batch_run', 'batch_run_status', 'read_batch_results', 'list_batch_runs',
 }
+WRITES = {'start_batch_run'}  # writes only new run folders; never destructive
 
 
 def _run(coro_fn):
@@ -32,12 +34,13 @@ def _payload(result):
     return json.loads(result.content[0].text)
 
 
-def test_tool_set_is_exactly_the_read_only_set():
+def test_tool_set_and_write_annotations():
     tools = _run(lambda c: c.list_tools()).tools
     names = {t.name for t in tools}
     assert names == EXPECTED_TOOLS
     for t in tools:
-        assert t.annotations is not None and t.annotations.read_only_hint is True, t.name
+        assert t.annotations is not None, t.name
+        assert t.annotations.read_only_hint is (t.name not in WRITES), t.name
         assert t.annotations.destructive_hint is False, t.name
         assert t.description and len(t.description) > 40, t.name
 
@@ -75,3 +78,23 @@ def test_guide_resource_is_served():
         return await c.read_resource('aerosysprop://guide')
     res = _run(call)
     assert 'log10' in res.contents[0].text
+
+
+def test_batch_run_over_mcp(tmp_path, monkeypatch):
+    monkeypatch.setenv('AEROSYSPROP_OUTPUT_DIR', str(tmp_path))
+
+    async def go(c):
+        started = _payload(await c.call_tool('start_batch_run', {
+            'smiles': ['CCO', 'CC[N+](=O)[O-]'], 'methods': ['vp_simpol'], 'label': 'mcp test'}))
+        for _ in range(300):
+            st = _payload(await c.call_tool('batch_run_status', {'run_id': started['run_id']}))
+            if st['status'] != 'running':
+                break
+            await asyncio.sleep(0.1)
+        rows = _payload(await c.call_tool('read_batch_results', {
+            'run_id': started['run_id'], 'view': 'flagged'}))
+        return st, rows
+    st, rows = _run(go)
+    assert st['status'] == 'complete'
+    assert st['summary']['flags_by_method'] == {'vp_simpol': 1}
+    assert rows['total_matching'] == 1

@@ -13,6 +13,8 @@ AeroSysProp estimates properties of organic molecules relevant to atmospheric ae
 | Molecules held in a file | `list_data_files`, then `load_smiles_file` |
 | Results saved earlier from the AeroSysProp app | `read_session_database` |
 | Independent QSAR cross-check (if the OPERA container runs) | `opera_predict` |
+| More than about 50 molecules, or a whole file | `start_batch_run`, then `batch_run_status` and `read_batch_results` |
+| Earlier batch runs | `list_batch_runs` |
 
 ## Units
 
@@ -40,6 +42,16 @@ Results carry diagnostics per method. The important codes:
 
 Every result includes a `provenance` block. Each method has a label such as `vp_simpol@1 (3f9a1c2b7d40)`: the method ID, its parameter set version and a fingerprint of the parameter files. The method's card, summarised under `card` in `list_methods`, gives its publication status. When reporting values in anything a person may cite, include the provenance label, and say when a method is `published-with-modifications` or `in-house` rather than presenting it as the literature method. A `PARAMETERS_CHANGED` warning means the installed parameter files differ from the approved version.
 
+## Batch runs
+
+`predict_properties` returns every value, which is only practical for a few tens of molecules. For larger sets use `start_batch_run` (up to 100,000 molecules; the full MCM of about 5,800 species takes around 40 s on 4 cores). It writes a new run folder containing `results.csv`, `diagnostics.csv` and `run.json`, a manifest recording the request, every method's provenance label, the software version and a fingerprint of each output file. Then:
+
+1. Poll `batch_run_status` until `status` is `complete`. The summary gives counts, the range of every column, how many molecules each method flagged, and `method_spread`: how far methods disagree for each quantity, with the molecules that disagree most.
+2. Use `read_batch_results` for detail: `view: "flagged"` (optionally one `method`), or `view: "largest_spread"` with a `group` exactly as named in `method_spread`. Read at most what you need; each call returns up to 200 rows.
+3. Tell the user the run folder so they can open `results.csv` themselves, and quote provenance labels from the summary.
+
+Radical species (`radical_electrons > 0`; common in mechanisms such as the MCM) are usually flagged. Group-contribution methods are designed for stable molecules, so say so rather than reporting radical values as pure-component properties. If `results_match_manifest` is false, the results file has been edited since the run wrote it.
+
 ## What this server will not do
 
-It cannot write files, save results or change a session database, and it can only read files inside the directory the user configured. If a user wants results saved, return them and let the user save them through the AeroSysProp app or their own code.
+It never overwrites or deletes anything and never changes a session database. The only thing it writes is a new batch-run folder inside the output folder the user configured (batch runs are disabled if none is set). It can only read files inside the data folder the user configured.

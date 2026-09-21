@@ -21,13 +21,15 @@ Design rules
   ``code``, a message and a ``hint`` telling the caller how to fix the call.
 * Nothing in this module writes to disk. Session databases are opened
   read-only, and file access is confined to the ``AEROSYSPROP_DATA_DIR``
-  directory.
+  directory. Large batch runs, which do write, live in
+  :mod:`aerosysprop.runs` and are confined to ``AEROSYSPROP_OUTPUT_DIR``.
 """
 from __future__ import annotations
 
 import functools
 import json
 import math
+import multiprocessing
 import os
 import re
 import sqlite3
@@ -39,7 +41,7 @@ from typing import Any, Optional
 
 import numpy as np
 from rdkit import Chem, rdBase
-from rdkit.Chem import rdMolDescriptors
+from rdkit.Chem import Descriptors, rdMolDescriptors
 
 from aerosysprop import __version__, batch, data, db, method_cards
 from aerosysprop import io as asp_io
@@ -64,6 +66,13 @@ MAX_OPERA_MOLECULES = 100
 SMILES_FILE_SUFFIXES = {'.txt', '.prop', '.smi', '.csv', '.tsv'}
 DB_SUFFIXES = {'.db', '.sqlite', '.sqlite3'}
 SDF_SUFFIXES = {'.sdf'}
+
+# Below this many molecules a single thread is quickest; above it, worker
+# processes. Processes are started with 'spawn', which is safe inside a
+# multi-threaded host such as the MCP server (forking is not). Benchmarked on
+# the MCM v3.3.1 set: 1,000 molecules in about 3 s on 4 cores.
+PROCESS_THRESHOLD = 50
+_SPAWN = multiprocessing.get_context('spawn')
 
 
 # ---------------------------------------------------------------------------
@@ -416,37 +425,19 @@ def _molecule_summary(mol) -> dict:
         'formula': rdMolDescriptors.CalcMolFormula(mol),
         'heavy_atoms': mol.GetNumHeavyAtoms(),
         'formal_charge': Chem.GetFormalCharge(mol),
+        'radical_electrons': Descriptors.NumRadicalElectrons(mol),
     }
 
 
-def _provenance(method_ids) -> tuple:
-    methods = {m: method_cards.provenance(m) for m in method_ids}
-    notes = [{'severity': 'warning', 'code': 'PARAMETERS_CHANGED', 'message':
-              f'{m}: {p["warning"]}'} for m, p in methods.items() if p.get('warning')]
-    return {'software': method_cards.software_provenance(), 'methods': methods}, notes
+def _compute(smiles, names, method_ids, T, bp, include_diagnostics=True,
+             progress_callback=None):
+    """Shared calculation core for predict_properties and batch runs.
 
-
-def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
-                       bp_sources=None, include_diagnostics=True) -> dict:
-    """Predict single-component properties for one or more molecules.
-
-    Parameters mirror :func:`aerosysprop.batch.run_all`, but take SMILES
-    strings, accept property-group names (e.g. ``'vapour_pressure'``) as well
-    as method IDs, and never write output files.
+    Returns ``(methods_run, records, columns)``: the resolved method IDs in
+    registry order, one record per input molecule, and {column: unit}.
     """
-    smiles = _as_str_list(smiles, 'smiles')
-    _check_count(len(smiles))
-    if names is not None:
-        names = _as_str_list(names, 'names')
-        if len(names) != len(smiles):
-            raise ApiError('INVALID_ARGUMENT', 'names must be the same length as smiles.')
-    else:
-        names = list(smiles)
-    method_ids = _normalise_methods(methods)
-    bp = _normalise_bp_sources(bp_sources)
-    T, notes = _check_temperature(temperature_K)
-    resolved = [m for m in batch.ALL_METHODS
-                if m in batch.resolve_methods(method_ids or batch.ALL_METHODS, bp_sources=bp)]
+    resolved_set = batch.resolve_methods(method_ids or batch.ALL_METHODS, bp_sources=bp)
+    resolved = [m for m in batch.ALL_METHODS if m in resolved_set]
 
     records, mols = [], []
     for i, (smi, name) in enumerate(zip(smiles, names)):
@@ -463,12 +454,15 @@ def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
 
     by_key = {}
     if mols:
+        if len(mols) < PROCESS_THRESHOLD:
+            pool = {'use_threads': True, 'workers': 1}
+        else:
+            pool = {'workers': os.cpu_count() or 1, 'mp_context': _SPAWN}
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             rows = batch.run_all(
-                mols, methods=method_ids, temperature=T,
-                workers=min(4, len(mols)), use_threads=True,
-                progress_callback=lambda *_: None, bp_sources=bp)
+                mols, methods=method_ids, temperature=T, bp_sources=bp,
+                progress_callback=progress_callback or (lambda *_: None), **pool)
         by_key = {key: row for (key, _), row in zip(mols, rows)}
 
     columns = {}
@@ -487,7 +481,39 @@ def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
             diag = _method_diagnostics(rec['canonical_smiles'], resolved)
             if diag:
                 rec['diagnostics'] = diag
+    return resolved, records, columns
 
+
+def _provenance(method_ids) -> tuple:
+    methods = {m: method_cards.provenance(m) for m in method_ids}
+    notes = [{'severity': 'warning', 'code': 'PARAMETERS_CHANGED', 'message':
+              f'{m}: {p["warning"]}'} for m, p in methods.items() if p.get('warning')]
+    return {'software': method_cards.software_provenance(), 'methods': methods}, notes
+
+
+def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
+                       bp_sources=None, include_diagnostics=True) -> dict:
+    """Predict single-component properties for one or more molecules.
+
+    Parameters mirror :func:`aerosysprop.batch.run_all`, but take SMILES
+    strings, accept property-group names (e.g. ``'vapour_pressure'``) as well
+    as method IDs, and never write output files. For large sets, use
+    :mod:`aerosysprop.runs`, which writes a run folder instead of returning
+    every row.
+    """
+    smiles = _as_str_list(smiles, 'smiles')
+    _check_count(len(smiles))
+    if names is not None:
+        names = _as_str_list(names, 'names')
+        if len(names) != len(smiles):
+            raise ApiError('INVALID_ARGUMENT', 'names must be the same length as smiles.')
+    else:
+        names = list(smiles)
+    method_ids = _normalise_methods(methods)
+    bp = _normalise_bp_sources(bp_sources)
+    T, notes = _check_temperature(temperature_K)
+
+    resolved, records, columns = _compute(smiles, names, method_ids, T, bp, include_diagnostics)
     provenance, prov_notes = _provenance(resolved)
     return {
         'temperature_K': T,
@@ -680,16 +706,9 @@ def list_data_files() -> dict:
     return {'data_directory': str(root), 'files': files}
 
 
-def load_smiles_file(path: str, smiles_column: Optional[int] = None,
-                     name_column: Optional[int] = None, table: str = 'compounds',
-                     name_property: Optional[str] = None,
-                     max_molecules: int = MAX_MOLECULES) -> dict:
-    """Read molecules from a text, SQLite or SDF file in the data directory.
-
-    For text files the SMILES column is detected automatically unless
-    ``smiles_column`` is given (0-based).
-    """
-    p = _resolve_in_root(path)
+def _read_molecules(p: Path, smiles_column=None, name_column=None, table='compounds',
+                    name_property=None) -> list:
+    """Read (name, canonical SMILES) pairs from a resolved file path."""
     suffix = p.suffix.lower()
     with rdBase.BlockLogs(), warnings.catch_warnings():
         warnings.simplefilter('ignore')
@@ -712,10 +731,23 @@ def load_smiles_file(path: str, smiles_column: Optional[int] = None,
             raise ApiError('UNSUPPORTED_FORMAT', f'Unsupported file type {suffix!r}.',
                            hint='Supported: ' + ', '.join(sorted(
                                SMILES_FILE_SUFFIXES | DB_SUFFIXES | SDF_SUFFIXES)))
-    molecules = [{'name': n, 'smiles': Chem.MolToSmiles(m)}
-                 for n, m in mols[:max(0, int(max_molecules))]]
-    return {'path': path, 'count': len(molecules), 'total_in_file': len(mols),
-            'truncated': len(mols) > len(molecules), 'molecules': molecules,
+        return [(n, Chem.MolToSmiles(m)) for n, m in mols]
+
+
+def load_smiles_file(path: str, smiles_column: Optional[int] = None,
+                     name_column: Optional[int] = None, table: str = 'compounds',
+                     name_property: Optional[str] = None,
+                     max_molecules: int = MAX_MOLECULES) -> dict:
+    """Read molecules from a text, SQLite or SDF file in the data directory.
+
+    For text files the SMILES column is detected automatically unless
+    ``smiles_column`` is given (0-based).
+    """
+    p = _resolve_in_root(path)
+    pairs = _read_molecules(p, smiles_column, name_column, table, name_property)
+    molecules = [{'name': n, 'smiles': s} for n, s in pairs[:max(0, int(max_molecules))]]
+    return {'path': path, 'count': len(molecules), 'total_in_file': len(pairs),
+            'truncated': len(pairs) > len(molecules), 'molecules': molecules,
             'note': 'Rows whose SMILES could not be parsed are skipped by the loader.'}
 
 
