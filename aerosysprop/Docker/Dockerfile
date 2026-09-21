@@ -49,11 +49,11 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Copy the packaging metadata and the package itself, then install. Runtime
-# dependencies are declared in pyproject.toml's [project.dependencies], so a
-# plain `pip install .` pulls everything needed.
+# dependencies are declared in pyproject.toml's [project.dependencies]; the
+# Streamlit interface is the optional `ui` extra, so install with `.[ui]`.
 COPY pyproject.toml ./
 COPY aerosysprop ./aerosysprop
-RUN pip install .
+RUN pip install ".[ui]"
 
 EXPOSE 8501
 

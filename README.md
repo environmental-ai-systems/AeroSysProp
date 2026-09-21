@@ -14,6 +14,7 @@ A Python library for predicting thermophysical properties of organic molecules r
 - [Available methods](#available-methods)
 - [Activity coefficients](#activity-coefficients)
 - [Web interface](#web-interface)
+- [Use with AI agents (MCP)](#use-with-ai-agents-mcp)
 - [Use in numerical simulations](#use-in-numerical-simulations)
 - [Running the tests](#running-the-tests)
 - [Docker](#docker)
@@ -47,6 +48,9 @@ AeroSysProp/
 │   ├── molar_volumes.py             # Molar volume helpers used by density methods
 │   ├── app.py                       # Streamlit app — navigation router (st.navigation)
 │   ├── _ui.py                       # Shared Streamlit UI helpers used by the views
+│   ├── api.py                       # Agent-facing API: plain JSON in and out, read-only
+│   ├── mcp_server.py                # MCP server for AI agents (aerosysprop-mcp)
+│   ├── agent_guide.md               # Guidance for agents using the MCP server
 │   ├── views/                       # Streamlit multipage app pages
 │   │   ├── home.py                  # Homepage / landing
 │   │   ├── single_component.py      # Per-compound property prediction
@@ -441,7 +445,7 @@ streamlit run aerosysprop/app.py
 `pyproject.toml`, so an editable install pulls them in:
 
 ```bash
-pip install -e .
+pip install -e ".[ui]"
 streamlit run aerosysprop/app.py
 ```
 
@@ -484,6 +488,60 @@ as the single-component page (type, upload a file, or reload from a
 saved session), lets you pick inorganic salts from the AIOMFAC catalog,
 and surfaces input diagnostics (matcher gaps, missing interaction
 parameters, out-of-range concentrations) inline with the results.
+
+---
+
+## Use with AI agents (MCP)
+
+AeroSysProp includes a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server, so AI agents such as Claude Desktop, Claude Code or a local model with an MCP-capable client can call it directly. The agent sees a small set of documented tools and gets plain JSON back, with units in the field names and the relevant diagnostics attached to every value.
+
+Install the optional dependency (Python 3.10 or later):
+
+```bash
+pip install -e ".[mcp]"
+```
+
+This provides the `aerosysprop-mcp` command. By default it speaks MCP over stdio, which is what desktop agents expect; `aerosysprop-mcp --http --port 8765` serves Streamable HTTP instead.
+
+| Tool | Purpose |
+|---|---|
+| `list_methods` | Method IDs, units, output columns and dependencies |
+| `list_salts` | Salts supported by AIOMFAC, with their ions |
+| `predict_properties` | Boiling point, vapour pressure, critical properties and density for up to 1000 SMILES |
+| `diagnose_smiles` | SMILES validity and per-method group coverage, without computing anything |
+| `activity_coefficients` | AIOMFAC activity coefficients for water/organic/salt mixtures |
+| `list_data_files`, `load_smiles_file` | Read molecules from files in the data directory |
+| `read_session_database` | Read results saved by the web app |
+| `opera_predict` | OPERA QSAR predictions, when the OPERA container is running |
+
+The server is **read-only by design**. It has no tool that writes files or databases, session databases are opened in SQLite read-only mode, and file access is confined to the directory named by the `AEROSYSPROP_DATA_DIR` environment variable (file tools are disabled if it is not set). Note that this only governs what agents can do *through the server*; an agent that also has shell access is controlled by that agent's own permission settings.
+
+**Claude Desktop**: add to `claude_desktop_config.json` (use the full path to the command in your environment, e.g. from `which aerosysprop-mcp`):
+
+```json
+{
+  "mcpServers": {
+    "aerosysprop": {
+      "command": "/path/to/envs/AeroSysProp/bin/aerosysprop-mcp",
+      "env": { "AEROSYSPROP_DATA_DIR": "/path/to/your/smiles/files" }
+    }
+  }
+}
+```
+
+**Claude Code**:
+
+```bash
+claude mcp add aerosysprop -e AEROSYSPROP_DATA_DIR=/path/to/your/smiles/files -- aerosysprop-mcp
+```
+
+**Trying it without an agent**: the MCP Inspector lets you call each tool by hand:
+
+```bash
+npx @modelcontextprotocol/inspector aerosysprop-mcp
+```
+
+The same functions are available directly in Python through `aerosysprop.api`, which the server wraps; every function takes and returns plain JSON-compatible values. Guidance written for agents (units, how to read diagnostics, when to compare methods) is in [`aerosysprop/agent_guide.md`](aerosysprop/agent_guide.md) and is also served to agents as the resource `aerosysprop://guide`.
 
 ---
 

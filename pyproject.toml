@@ -1,21 +1,28 @@
 [build-system]
-requires = ["setuptools>=42"]
+requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "aerosysprop"
 version = "0.1.0"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "rdkit",
     "numpy",
     "pandas",
-    "streamlit",
     "tqdm",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+# Streamlit web interface
+ui = ["streamlit"]
+# MCP server for AI agents (aerosysprop-mcp)
+mcp = ["mcp>=2.2,<3"]
+all = ["streamlit", "mcp>=2.2,<3"]
+dev = ["pytest", "streamlit", "mcp>=2.2,<3"]
+
+[project.scripts]
+aerosysprop-mcp = "aerosysprop.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -28,4 +35,5 @@ aerosysprop = [
     "data/*.smarts",
     "data/*.matrix",
     "methods/*.md",
+    "agent_guide.md",
 ]
