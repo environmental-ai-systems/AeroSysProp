@@ -70,8 +70,10 @@ mass fractions (neutrals first, then salts).
 6. For more than about 50 molecules, use start_batch_run instead of \
 predict_properties: it writes a run folder (CSV plus a provenance manifest) \
 and returns a summary. Poll batch_run_status, then use read_batch_results \
-to look at flagged molecules or where methods disagree most. Tell the user \
-the run folder so they can open results.csv.
+to look at flagged molecules or where methods disagree most. Follow the \
+summary's reporting_requirements: give the run folder, quote provenance \
+labels, state the coverage with any aggregate, and look up specific \
+molecules by name or SMILES rather than inferring them.
 Values are estimates, not measurements. When methods disagree, report the \
 spread rather than picking one silently. The resource aerosysprop://guide has \
 fuller guidance."""
@@ -328,9 +330,12 @@ def start_batch_run(
 def batch_run_status(
     run_id: Annotated[str, Field(description='The run_id from start_batch_run.')],
 ) -> dict:
-    """Progress of a batch run, or once complete its summary: counts, the range of
-    every output column, how many molecules each method flagged, and the molecules
-    where methods disagree most, with provenance labels for every method."""
+    """Progress of a batch run, or once complete its summary: a coverage statement,
+    caveats and reporting requirements, the range of every output column for clean
+    molecules (closed-shell, unflagged) and for all molecules, and where methods
+    disagree most, with provenance labels for every method. Follow the reporting
+    requirements, and pass the coverage statement and caveats on with any
+    aggregate figure."""
     return runs.batch_run_status(run_id)
 
 
@@ -349,17 +354,23 @@ def read_batch_results(
         description='For flagged: only molecules flagged by this method ID.')] = None,
     columns: Annotated[Optional[list[str]], Field(
         description='Only return these value columns (plus name and SMILES).')] = None,
+    names: Annotated[Optional[list[str]], Field(
+        description='Exact molecule names to look up. Use this (or smiles) whenever '
+                    'reporting a specific molecule.')] = None,
+    smiles: Annotated[Optional[list[str]], Field(
+        description='SMILES to look up; matched after canonicalisation.')] = None,
     name_contains: Annotated[Optional[str], Field(
         description='Only molecules whose name contains this text.')] = None,
     limit: Annotated[int, Field(description='Rows to return (at most 200).', ge=1, le=200)] = 50,
     offset: Annotated[int, Field(description='Rows to skip, for paging.', ge=0)] = 0,
 ) -> dict:
     """Read a slice of a completed batch run without loading the whole table.
-    Also reports whether results.csv still matches the fingerprint recorded when
-    the run wrote it."""
+    Look up specific molecules by exact name or SMILES; never infer a molecule's
+    value from the summary. Also reports whether results.csv still matches the
+    fingerprint recorded when the run wrote it."""
     return runs.read_batch_results(run_id, view=view, columns=columns, method=method,
                                    name_contains=name_contains, group=group,
-                                   limit=limit, offset=offset)
+                                   limit=limit, offset=offset, names=names, smiles=smiles)
 
 
 @server.tool(title='List batch runs', annotations=_READ_ONLY)

@@ -96,5 +96,5 @@ def test_batch_run_over_mcp(tmp_path, monkeypatch):
         return st, rows
     st, rows = _run(go)
     assert st['status'] == 'complete'
-    assert st['summary']['flags_by_method'] == {'vp_simpol': 1}
+    assert st['summary']['coverage']['flagged_fraction_by_method'] == {'vp_simpol': 0.5}
     assert rows['total_matching'] == 1

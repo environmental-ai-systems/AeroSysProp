@@ -15,6 +15,7 @@ Guidance for AI coding agents working on the AeroSysProp codebase. (Agents that 
 
 * `api.py` never writes. The only writing path is `runs.py`, which creates a new run folder inside `AEROSYSPROP_OUTPUT_DIR` per run and never overwrites or deletes; keep it that way. Never pass `output_csv` to `run_all` from `api.py`. Database reads use `read_only=True`; nothing writes to a session database.
 * Worker processes started from the API or the MCP server must use the `spawn` context (`api._SPAWN`); forking inside a multi-threaded server is unsafe.
+* Batch-run summaries must keep the coverage statement, caveats and clean/all split; anything an agent sees in place of the full results must say what it leaves out.
 * File access from the API goes through `_resolve_in_root`, which confines it to `AEROSYSPROP_DATA_DIR`.
 * Nothing in `mcp_server.py` may print to stdout (it carries the stdio protocol).
 * API outputs must be JSON-safe: pass values through `json_safe`, never return RDKit objects, numpy types, tuples or NaN.

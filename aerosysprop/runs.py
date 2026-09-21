@@ -18,9 +18,15 @@ and writes a *run folder* instead of returning every row::
         run.json          provenance manifest: request, method labels,
                           software version, timings, summary and the
                           SHA-256 fingerprint of each output file
+        ro-crate-metadata.json
+                          the same provenance in the community-standard
+                          RO-Crate format (Process Run Crate profile), so
+                          the folder can be archived or deposited as is
 
-The caller gets back a compact summary (counts, ranges, flags and the largest
-disagreements between methods) and can read slices of the results on demand.
+The caller gets back a compact summary and can read slices of the results on
+demand. The run folder is the result; a summary of it, including an agent's
+account, is a guide to the result. Summaries therefore carry a coverage
+statement and caveats that must accompany any aggregate figure.
 
 Write rules
 -----------
@@ -55,6 +61,8 @@ MAX_BATCH = int(os.environ.get('AEROSYSPROP_MAX_BATCH', '100000'))
 MAX_ROWS_PER_READ = 200
 SCHEMA_VERSION = 1
 RESULTS_FILE, DIAGNOSTICS_FILE, MANIFEST_FILE = 'results.csv', 'diagnostics.csv', 'run.json'
+CRATE_FILE = 'ro-crate-metadata.json'
+PROCESS_RUN_CRATE = 'https://w3id.org/ro/wfrun/process/0.5'
 _RUN_ID = re.compile(r'^\d{4}-\d{2}-\d{2}_\d{6}_[a-z0-9-]{0,40}_[0-9a-f]{6}$')
 
 _jobs: dict = {}
@@ -244,6 +252,11 @@ def _execute(d: Path, pairs, method_ids, T, bp, include_diagnostics, manifest):
     finally:
         manifest['finished'] = _now()
         manifest['elapsed_s'] = round(time.time() - job['started'], 1)
+        try:
+            _write_crate(d, manifest)
+        except Exception as e:  # the crate is a convenience; never lose the run over it
+            manifest.setdefault('warnings', []).append(
+                {'severity': 'warning', 'code': 'CRATE_NOT_WRITTEN', 'message': str(e)[:500]})
         _write_manifest(d, manifest)
         job['status'] = manifest['status']
 
@@ -305,49 +318,164 @@ def _spreads(rows, cols):
     return out
 
 
+def _stats(xs):
+    return {'n': len(xs), 'min': min(xs) if xs else None,
+            'median': statistics.median(xs) if xs else None, 'max': max(xs) if xs else None}
+
+
+def _is_clean(r) -> bool:
+    """Closed-shell molecule with no diagnostic warning from any method."""
+    return not r.get('radical_electrons') and not r.get('diagnostics')
+
+
+CAVEATS = [
+    'Values are group-contribution estimates, not measurements.',
+    'Agreement between methods does not establish accuracy: methods can share '
+    'the same blind spot (for example, a functional group none of them represents).',
+    'Aggregate figures hide molecule-level caveats. Statistics are given for '
+    '"clean" molecules (closed-shell, no method flagged) and for all molecules; '
+    'quote the clean figures, and the coverage, whenever reporting aggregates.',
+    'Radical species are outside the design range of these methods; their values '
+    'should not be reported as pure-component properties.',
+    'The run folder (results.csv, diagnostics.csv, run.json) is the result. A '
+    'summary is a guide to it; check specific molecules against results.csv.',
+]
+
+REPORTING_REQUIREMENTS = [
+    'Give the user the run folder path.',
+    'Quote provenance labels (method@version) for any value reported.',
+    'When reporting an aggregate, state its basis (clean or all molecules) and '
+    'the coverage figures.',
+    'For a specific molecule, read its row (read_batch_results with names or '
+    'smiles) rather than inferring from the summary, and report any flags on it.',
+]
+
+
 def _summarise(records, value_cols, units) -> dict:
     valid = [r for r in records if 'error' not in r]
-    rows = [dict(name=r['name'], canonical_smiles=r['canonical_smiles'],
-                 flagged=sorted(r.get('diagnostics', {})), **r['values']) for r in valid]
+    clean = [r for r in valid if _is_clean(r)]
+
+    def rows_of(rs):
+        return [dict(name=r['name'], canonical_smiles=r['canonical_smiles'],
+                     flagged=sorted(r.get('diagnostics', {})),
+                     radical=bool(r.get('radical_electrons')), **r['values']) for r in rs]
+    rows_all, rows_clean = rows_of(valid), rows_of(clean)
+
     stats = {}
     for c in value_cols:
-        xs = [r[c] for r in rows if r.get(c) is not None]
-        stats[c] = {'unit': units.get(c, ''), 'computed': len(xs),
-                    'min': min(xs) if xs else None,
-                    'median': statistics.median(xs) if xs else None,
-                    'max': max(xs) if xs else None}
+        stats[c] = {'unit': units.get(c, ''),
+                    'clean': _stats([r[c] for r in rows_clean if r.get(c) is not None]),
+                    'all': _stats([r[c] for r in rows_all if r.get(c) is not None])}
+
     flags = Counter(m for r in valid for m in r.get('diagnostics', {}))
-    spreads = {}
-    for group, cols in _column_groups(value_cols).items():
-        sp = _spreads(rows, cols)
-        if not sp:
-            continue
-        values = sorted(s for s, _ in sp)
-        top = sorted(sp, key=lambda t: -t[0])[:10]
-        spreads[group] = {
-            'columns': cols,
-            'molecules_compared': len(sp),
-            'median_spread': statistics.median(values),
-            'p90_spread': values[int(0.9 * (len(values) - 1))],
-            'largest': [{'name': r['name'], 'smiles': r['canonical_smiles'], 'spread': s,
-                         'values': {c: r.get(c) for c in cols}, 'flagged_methods': r['flagged']}
-                        for s, r in top],
-        }
-    return {
+    n = len(valid) or 1
+    radicals = sum(1 for r in valid if r.get('radical_electrons'))
+    flagged = sum(1 for r in valid if r.get('diagnostics'))
+    coverage = {
         'molecules': len(records),
         'computed': len(valid),
         'invalid_smiles': len(records) - len(valid),
-        'molecules_with_diagnostic_warnings': sum(1 for r in valid if r.get('diagnostics')),
-        'radical_species': sum(1 for r in valid if r.get('radical_electrons')),
-        'radical_species_flagged': sum(1 for r in valid
-                                       if r.get('radical_electrons') and r.get('diagnostics')),
-        'note': ('Group-contribution methods are designed for stable, closed-shell molecules. '
-                 'Radical species (radical_electrons > 0 in results.csv) are often flagged and '
-                 'their values should not be used as pure-component properties.'),
-        'flags_by_method': dict(flags.most_common()),
+        'clean': len(clean),
+        'clean_fraction': round(len(clean) / n, 3),
+        'flagged': flagged,
+        'flagged_fraction': round(flagged / n, 3),
+        'radical_species': radicals,
+        'radical_fraction': round(radicals / n, 3),
+        'flagged_fraction_by_method': {m: round(k / n, 3) for m, k in flags.most_common()},
+        'statement': (f'{len(clean)} of {len(valid)} molecules ({100 * len(clean) / n:.0f}%) are '
+                      f'clean. {flagged} ({100 * flagged / n:.0f}%) have at least one method '
+                      f'flagged, and {radicals} ({100 * radicals / n:.0f}%) are radicals.'),
+    }
+
+    spreads = {}
+    for group, cols in _column_groups(value_cols).items():
+        sp_clean, sp_all = _spreads(rows_clean, cols), _spreads(rows_all, cols)
+        if not sp_all:
+            continue
+        vals = sorted(x for x, _ in sp_clean)
+        top = sorted(sp_clean, key=lambda t: -t[0])[:10]
+        spreads[group] = {
+            'columns': cols,
+            'basis': 'clean molecules',
+            'molecules_compared': len(sp_clean),
+            'median_spread': statistics.median(vals) if vals else None,
+            'p90_spread': vals[int(0.9 * (len(vals) - 1))] if vals else None,
+            'median_spread_all_molecules': statistics.median(sorted(x for x, _ in sp_all)),
+            'largest': [{'name': r['name'], 'smiles': r['canonical_smiles'], 'spread': x,
+                         'values': {c: r.get(c) for c in cols}} for x, r in top],
+        }
+    caveats = list(CAVEATS)
+    if coverage['clean_fraction'] < 0.5:
+        caveats.insert(0, f'Fewer than half the molecules are clean '
+                          f'({coverage["clean_fraction"]:.0%}); aggregates over all molecules '
+                          'are dominated by values the methods are not designed for.')
+    return {
+        'coverage': coverage,
+        'caveats': caveats,
+        'reporting_requirements': REPORTING_REQUIREMENTS,
         'columns': stats,
         'method_spread': spreads,
     }
+
+
+def _write_crate(d: Path, m: dict):
+    """Write ro-crate-metadata.json (RO-Crate 1.1, Process Run Crate 0.5)."""
+    sw = m['provenance']['software']
+    req = m['request']
+    action_id = '#run-' + m['run_id']
+    params = [
+        {'@id': '#param-methods', '@type': 'PropertyValue', 'name': 'methods',
+         'value': ', '.join(req['methods_run'])},
+        {'@id': '#param-temperature', '@type': 'PropertyValue', 'name': 'temperature',
+         'value': req['temperature_K'], 'unitText': 'K'},
+        {'@id': '#param-bp-sources', '@type': 'PropertyValue', 'name': 'boiling point sources',
+         'value': ', '.join(req['boiling_point_sources'])},
+    ]
+    inp = req['input']
+    params.append({'@id': '#param-input', '@type': 'PropertyValue', 'name': 'input',
+                   'value': (f'{inp["path"]} (sha256 {inp["sha256"]})' if inp['kind'] == 'file'
+                             else f'{inp["molecules"]} SMILES given inline')})
+    methods = [{'@id': f'#method-{mid}', '@type': 'PropertyValue', 'name': mid,
+                'value': pv.get('label'), 'description': f'status: {pv.get("status")}; '
+                f'review: {pv.get("review_state")}'}
+               for mid, pv in m['provenance']['methods'].items()]
+    files = [f for f in (RESULTS_FILE, DIAGNOSTICS_FILE, MANIFEST_FILE) if (d / f).exists()
+             or f == MANIFEST_FILE]
+    file_entities = [{'@id': RESULTS_FILE, '@type': 'File', 'name': 'Predicted properties',
+                      'encodingFormat': 'text/csv'},
+                     {'@id': DIAGNOSTICS_FILE, '@type': 'File', 'name': 'Diagnostic warnings',
+                      'encodingFormat': 'text/csv'},
+                     {'@id': MANIFEST_FILE, '@type': 'File', 'name': 'AeroSysProp run manifest',
+                      'encodingFormat': 'application/json',
+                      'description': 'Full provenance, summary and SHA-256 fingerprints of the outputs.'}]
+    file_entities = [f for f in file_entities if f['@id'] in files]
+    graph = [
+        {'@id': CRATE_FILE, '@type': 'CreativeWork',
+         'conformsTo': {'@id': 'https://w3id.org/ro/crate/1.1'}, 'about': {'@id': './'}},
+        {'@id': './', '@type': 'Dataset', 'conformsTo': {'@id': PROCESS_RUN_CRATE},
+         'name': f'AeroSysProp batch run {m["run_id"]}',
+         'description': m.get('label') or 'AeroSysProp batch run',
+         'datePublished': m['finished'] or m['created'],
+         'hasPart': [{'@id': f['@id']} for f in file_entities],
+         'mentions': {'@id': action_id}},
+        {'@id': PROCESS_RUN_CRATE, '@type': 'CreativeWork', 'name': 'Process Run Crate',
+         'version': '0.5'},
+        {'@id': action_id, '@type': 'CreateAction', 'name': f'AeroSysProp batch run {m["run_id"]}',
+         'startTime': m['created'], 'endTime': m['finished'],
+         'actionStatus': {'@id': 'http://schema.org/CompletedActionStatus'
+                          if m['status'] == 'complete' else 'http://schema.org/FailedActionStatus'},
+         'instrument': {'@id': '#aerosysprop'},
+         'object': [{'@id': p['@id']} for p in params + methods],
+         'result': [{'@id': f['@id']} for f in file_entities if f['@id'] != MANIFEST_FILE]},
+        {'@id': '#aerosysprop', '@type': 'SoftwareApplication', 'name': 'AeroSysProp',
+         'softwareVersion': sw.get('aerosysprop_version'),
+         'description': f'git commit {sw.get("git_commit")}' if sw.get('git_commit') else None},
+    ] + params + methods + file_entities
+    if m['status'] != 'complete' and m.get('error'):
+        graph[3]['error'] = m['error']
+    crate = {'@context': 'https://w3id.org/ro/crate/1.1/context',
+             '@graph': [{k: v for k, v in e.items() if v is not None} for e in graph]}
+    (d / CRATE_FILE).write_text(json.dumps(json_safe(crate), indent=2), encoding='utf-8')
 
 
 # ---------------------------------------------------------------------------
@@ -397,13 +525,16 @@ def _load_rows(d: Path, m: dict):
 
 def read_batch_results(run_id: str, view: str = 'rows', columns=None,
                        method: Optional[str] = None, name_contains: Optional[str] = None,
-                       group: Optional[str] = None, limit: int = 50, offset: int = 0) -> dict:
+                       group: Optional[str] = None, limit: int = 50, offset: int = 0,
+                       names=None, smiles=None) -> dict:
     """Read a slice of a completed run. Read-only.
 
     ``view``: ``'rows'`` (all rows, paged), ``'flagged'`` (rows with a
     diagnostic warning, optionally for one ``method``) or ``'largest_spread'``
     (rows where methods disagree most within ``group``, as named in the
-    summary's method_spread).
+    summary's method_spread). ``names`` and ``smiles`` select exact
+    molecules (SMILES are compared after canonicalisation); any not found are
+    listed in ``not_found``.
     """
     d = _run_dir(run_id)
     m = _read_manifest(d)
@@ -412,6 +543,19 @@ def read_batch_results(run_id: str, view: str = 'rows', columns=None,
                        hint='Call batch_run_status and wait until status is complete.')
     matches = _sha256(d / RESULTS_FILE) == m['outputs'][RESULTS_FILE]['sha256']
     cols, rows = _load_rows(d, m)
+    not_found = []
+    if names is not None or smiles is not None:
+        wanted_names = api._as_str_list(names, 'names') if names is not None else []
+        wanted_smiles = {}
+        for smi in (api._as_str_list(smiles, 'smiles') if smiles is not None else []):
+            mol = api._parse_smiles(smi)
+            wanted_smiles[api.Chem.MolToSmiles(mol) if mol is not None else smi] = smi
+        by_name = {r['name'] for r in rows}
+        by_smiles = {r['canonical_smiles'] for r in rows}
+        not_found = [n for n in wanted_names if n not in by_name] + \
+                    [orig for can, orig in wanted_smiles.items() if can not in by_smiles]
+        rows = [r for r in rows if r['name'] in wanted_names
+                or r['canonical_smiles'] in wanted_smiles]
     if name_contains:
         rows = [r for r in rows if name_contains.lower() in r['name'].lower()]
     if view == 'rows':
@@ -438,13 +582,15 @@ def read_batch_results(run_id: str, view: str = 'rows', columns=None,
         if unknown:
             raise ApiError('INVALID_ARGUMENT', f'Unknown columns {unknown}.',
                            details={'columns': cols})
-        keep = ['name', 'canonical_smiles'] + wanted + ['flagged_methods', 'spread']
+        keep = ['name', 'canonical_smiles', 'radical_electrons'] + wanted + \
+               ['flagged_methods', 'not_computed', 'spread']
     limit = max(1, min(int(limit), MAX_ROWS_PER_READ))
     offset = max(0, int(offset))
     page = rows[offset:offset + limit]
     if keep:
         page = [{k: r[k] for k in keep if k in r} for r in page]
     return {'run_id': run_id, 'view': view, 'total_matching': len(rows), 'offset': offset,
+            'not_found': not_found,
             'returned': len(page), 'rows': json_safe(page),
             'units': m['outputs'][RESULTS_FILE]['columns'],
             'results_match_manifest': matches,
@@ -464,7 +610,7 @@ def list_batch_runs(limit: int = 20) -> dict:
             continue
         runs.append({'run_id': m['run_id'], 'label': m.get('label'), 'status': m['status'],
                      'created': m['created'],
-                     'molecules': (m.get('summary') or {}).get('molecules')
+                     'molecules': ((m.get('summary') or {}).get('coverage') or {}).get('molecules')
                      or m['request']['input'].get('molecules')
                      or m['request']['input'].get('molecules_read'),
                      'methods_run': m['request']['methods_run'],

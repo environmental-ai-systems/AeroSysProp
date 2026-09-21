@@ -44,11 +44,17 @@ Every result includes a `provenance` block. Each method has a label such as `vp_
 
 ## Batch runs
 
-`predict_properties` returns every value, which is only practical for a few tens of molecules. For larger sets use `start_batch_run` (up to 100,000 molecules; the full MCM of about 5,800 species takes around 40 s on 4 cores). It writes a new run folder containing `results.csv`, `diagnostics.csv` and `run.json`, a manifest recording the request, every method's provenance label, the software version and a fingerprint of each output file. Then:
+`predict_properties` returns every value, which is only practical for a few tens of molecules. For larger sets use `start_batch_run` (up to 100,000 molecules; the full MCM of about 5,800 species takes around 40 s on 4 cores). It writes a new run folder containing `results.csv`, `diagnostics.csv`, `run.json` (the full provenance manifest, with a fingerprint of each output file) and `ro-crate-metadata.json` (the same provenance in the RO-Crate community standard). Then:
 
-1. Poll `batch_run_status` until `status` is `complete`. The summary gives counts, the range of every column, how many molecules each method flagged, and `method_spread`: how far methods disagree for each quantity, with the molecules that disagree most.
-2. Use `read_batch_results` for detail: `view: "flagged"` (optionally one `method`), or `view: "largest_spread"` with a `group` exactly as named in `method_spread`. Read at most what you need; each call returns up to 200 rows.
-3. Tell the user the run folder so they can open `results.csv` themselves, and quote provenance labels from the summary.
+1. Poll `batch_run_status` until `status` is `complete`. The summary gives a `coverage` statement, `caveats`, `reporting_requirements`, the range of every column for **clean** molecules (closed-shell, no method flagged) and for **all** molecules, and `method_spread`: how far methods disagree, computed on clean molecules.
+2. Use `read_batch_results` for detail: `view: "flagged"` (optionally one `method`), `view: "largest_spread"` with a `group` exactly as named in `method_spread`, or `names` / `smiles` for exact molecules. Each call returns up to 200 rows.
+
+**The run folder is the result; your summary of it is a guide to the result.** You see a summary, not every row, so:
+
+* Follow `reporting_requirements`: give the user the run folder, quote provenance labels, state the basis (clean or all) and the coverage statement with any aggregate figure, and pass on the caveats.
+* For any specific molecule, look up its row by name or SMILES and report its flags. Never infer one molecule's value from summary statistics.
+* Agreement between methods is not evidence of accuracy; methods can share a blind spot.
+* Prefer clean-molecule statistics. If `coverage.clean_fraction` is low, say so first.
 
 Radical species (`radical_electrons > 0`; common in mechanisms such as the MCM) are usually flagged. Group-contribution methods are designed for stable molecules, so say so rather than reporting radical values as pure-component properties. If `results_match_manifest` is false, the results file has been edited since the run wrote it.
 

@@ -49,7 +49,8 @@ def test_file_run_writes_folder_with_provenance(dirs):
     st = _wait(started['run_id'])
     assert st['status'] == 'complete', st
     d = out / started['run_id']
-    assert {p.name for p in d.iterdir()} == {'results.csv', 'diagnostics.csv', 'run.json'}
+    assert {p.name for p in d.iterdir()} == {'results.csv', 'diagnostics.csv', 'run.json',
+                                             'ro-crate-metadata.json'}
     m = json.loads((d / 'run.json').read_text())
     # the manifest fingerprints the input and every output
     assert m['request']['input']['sha256'] == hashlib.sha256((data / 'mols.txt').read_bytes()).hexdigest()
@@ -61,7 +62,8 @@ def test_file_run_writes_folder_with_provenance(dirs):
     assert len(rows) == 60 and 'vp_simpol_log10atm' in rows[0]
     # nitroethane is flagged, and the summary reports method spread
     s = st['summary']
-    assert s['molecules'] == 60 and s['flags_by_method'].get('vp_simpol') == 6
+    assert s['coverage']['molecules'] == 60
+    assert s['coverage']['flagged_fraction_by_method']['vp_simpol'] == 0.1
     assert 'Vapour Pressure (log10(atm))' in s['method_spread']
 
 
@@ -86,7 +88,8 @@ def test_views_and_tamper_detection(dirs):
     assert s == sorted(s, reverse=True)
     page = runs.read_batch_results(rid, columns=['vp_simpol_log10atm'], limit=5, offset=5)
     assert page['returned'] == 5 and set(page['rows'][0]) <= {
-        'name', 'canonical_smiles', 'vp_simpol_log10atm', 'flagged_methods'}
+        'name', 'canonical_smiles', 'radical_electrons', 'vp_simpol_log10atm',
+        'flagged_methods', 'not_computed'}
     assert page['results_match_manifest'] is True
     f = out / rid / 'results.csv'
     f.write_text(f.read_text().replace('m0', 'edited', 1))
@@ -154,6 +157,53 @@ def test_reading_an_incomplete_run_is_refused(dirs, monkeypatch):
 
 def test_radicals_are_counted(dirs):
     st = _wait(runs.start_batch_run(smiles=['CCO', 'CC[O]', 'CCO[O]'], methods=['vp_simpol'])['run_id'])
-    assert st['summary']['radical_species'] == 2
+    assert st['summary']['coverage']['radical_species'] == 2
     rows = runs.read_batch_results(st['run_id'])['rows']
     assert [r['radical_electrons'] for r in rows] == ['0', '1', '1']
+
+
+def test_clean_and_all_statistics_are_separate(dirs):
+    # ethanol and propanol are clean; the ethoxy radical and nitroethane are not
+    st = _wait(runs.start_batch_run(smiles=['CCO', 'CCCO', 'CC[O]', 'CC[N+](=O)[O-]'],
+                                    methods=['vp_simpol'])['run_id'])
+    s = st['summary']
+    assert s['coverage']['clean'] == 2 and s['coverage']['clean_fraction'] == 0.5
+    col = s['columns']['vp_simpol_log10atm']
+    assert col['clean']['n'] == 2 and col['all']['n'] == 4
+    assert '2 of 4 molecules (50%) are clean' in s['coverage']['statement']
+    assert any('does not establish accuracy' in c for c in s['caveats'])
+    assert s['reporting_requirements']
+
+
+def test_low_clean_fraction_adds_leading_caveat(dirs):
+    st = _wait(runs.start_batch_run(smiles=['CC[O]', 'CCO[O]', 'CCO'], methods=['vp_simpol'])['run_id'])
+    assert st['summary']['caveats'][0].startswith('Fewer than half the molecules are clean')
+
+
+def test_exact_lookup_by_name_and_smiles(dirs):
+    rid = _wait(runs.start_batch_run(smiles=['CCO', 'OCC', 'CCCO'], names=['ethanol', 'ethanol-2', 'propanol'],
+                                     methods=['vp_simpol'])['run_id'])['run_id']
+    r = runs.read_batch_results(rid, names=['propanol', 'butanol'])
+    assert [x['name'] for x in r['rows']] == ['propanol'] and r['not_found'] == ['butanol']
+    # 'OCC' and 'CCO' are the same molecule; SMILES lookup is canonical
+    r = runs.read_batch_results(rid, smiles=['C(O)C'])
+    assert sorted(x['name'] for x in r['rows']) == ['ethanol', 'ethanol-2'] and r['not_found'] == []
+
+
+def test_ro_crate_metadata(dirs):
+    _, out = dirs
+    rid = _wait(runs.start_batch_run(input_path='mols.txt', methods=['vp_simpol'], label='crate')['run_id'])['run_id']
+    crate = json.loads((out / rid / 'ro-crate-metadata.json').read_text())
+    assert crate['@context'] == 'https://w3id.org/ro/crate/1.1/context'
+    g = {e['@id']: e for e in crate['@graph']}
+    assert g['ro-crate-metadata.json']['about'] == {'@id': './'}
+    assert g['./']['conformsTo'] == {'@id': 'https://w3id.org/ro/wfrun/process/0.5'}
+    action = g[g['./']['mentions']['@id']]
+    assert action['@type'] == 'CreateAction'
+    assert action['actionStatus']['@id'].endswith('CompletedActionStatus')
+    assert g[action['instrument']['@id']]['@type'] == 'SoftwareApplication'
+    assert {r['@id'] for r in action['result']} == {'results.csv', 'diagnostics.csv'}
+    labels = [g[o['@id']]['value'] for o in action['object'] if o['@id'].startswith('#method-')]
+    assert labels and labels[0].startswith('vp_simpol@1 (')
+    for part in g['./']['hasPart']:
+        assert (out / rid / part['@id']).is_file()
