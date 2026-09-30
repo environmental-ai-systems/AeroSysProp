@@ -43,7 +43,7 @@ import numpy as np
 from rdkit import Chem, rdBase
 from rdkit.Chem import Descriptors, rdMolDescriptors
 
-from aerosysprop import __version__, batch, data, db, method_cards
+from aerosysprop import __version__, batch, data, db, guidance, method_cards
 from aerosysprop import io as asp_io
 from aerosysprop.diagnostics import (
     DiagnosticReport,
@@ -361,6 +361,17 @@ def list_methods() -> dict:
         'when_to_use': m.when_to_use, 'diagnostic_notes': m.diagnostics_notes,
         'card': method_cards.summary(m.id),
     } for m in MIXTURE_METHODS]
+    if guidance.is_bare():
+        # IDs, output columns and units only: no cards, parameter set list,
+        # dependencies or notes.
+        return {
+            'aerosysprop_version': __version__,
+            'single_component_methods': [{'id': m['id'], 'output_columns': m['output_columns']}
+                                         for m in single],
+            'property_groups': list(batch.METHOD_GROUPS),
+            'boiling_point_sources': sorted(batch.BP_METHODS),
+            'mixture_methods': [{'id': m['id']} for m in mixture],
+        }
     return {
         'aerosysprop_version': __version__,
         'single_component_methods': single,
@@ -582,7 +593,7 @@ def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
                                           parameter_sets=sets)
     _, sets = batch.normalise_parameter_sets(resolved, sets)
     provenance, prov_notes = _provenance(resolved, sets)
-    return {
+    out = {
         'temperature_K': T,
         'boiling_point_sources': bp,
         'methods_run': resolved,
@@ -602,6 +613,9 @@ def predict_properties(smiles, names=None, methods=None, temperature_K=298.15,
             'its atoms or groups, so treat that value with caution. '
             '"not_computed" lists outputs the method could not produce.'),
     }
+    if guidance.is_bare():
+        del out['interpretation']
+    return out
 
 
 def diagnose_smiles(smiles, methods=None, include_aiomfac=True) -> dict:
