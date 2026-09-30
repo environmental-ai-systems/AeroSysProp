@@ -48,10 +48,11 @@ REPO = HERE.parent
 SYSTEM_PROMPT = ('You answer questions about molecular properties using the AeroSysProp tools. '
                  'Do not answer from memory. If a tool reports a problem with a molecule, '
                  'say so in your answer.')
-# 'greedy' pins temperature 0 for every model, as the protocol states. 'model'
-# keeps each model's own recommended sampling (its Ollama defaults, recorded in
-# the manifest) with a fixed seed: Qwen3, for one, warns that greedy decoding
-# makes its thinking models repeat themselves.
+# 'model' (the default) keeps each model's own recommended sampling (its Ollama
+# defaults, recorded in the manifest) with a fixed seed: Qwen3, for one, warns
+# that greedy decoding makes its thinking models repeat themselves, and in the
+# Spark smoke test qwen3:4b looped for 12,000 tokens at temperature 0.
+# 'greedy' pins temperature 0 for every model.
 SAMPLING_MODES = {'greedy': {'temperature': 0, 'top_p': 1, 'seed': 7},
                   'model': {'seed': 7}}
 NUM_CTX = 32768
@@ -118,12 +119,16 @@ async def converse(host, model, question, env, sampling, max_calls=MAX_CALLS,
 
     params = StdioServerParameters(command=sys.executable,
                                    args=['-m', 'aerosysprop.mcp_server'], env=env)
-    messages = [{'role': 'system', 'content': SYSTEM_PROMPT},
-                {'role': 'user', 'content': question}]
     calls, turns = [], []
     stop, final = None, ''
     t0 = time.time()
     async with Client(params) as client:
+        # The server's own instructions follow the fixed prompt, as MCP clients
+        # such as Claude Desktop pass them; they differ between guidance levels.
+        instructions = client.instructions or ''
+        system = SYSTEM_PROMPT + (f'\n\n{instructions}' if instructions else '')
+        messages = [{'role': 'system', 'content': system},
+                    {'role': 'user', 'content': question}]
         tools = (await client.list_tools()).tools
         tool_defs = _ollama_tools(tools)
         while True:
@@ -167,6 +172,7 @@ async def converse(host, model, question, env, sampling, max_calls=MAX_CALLS,
                 messages.append(tool_msg)
     prompt = [x['prompt_tokens'] or 0 for x in turns]
     return {
+        'server_instructions': instructions,
         'messages': messages, 'tools_offered': tool_defs, 'tool_calls': calls, 'turns': turns,
         'stop_reason': stop, 'final_answer': final,
         'wall_seconds': round(time.time() - t0, 2),
@@ -251,7 +257,7 @@ def main(argv=None) -> int:
     p.add_argument('--host', default='http://localhost:11434')
     p.add_argument('--num-ctx', type=int, default=NUM_CTX)
     p.add_argument('--num-predict', type=int, default=NUM_PREDICT)
-    p.add_argument('--sampling', choices=sorted(SAMPLING_MODES), default='greedy')
+    p.add_argument('--sampling', choices=sorted(SAMPLING_MODES), default='model')
     p.add_argument('--max-calls', type=int, default=MAX_CALLS)
     p.add_argument('--order-seed', type=int, default=20261001)
     args = p.parse_args(argv)
@@ -301,7 +307,9 @@ def main(argv=None) -> int:
                          'keys_built_at_commit': qdoc.get('git_commit'),
                          'ids': [q['id'] for q in questions]},
         'conditions': conditions, 'repeats': args.repeats,
-        'system_prompt': SYSTEM_PROMPT, 'sampling_mode': args.sampling,
+        'system_prompt': SYSTEM_PROMPT,
+        'system_prompt_note': "followed by the server's instructions for the condition",
+        'sampling_mode': args.sampling,
         'sampling': SAMPLING_MODES[args.sampling], 'num_ctx': args.num_ctx,
         'num_predict': args.num_predict,
         'max_tool_calls': args.max_calls, 'order_seed': args.order_seed,

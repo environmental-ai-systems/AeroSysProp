@@ -55,6 +55,11 @@ check each model can call tools with list arguments, as AeroSysProp's tools need
 python evaluation/check_tool_calling.py --model qwen3:8b
 ```
 
+A model that fails this check cannot take part, and that is reported as a
+result rather than worked around: the harness never repairs a model's
+arguments. On the Spark (Ollama 0.35.0), `llama3.1:8b` fails it by sending
+lists as strings such as `"['CCO']"`.
+
 Then run the campaign and mark it:
 
 ```bash
@@ -65,7 +70,11 @@ python -m evaluation.mark evaluation/results/2026-10-07
 `run_eval.py` asks every question of every model under both guidance levels
 (`--conditions full,bare`), three times each (`--repeats`), in an order shuffled
 per model. Each conversation gets a fresh MCP server with `AEROSYSPROP_GUIDANCE`
-set, the fixed system prompt, and up to 12 tool calls. It writes
+set, the fixed system prompt followed by the server's own instructions for that
+level (as MCP clients such as Claude Desktop pass them), and up to 12 tool
+calls. Sampling defaults to each model's own recommended settings with a fixed
+seed (`--sampling model`), because greedy decoding makes some thinking models
+loop; `--sampling greedy` pins temperature 0 instead. It writes
 `manifest.json` (software, commit, question set checksum, models with their
 digests and quantisation, sampling), one transcript per conversation, and
 `answers.csv`. Stopping and restarting the same command carries on where it
