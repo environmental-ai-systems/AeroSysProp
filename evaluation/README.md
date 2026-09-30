@@ -46,6 +46,43 @@ Every key carries `value_from_transcript: true`. The marker checks the answer
 against the tool result in that transcript as well as against the key, so a
 number no tool returned is caught as invention whatever path the model took.
 
+## Running the evaluation
+
+Models are served by [Ollama](https://ollama.com) on the same machine. First
+check each model can call tools with list arguments, as AeroSysProp's tools need:
+
+```bash
+python evaluation/check_tool_calling.py --model qwen3:8b
+```
+
+Then run the campaign and mark it:
+
+```bash
+python -m evaluation.run_eval --models qwen3:8b,granite4.1:8b --out evaluation/results/2026-10-07
+python -m evaluation.mark evaluation/results/2026-10-07
+```
+
+`run_eval.py` asks every question of every model under both guidance levels
+(`--conditions full,bare`), three times each (`--repeats`), in an order shuffled
+per model. Each conversation gets a fresh MCP server with `AEROSYSPROP_GUIDANCE`
+set, the fixed system prompt, and up to 12 tool calls. It writes
+`manifest.json` (software, commit, question set checksum, models with their
+digests and quantisation, sampling), one transcript per conversation, and
+`answers.csv`. Stopping and restarting the same command carries on where it
+left off; restarting with different settings is refused.
+
+Every conversation starts from the same state: an output folder already holding
+one completed run of the batch request over `mcm_subset.txt`, so questions that
+refer to "that run" or "the last batch" mean the same thing whatever order they
+come in. Folders are given opaque names because tools report their paths.
+
+`mark.py` writes `marks.csv`: the automatic checks (a tool was called, values
+against the key, method, version named, caveat passed on, run folder cited,
+coverage stated, numbers no tool returned), with a `blind` column listing what
+still needs a human or judge.
+
+For a quick test, `--questions-only lookup-01,diag-01 --repeats 1`.
+
 ## Your own question set
 
 The shipped set is a reference, not a limit. To test the compounds you care

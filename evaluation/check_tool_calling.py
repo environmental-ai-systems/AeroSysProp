@@ -24,12 +24,15 @@ TOOLS = [{
     'function': {
         'name': 'get_vapour_pressure',
         'description': ('Return the vapour pressure of a molecule in log10(atm). '
-                        'Takes a SMILES string. Always use this tool rather than '
-                        'answering from memory.'),
+                        'Takes a list of SMILES strings. Always use this tool rather '
+                        'than answering from memory.'),
         'parameters': {
             'type': 'object',
             'properties': {
-                'smiles': {'type': 'string', 'description': 'SMILES, e.g. CCO for ethanol'},
+                # A list, as in AeroSysProp's own tools: some models send lists
+                # as the string "['CCO']", which the real server rejects.
+                'smiles': {'type': 'array', 'items': {'type': 'string'},
+                           'description': 'SMILES strings, e.g. ["CCO"] for ethanol'},
                 'temperature_K': {'type': 'number', 'description': 'temperature in kelvin'},
             },
             'required': ['smiles'],
@@ -38,7 +41,7 @@ TOOLS = [{
 }]
 
 QUESTION = 'What is the vapour pressure of ethanol (SMILES CCO) at 298.15 K?'
-ANSWER = {'smiles': 'CCO', 'temperature_K': 298.15, 'vapour_pressure_log10atm': -1.0189}
+ANSWER = {'smiles': ['CCO'], 'temperature_K': 298.15, 'vapour_pressure_log10atm': -1.0189}
 
 
 def chat(host: str, model: str, messages: list, tools=None, timeout=180) -> dict:
@@ -96,8 +99,16 @@ def main(argv=None) -> int:
     if call.get('name') != 'get_vapour_pressure':
         print('WARN  called a tool that does not exist')
         return 1
-    if 'CCO' not in str(parsed.get('smiles', '')):
+    smiles, temp = parsed.get('smiles'), parsed.get('temperature_K')
+    if not isinstance(smiles, list):
+        print(f'FAIL  smiles came back as {type(smiles).__name__} {smiles!r}, not a list.')
+        print('      AeroSysProp\'s tools validate argument types and will reject this call.')
+        return 1
+    if 'CCO' not in smiles:
         print('WARN  the SMILES argument does not look right')
+    if temp is not None and not isinstance(temp, (int, float)):
+        print(f'WARN  temperature_K came back as {type(temp).__name__} {temp!r}; the server '
+              'converts a numeric string, but the model is not following the schema.')
 
     # Second turn: hand back a result and see whether the model uses it.
     messages += [msg, {'role': 'tool', 'name': 'get_vapour_pressure',
