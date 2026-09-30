@@ -53,7 +53,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from aerosysprop import api, batch, method_cards
+from aerosysprop import api, batch, guidance, method_cards
 from aerosysprop.api import ApiError, json_safe
 
 OUTPUT_DIR_ENV = 'AEROSYSPROP_OUTPUT_DIR'
@@ -562,6 +562,17 @@ def _write_crate(d: Path, m: dict):
 # Status, reading and listing
 # ---------------------------------------------------------------------------
 
+def _served_summary(summary: dict) -> dict:
+    """The summary as served at the current guidance level. run.json always
+    keeps the full summary; at the bare level the coverage statement, caveats
+    and reporting requirements are left out and the statistics are unchanged."""
+    if not guidance.is_bare():
+        return summary
+    served = {k: v for k, v in summary.items() if k not in ('caveats', 'reporting_requirements')}
+    served['coverage'] = {k: v for k, v in summary['coverage'].items() if k != 'statement'}
+    return served
+
+
 def batch_run_status(run_id: str) -> dict:
     """Status of a run; once complete, includes its summary and provenance."""
     d = _run_dir(run_id)
@@ -584,7 +595,7 @@ def batch_run_status(run_id: str) -> dict:
     if status == 'failed':
         out['error'] = m.get('error')
         return out
-    out['summary'] = m['summary']
+    out['summary'] = _served_summary(m['summary'])
     out['provenance'] = {'software': m['provenance']['software'],
                          'methods': {k: v.get('label') for k, v in m['provenance']['methods'].items()}}
     out['outputs'] = {k: {'rows': v['rows']} for k, v in m['outputs'].items()}

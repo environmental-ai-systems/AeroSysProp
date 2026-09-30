@@ -20,6 +20,10 @@ folder inside ``AEROSYSPROP_OUTPUT_DIR`` (disabled if unset), and nothing is
 ever overwritten, deleted, or written to a session database. File reading is
 limited to ``AEROSYSPROP_DATA_DIR`` (disabled if unset).
 
+``AEROSYSPROP_GUIDANCE=bare`` serves one-line tool descriptions, no argument
+descriptions and no guide resources; values are unchanged (see
+:mod:`aerosysprop.guidance`).
+
 Nothing may be printed to stdout in this module: with the stdio transport,
 stdout carries the protocol messages.
 """
@@ -45,7 +49,7 @@ except ImportError as exc:  # pragma: no cover - exercised only without the extr
         'Install it with:  pip install "aerosysprop[mcp]"'
     ) from exc
 
-from aerosysprop import __version__, api, runs
+from aerosysprop import __version__, api, guidance, runs
 
 _PKG = Path(__file__).parent
 _GUIDE = _PKG / 'agent_guide.md'
@@ -80,12 +84,18 @@ Values are estimates, not measurements. When methods disagree, report the \
 spread rather than picking one silently. The resource aerosysprop://guide has \
 fuller guidance."""
 
+BARE_INSTRUCTIONS = 'AeroSysProp estimates properties of organic molecules from SMILES.'
+
+# The guidance level is fixed when the server starts. An unknown value stops
+# the server rather than serving the wrong condition.
+GUIDANCE = guidance.level()
+
 server = MCPServer(
     name='aerosysprop',
     title='AeroSysProp',
     description='Thermophysical property and AIOMFAC activity coefficient '
                 'estimation for atmospheric organic compounds.',
-    instructions=INSTRUCTIONS,
+    instructions=INSTRUCTIONS if GUIDANCE == 'full' else BARE_INSTRUCTIONS,
     version=__version__,
 )
 
@@ -392,23 +402,69 @@ def list_batch_runs(
 
 
 # ---------------------------------------------------------------------------
-# Resources: reference documents the agent can read on demand
+# Bare guidance level: one line per tool, no argument descriptions
 # ---------------------------------------------------------------------------
 
-@server.resource('aerosysprop://guide', name='agent_guide', title='Guide for agents',
-                 description='How to choose methods and interpret AeroSysProp results.',
-                 mime_type='text/markdown')
-def agent_guide() -> str:
-    return _GUIDE.read_text(encoding='utf-8')
+BARE_DESCRIPTIONS = {
+    'list_methods': 'List property methods.',
+    'list_salts': 'List AIOMFAC salts.',
+    'predict_properties': 'Predict properties for SMILES strings.',
+    'diagnose_smiles': 'Diagnose SMILES strings.',
+    'activity_coefficients': 'AIOMFAC activity coefficients for a mixture.',
+    'list_data_files': 'List data files.',
+    'load_smiles_file': 'Load molecules from a data file.',
+    'read_session_database': 'Read a session database.',
+    'opera_predict': 'OPERA predictions for SMILES strings.',
+    'start_batch_run': 'Start a batch run.',
+    'batch_run_status': 'Status of a batch run.',
+    'read_batch_results': 'Read batch run results.',
+    'list_batch_runs': 'List batch runs.',
+}
 
 
-@server.resource('aerosysprop://docs/aiomfac', name='aiomfac_reference',
-                 title='AIOMFAC implementation notes',
-                 description='Theory, validation and known limitations of the AIOMFAC '
-                             'implementation.',
-                 mime_type='text/markdown')
-def aiomfac_reference() -> str:
-    return _AIOMFAC_DOC.read_text(encoding='utf-8')
+def _strip_descriptions(schema):
+    """Remove 'description' keys from a JSON schema, keeping types, defaults,
+    enums and bounds, so validation is identical at every level."""
+    if isinstance(schema, dict):
+        return {k: _strip_descriptions(v) for k, v in schema.items() if k != 'description'}
+    if isinstance(schema, list):
+        return [_strip_descriptions(v) for v in schema]
+    return schema
+
+
+def _serve_bare():
+    tools = server._tool_manager.list_tools()
+    missing = {t.name for t in tools} - set(BARE_DESCRIPTIONS)
+    if missing:  # a new tool must be given a bare description too
+        raise RuntimeError(f'No bare description for: {", ".join(sorted(missing))}')
+    for t in tools:
+        t.title = None
+        t.description = BARE_DESCRIPTIONS[t.name]
+        t.parameters = _strip_descriptions(t.parameters)
+
+
+if GUIDANCE == 'bare':
+    _serve_bare()
+
+
+# ---------------------------------------------------------------------------
+# Resources: reference documents the agent can read on demand (full level only)
+# ---------------------------------------------------------------------------
+
+if GUIDANCE == 'full':
+    @server.resource('aerosysprop://guide', name='agent_guide', title='Guide for agents',
+                     description='How to choose methods and interpret AeroSysProp results.',
+                     mime_type='text/markdown')
+    def agent_guide() -> str:
+        return _GUIDE.read_text(encoding='utf-8')
+
+    @server.resource('aerosysprop://docs/aiomfac', name='aiomfac_reference',
+                     title='AIOMFAC implementation notes',
+                     description='Theory, validation and known limitations of the AIOMFAC '
+                                 'implementation.',
+                     mime_type='text/markdown')
+    def aiomfac_reference() -> str:
+        return _AIOMFAC_DOC.read_text(encoding='utf-8')
 
 
 # ---------------------------------------------------------------------------
