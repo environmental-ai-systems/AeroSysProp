@@ -14,6 +14,7 @@ A Python library for predicting thermophysical properties of organic molecules r
 - [Available methods](#available-methods)
 - [Activity coefficients](#activity-coefficients)
 - [Web interface](#web-interface)
+- [Use with AI agents (MCP)](#use-with-ai-agents-mcp)
 - [Use in numerical simulations](#use-in-numerical-simulations)
 - [Running the tests](#running-the-tests)
 - [Docker](#docker)
@@ -47,6 +48,9 @@ AeroSysProp/
 │   ├── molar_volumes.py             # Molar volume helpers used by density methods
 │   ├── app.py                       # Streamlit app — navigation router (st.navigation)
 │   ├── _ui.py                       # Shared Streamlit UI helpers used by the views
+│   ├── api.py                       # Agent-facing API: plain JSON in and out, read-only
+│   ├── mcp_server.py                # MCP server for AI agents (aerosysprop-mcp)
+│   ├── agent_guide.md               # Guidance for agents using the MCP server
 │   ├── views/                       # Streamlit multipage app pages
 │   │   ├── home.py                  # Homepage / landing
 │   │   ├── single_component.py      # Per-compound property prediction
@@ -248,7 +252,7 @@ All functions return **log₁₀(P / atm)**. `T` is temperature in K.
 | `nannoolal(mol, T, bp)` | Nannoolal *et al.* (2008) | Yes |
 | `myrdal_and_yalkowsky(mol, T, bp)` | Myrdal & Yalkowsky (1997) | Yes |
 | `evaporation(mol, T)` | EVAPORATION (Compernolle *et al.*, 2011) | No |
-| `evaporation2(mol, T)` | EVAPORATION with revised alcohol terms | No |
+| `evaporation2(mol, T)` | EVAPORATION parameter set 2 (revised alcohol terms; the default in the app and API) | No |
 | `simpol(mol, T)` | SIMPOL.1 (Pankow & Asher, 2008) | No |
 
 ### Critical properties — `aerosysprop.methods.critical_properties`
@@ -441,7 +445,7 @@ streamlit run aerosysprop/app.py
 `pyproject.toml`, so an editable install pulls them in:
 
 ```bash
-pip install -e .
+pip install -e ".[ui]"
 streamlit run aerosysprop/app.py
 ```
 
@@ -472,6 +476,23 @@ compare the sensitivity of the dependent predictions to the
 boiling-point choice — each dependent column is then reported once per
 source (e.g. `vp_nannoolal_log10atm__bpStein`).
 
+Some methods have more than one **parameter set**: the same equations
+with different group definitions. EVAPORATION has two. Set 1 is the
+original port, with an MCM-style enol term; set 2 (the default) revises
+the alcohol terms to match the published method. Tick EVAPORATION and
+choose one or both sets underneath it. The column always names the set
+(`vp_evaporation_log10atm__set2`), so results from different sets can't
+be confused. The sets give the same value for most molecules; on the MCM
+they differ for 91 of 5,809 species: 78 enols, by about 0.9 log units,
+and 13 alpha-hydroxy acids, by about 0.25 log units (see
+`METHODS_GOVERNANCE.md`; the second looks like an unintended side effect).
+From Python, pass `parameter_sets={'vp_evaporation': [1, 2]}` to
+`run_all`; through the agent API, request `"vp_evaporation@1"`. The old
+method ID `vp_evaporation2` still works as an alias for set 2 but is
+deprecated. Session databases saved before this change hold columns
+named `vp_evaporation_log10atm` (set 1) and `vp_evaporation2_log10atm`
+(set 2).
+
 A **session database** (`.db`) loaded in the sidebar is shared across
 all three pages — compounds, single-component results, and saved
 mixture calculations persist as you move between them. Both
@@ -484,6 +505,68 @@ as the single-component page (type, upload a file, or reload from a
 saved session), lets you pick inorganic salts from the AIOMFAC catalog,
 and surfaces input diagnostics (matcher gaps, missing interaction
 parameters, out-of-range concentrations) inline with the results.
+
+---
+
+## Use with AI agents (MCP)
+
+AeroSysProp includes a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server, so AI agents such as Claude Desktop, Claude Code or a local model with an MCP-capable client can call it directly. The agent sees a small set of documented tools and gets plain JSON back, with units in the field names and the relevant diagnostics attached to every value.
+
+Install the optional dependency (Python 3.10 or later):
+
+```bash
+pip install -e ".[mcp]"
+```
+
+This provides the `aerosysprop-mcp` command. By default it speaks MCP over stdio, which is what desktop agents expect; `aerosysprop-mcp --http --port 8765` serves Streamable HTTP instead.
+
+| Tool | Purpose |
+|---|---|
+| `list_methods` | Method IDs, units, output columns and dependencies |
+| `list_salts` | Salts supported by AIOMFAC, with their ions |
+| `predict_properties` | Boiling point, vapour pressure, critical properties and density for up to 1000 SMILES |
+| `diagnose_smiles` | SMILES validity and per-method group coverage, without computing anything |
+| `activity_coefficients` | AIOMFAC activity coefficients for water/organic/salt mixtures |
+| `list_data_files`, `load_smiles_file` | Read molecules from files in the data directory |
+| `read_session_database` | Read results saved by the web app |
+| `opera_predict` | OPERA QSAR predictions, when the OPERA container is running |
+| `start_batch_run`, `batch_run_status` | Large runs (up to 100,000 molecules) written to a run folder, with a summary for the agent |
+| `read_batch_results`, `list_batch_runs` | Read slices of a run (flagged molecules, largest disagreements) and list earlier runs |
+
+The server **never overwrites, deletes, or writes to a session database**. File reading is confined to the directory named by `AEROSYSPROP_DATA_DIR`, and session databases are opened in SQLite read-only mode. The only thing it writes is a batch run: each run creates a new folder inside `AEROSYSPROP_OUTPUT_DIR` holding `results.csv`, `diagnostics.csv`, `run.json` (a provenance manifest recording the request, each method's version label, the software version and a SHA-256 fingerprint of every output file) and `ro-crate-metadata.json`, the same provenance as an [RO-Crate](https://www.researchobject.org/ro-crate/) following the [Process Run Crate](https://www.researchobject.org/workflow-run-crate/) profile, so a run folder can be archived or deposited (for example on Zenodo) as it stands. Either feature is disabled if its variable is not set. The full MCM v3.3.1 (5,809 species, all methods) runs in about 40 s on 4 cores.
+
+**The run folder is the result; an agent's account of it is a guide to the result.** An agent sees a compact summary rather than every row. The summary therefore separates statistics for *clean* molecules (closed-shell, no method flagged) from those for all molecules, carries a coverage statement (for the MCM: 37% clean, 38% radicals), and lists caveats and reporting requirements that agents are instructed to pass on. Specific molecules are always looked up by name or SMILES rather than inferred. Note that this only governs what agents can do *through the server*; an agent that also has shell access is controlled by that agent's own permission settings.
+
+**Claude Desktop**: add to `claude_desktop_config.json` (use the full path to the command in your environment, e.g. from `which aerosysprop-mcp`):
+
+```json
+{
+  "mcpServers": {
+    "aerosysprop": {
+      "command": "/path/to/envs/AeroSysProp/bin/aerosysprop-mcp",
+      "env": {
+        "AEROSYSPROP_DATA_DIR": "/path/to/your/smiles/files",
+        "AEROSYSPROP_OUTPUT_DIR": "/path/to/aerosysprop-runs"
+      }
+    }
+  }
+}
+```
+
+**Claude Code**:
+
+```bash
+claude mcp add aerosysprop -e AEROSYSPROP_DATA_DIR=/path/to/your/smiles/files \
+  -e AEROSYSPROP_OUTPUT_DIR=/path/to/aerosysprop-runs -- aerosysprop-mcp
+```
+
+**Trying it without an agent**: the MCP Inspector lets you call each tool by hand:
+
+```bash
+npx @modelcontextprotocol/inspector aerosysprop-mcp
+```
+
+The same functions are available directly in Python through `aerosysprop.api`, which the server wraps; every function takes and returns plain JSON-compatible values. Guidance written for agents (units, how to read diagnostics, when to compare methods) is in [`aerosysprop/agent_guide.md`](aerosysprop/agent_guide.md) and is also served to agents as the resource `aerosysprop://guide`.
 
 ---
 

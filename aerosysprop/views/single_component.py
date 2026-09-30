@@ -21,6 +21,7 @@ from aerosysprop._ui import (
 from aerosysprop.batch import (
     METHOD_GROUPS,
     METHOD_META,
+    MULTI_SET_METHODS,
     run_all,
 )
 
@@ -39,6 +40,7 @@ with st.sidebar:
 
     st.subheader('Methods')
     selected_methods = []
+    parameter_sets = {}
     for group, group_methods in METHOD_GROUPS.items():
         st.markdown(f'**{group}**')
         col1, col2 = st.columns([1, 1])
@@ -58,6 +60,26 @@ with st.sidebar:
             )
             if checked:
                 selected_methods.append(m)
+                pm = MULTI_SET_METHODS.get(m)
+                if pm is not None:
+                    labels = dict(zip(pm.parameter_sets, pm.parameter_set_labels))
+                    chosen = st.multiselect(
+                        'Parameter set(s)',
+                        options=list(pm.parameter_sets),
+                        default=[pm.default_set],
+                        format_func=lambda v, labels=labels: labels.get(v, f'Set {v}'),
+                        key=f'psets_{m}',
+                        help='Same equations, different group definitions. Pick both '
+                             'to compare them; each set gets its own column.',
+                    )
+                    parameter_sets[m] = chosen or [pm.default_set]
+                    if m == 'vp_evaporation':
+                        st.caption(
+                            'EVAPORATION now defaults to **set 2** (revised alcohol terms, '
+                            'matching the published method). Earlier results used set 1 '
+                            'unless "EVAPORATION2" was ticked. Columns name the set, e.g. '
+                            '`vp_evaporation_log10atm__set2`.'
+                        )
 
     # Boiling-point input — sits with the methods (not under generic settings)
     # because it is an input dependency of the VP / CP / density methods above.
@@ -149,6 +171,7 @@ else:
                 progress_callback=_update,
                 use_threads=True,
                 bp_sources=bp_sources or ['bp_nannoolal'],
+                parameter_sets=parameter_sets,
             )
         progress_bar.progress(1.0)
         status_text.caption(f'Done — {len(results)} molecules processed.')

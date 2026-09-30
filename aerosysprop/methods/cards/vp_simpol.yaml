@@ -1,0 +1,44 @@
+# Method card: vp_simpol
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: vp_simpol
+name: SIMPOL.1
+property: pure-component vapour pressure
+output_unit: log10(atm)
+status: published
+model:
+  summary: log10 P = sum over groups of b_k(T), each b_k a four-coefficient function of temperature.
+  references:
+  - citation: Pankow and Asher (2008), Atmos. Chem. Phys. 8, 2773-2796
+    doi: 10.5194/acp-8-2773-2008
+    role: source method
+    verified: false
+  inputs:
+  - SMILES
+  - temperature (K)
+parameter_set:
+  version: 1
+  files:
+    data/SIMPOL.smarts: 32450ba508a103c25d2227c6c819b544eaab8d32ecc1315c0575396d2f6289c3
+    data/SIMPOL.data: b8a92e2c85fd7cc803654016e059f6b00e6e7ba4d87b2215edbbab23682e1b33
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- SIMPOL defines groups in words; the SMARTS are this project's encoding of them. Status to confirm once
+  the encoding has been checked against the paper's worked examples.
+group_interpretation: []
+known_limitations:
+- Nitro groups are not covered by the SMARTS set (reported as UNMATCHED_ATOMS).
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.

@@ -1,0 +1,52 @@
+# Method card: vp_myrdal
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: vp_myrdal
+name: Myrdal & Yalkowsky
+property: pure-component vapour pressure
+output_unit: log10(atm)
+status: published-with-modifications
+model:
+  summary: Clausius-Clapeyron form with entropy and heat capacity of vaporisation estimated from molecular
+    flexibility and hydrogen bonding.
+  references:
+  - citation: Myrdal and Yalkowsky (1997), Ind. Eng. Chem. Res. 36, 2494-2499
+    doi: 10.1021/ie950242l
+    role: source method
+    verified: false
+  - citation: Topping et al. (2016), UManSysProp v1.0, Geosci. Model Dev. 9, 899-914
+    doi: 10.5194/gmd-9-899-2016
+    role: implementation this code descends from
+    verified: false
+  inputs:
+  - SMILES
+  - temperature (K)
+  - boiling point (K) from the chosen boiling point source
+parameter_set:
+  version: 1
+  files:
+    data/composition.smarts: 6c850360075e4f18c4d243c33f6c79241149138b6058ffa057f3eb9027069d04
+    data/stein_and_brown.smarts: f3b26e28ee58fec88a15d38f85019ca3de224348cc4cf68b131f2e692a1bbf93
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- Rotatable bond and hydrogen bonding counts are derived from Stein & Brown groups (methods/vapour_pressures.py);
+  coefficients are in the code rather than a data file.
+- Hydroperoxide, nitrate, peroxyacid and PAN oxygens are counted as non-terminal oxygens (PAN counts two);
+  an interpretation for atmospheric groups.
+group_interpretation: []
+known_limitations:
+- Result depends strongly on the boiling point source.
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.

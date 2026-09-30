@@ -132,7 +132,7 @@ class TestMethodSelection:
 
     def test_all_methods_default(self):
         results = run_all(_mols(), methods=None, workers=1, use_threads=True)
-        all_keys = {col for m in ALL_METHODS for col in _OUTPUT_KEYS[m]}
+        all_keys = set(resolved_output_columns(set(ALL_METHODS), ['bp_nannoolal']))
         for r in results:
             assert all_keys <= r.keys()
 
@@ -308,3 +308,39 @@ class TestDbRoundTrip:
         with open(csv_path) as f:
             rows = list(csv.DictReader(f))
         assert len(rows) == len(SMILES)
+
+
+class TestParameterSets:
+    """vp_evaporation has two parameter sets; set 2 is the default."""
+
+    def test_default_is_set_2(self):
+        r = run_all(_mols(), methods=['vp_evaporation'], workers=1, use_threads=True)[0]
+        assert 'vp_evaporation_log10atm__set2' in r
+        assert 'vp_evaporation_log10atm__set1' not in r
+        assert 'vp_evaporation_log10atm' not in r
+
+    def test_both_sets(self):
+        r = run_all(_mols(), methods=['vp_evaporation'], workers=1, use_threads=True,
+                    parameter_sets={'vp_evaporation': [1, 2]})[0]
+        assert {'vp_evaporation_log10atm__set1', 'vp_evaporation_log10atm__set2'} <= r.keys()
+
+    def test_sets_match_the_underlying_functions(self):
+        from aerosysprop.methods import vapour_pressures
+        mol = Chem.MolFromSmiles('OCC(=O)O')  # glycolic acid: the sets differ
+        r = run_all([('glycolic_acid', mol)], methods=['vp_evaporation'], workers=1, use_threads=True,
+                    parameter_sets={'vp_evaporation': [1, 2]})[0]
+        assert r['vp_evaporation_log10atm__set1'] == pytest.approx(
+            vapour_pressures.evaporation(mol, 298.15))
+        assert r['vp_evaporation_log10atm__set2'] == pytest.approx(
+            vapour_pressures.evaporation2(mol, 298.15))
+        assert r['vp_evaporation_log10atm__set1'] != pytest.approx(r['vp_evaporation_log10atm__set2'])
+
+    def test_deprecated_id_still_works(self):
+        with pytest.warns(FutureWarning):
+            r = run_all(_mols(), methods=['vp_evaporation2'], workers=1, use_threads=True)[0]
+        assert 'vp_evaporation_log10atm__set2' in r
+
+    def test_unknown_set_is_rejected(self):
+        with pytest.raises(ValueError):
+            run_all(_mols(), methods=['vp_evaporation'], workers=1, use_threads=True,
+                    parameter_sets={'vp_evaporation': [3]})

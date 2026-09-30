@@ -1,0 +1,49 @@
+# Method card: density_le_bas
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: density_le_bas
+name: Le Bas (with Rackett-type temperature correction)
+property: liquid density
+output_unit: g/cm3
+status: published-with-modifications
+model:
+  summary: Molar volume at the boiling point from Le Bas increments, extrapolated to temperature with
+    a Rackett-type equation using critical properties.
+  references:
+  - citation: Le Bas (1915), The Molecular Volumes of Liquid Chemical Compounds; as described in Poling,
+      Prausnitz and O'Connell (2001)
+    doi: null
+    role: source method
+    verified: false
+  inputs:
+  - SMILES
+  - temperature (K)
+  - critical properties from cp_nannoolal
+parameter_set:
+  version: 1
+  files:
+    data/le_bas.smarts: 66e15e3db96cc97c92b5dcee005f566f0ea5b29c78299eac4514b64b9b44e167
+    data/le_bas.data: 049b9bd05b8dbb4085d1d8f15a099b21b66059d7a52847300cd174b73c2f1cb1
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- Same mixed boiling point issue as density_schroeder (liquid_densities._generic).
+group_interpretation:
+- 'Carbonates are corrected as esters using the ethyl ester increment as a compromise; detected with the Extended Nannoolal SMARTS (groups.le_bas).'
+- 'When counting oxygens attached to nitrogen, N-O-N structures are assumed not to occur in closed-shell species (groups.le_bas).'
+- 'Triple-bonded nitrogen is given the same increment as double-bonded nitrogen (groups.le_bas).'
+- 'Ethyl ether detection handles branched and heteroatom-substituted cases with bespoke SMARTS logic (groups.le_bas).'
+known_limitations: []
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.

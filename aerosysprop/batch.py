@@ -61,6 +61,12 @@ class PropertyMethod:
     deps: frozenset = frozenset()    # direct dependencies; use BP_ANY for "a boiling point"
     bp_dependent: bool = False       # output changes with the boiling-point source
     bp_short: str = ''               # short label, only for boiling-point methods used as a source
+    # Parameter sets: the same model equations with different SMARTS/coefficient
+    # files. Methods with more than one set always name the set in their output
+    # columns ('<key>__set<n>') so values from different sets cannot be confused.
+    parameter_sets: tuple = (1,)
+    default_set: int = 1
+    parameter_set_labels: tuple = ()  # one short description per set, same order
 
 
 # The registry — order defines display order and CSV column order.
@@ -76,9 +82,9 @@ PROPERTY_METHODS = [
     PropertyMethod('vp_myrdal',    'Myrdal & Yalkowsky (1997)', 'log₁₀(atm)', 'Vapour Pressure',
                    ('vp_myrdal_log10atm',), deps=frozenset({BP_ANY}), bp_dependent=True),
     PropertyMethod('vp_evaporation',  'EVAPORATION (Compernolle 2011)', 'log₁₀(atm)', 'Vapour Pressure',
-                   ('vp_evaporation_log10atm',)),
-    PropertyMethod('vp_evaporation2', 'EVAPORATION revised', 'log₁₀(atm)', 'Vapour Pressure',
-                   ('vp_evaporation2_log10atm',)),
+                   ('vp_evaporation_log10atm',), parameter_sets=(1, 2), default_set=2,
+                   parameter_set_labels=('Set 1: MCM-style enol term',
+                                         'Set 2: revised alcohol terms, matching the published method')),
     PropertyMethod('vp_simpol',    'SIMPOL.1 (Pankow & Asher 2008)', 'log₁₀(atm)', 'Vapour Pressure',
                    ('vp_simpol_log10atm',)),
     PropertyMethod('cp_nannoolal', 'Nannoolal et al. (2004)', 'K / bar', 'Critical Properties',
@@ -111,6 +117,54 @@ METHOD_META = {
 # Canonical ordering for display and CSV columns
 ALL_METHODS = [m.id for m in PROPERTY_METHODS]
 
+# Methods offering more than one parameter set.
+MULTI_SET_METHODS = {m.id: m for m in PROPERTY_METHODS if len(m.parameter_sets) > 1}
+
+# Former method IDs that are now a parameter set of another method. Still
+# accepted, with a FutureWarning, so existing scripts keep working.
+DEPRECATED_METHOD_IDS = {'vp_evaporation2': ('vp_evaporation', 2)}
+
+
+def set_suffix(version):
+    return f'__set{version}'
+
+
+def normalise_parameter_sets(methods, parameter_sets=None):
+    """Resolve deprecated method IDs and default parameter sets.
+
+    Returns ``(methods, sets)``: the method list with deprecated IDs replaced,
+    and ``{method_id: tuple_of_versions}`` for every multi-set method among
+    them. ``methods=None`` means all methods.
+    """
+    import warnings
+    sets = {k: tuple(v) if isinstance(v, (list, tuple)) else (v,)
+            for k, v in (parameter_sets or {}).items()}
+    if methods is not None:
+        out = []
+        for m in methods:
+            if m in DEPRECATED_METHOD_IDS:
+                new_id, version = DEPRECATED_METHOD_IDS[m]
+                warnings.warn(f'{m!r} is now parameter set {version} of {new_id!r}; '
+                              f'request {new_id!r} with parameter_sets={{{new_id!r}: [{version}]}}.',
+                              FutureWarning, stacklevel=3)
+                sets[new_id] = tuple(dict.fromkeys(sets.get(new_id, ()) + (version,)))
+                m = new_id
+            if m not in out:
+                out.append(m)
+        methods = out
+    for mid, versions in sets.items():
+        pm = PROPERTY_METHOD_BY_ID.get(mid)
+        if pm is None:
+            raise ValueError(f'Unknown method ID in parameter_sets: {mid!r}')
+        bad = [v for v in versions if v not in pm.parameter_sets]
+        if bad or not versions:
+            raise ValueError(f'{mid} has parameter sets {list(pm.parameter_sets)}; got {list(versions)}')
+    wanted = ALL_METHODS if methods is None else methods
+    for mid in wanted:
+        if mid in MULTI_SET_METHODS and mid not in sets:
+            sets[mid] = (MULTI_SET_METHODS[mid].default_set,)
+    return methods, {k: v for k, v in sets.items() if k in MULTI_SET_METHODS}
+
 # Methods grouped for UI display (group order = first appearance in registry)
 METHOD_GROUPS = {}
 for _m in PROPERTY_METHODS:
@@ -135,15 +189,19 @@ _BP_DEPENDENT_KEYS = {
 }
 
 
-def resolved_output_columns(methods_to_run, bp_sources):
+def resolved_output_columns(methods_to_run, bp_sources, parameter_sets=None):
     """Return the ordered output-column names for a run, accounting for the
-    boiling-point-source suffix when multiple sources are selected."""
+    boiling-point-source suffix when multiple sources are selected and the
+    parameter-set suffix for methods that have more than one set."""
     multi = len(bp_sources) > 1
+    _, sets = normalise_parameter_sets(list(methods_to_run), parameter_sets)
     cols = []
     for m in ALL_METHODS:
         if m not in methods_to_run:
             continue
-        if m in _BP_DEPENDENT_KEYS:
+        if m in MULTI_SET_METHODS:
+            cols.extend(key + set_suffix(v) for key in _OUTPUT_KEYS[m] for v in sets[m])
+        elif m in _BP_DEPENDENT_KEYS:
             for key in _BP_DEPENDENT_KEYS[m]:
                 if multi:
                     cols.extend(key + '__bp' + _BP_SHORT[b] for b in bp_sources)
@@ -218,7 +276,8 @@ def _run_one(args):
     boiling-point source; when more than one source is given the resulting
     columns get a '__bp<Source>' suffix.
     """
-    name, smiles, temperature, methods, bp_sources = args
+    name, smiles, temperature, methods, bp_sources, *rest = args
+    psets = rest[0] if rest else {}
 
     from aerosysprop.methods import (
         boiling_points,
@@ -252,8 +311,11 @@ def _run_one(args):
             out[key] = bp_vals.get(bp_id)
 
     # --- Boiling-point-independent vapour pressures / density ---
-    if 'vp_evaporation'  in methods: out['vp_evaporation_log10atm']  = _call(vapour_pressures.evaporation,  mol, temperature)
-    if 'vp_evaporation2' in methods: out['vp_evaporation2_log10atm'] = _call(vapour_pressures.evaporation2, mol, temperature)
+    if 'vp_evaporation' in methods:
+        # Parameter set 1: evaporation.smarts/.data; set 2: evaporation2.smarts/.data
+        set_fn = {1: vapour_pressures.evaporation, 2: vapour_pressures.evaporation2}
+        for v in psets.get('vp_evaporation', (2,)):
+            out['vp_evaporation_log10atm' + set_suffix(v)] = _call(set_fn[v], mol, temperature)
     if 'vp_simpol'       in methods: out['vp_simpol_log10atm']       = _call(vapour_pressures.simpol,       mol, temperature)
     if 'density_girolami' in methods:
         try:
@@ -316,7 +378,8 @@ def _run_one(args):
 
 def run_all(mols, methods=None, temperature=298.15, workers=None,
             output_csv=None, progress_callback=None, use_threads=False,
-            bp_source='bp_nannoolal', bp_sources=None):
+            bp_source='bp_nannoolal', bp_sources=None, mp_context=None,
+            parameter_sets=None):
     """
     Run property predictions on a list of molecules in parallel.
 
@@ -352,6 +415,16 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
         each dependent column is produced once per source with a
         ``'__bp<Source>'`` suffix (e.g. ``'vp_nannoolal_log10atm__bpStein'``).
         ``None`` falls back to ``[bp_source]``.
+    parameter_sets : dict or None
+        For methods with more than one parameter set, which set(s) to run,
+        e.g. ``{'vp_evaporation': [1, 2]}``. Omitted methods use their default
+        set. Output columns of such methods always carry a ``'__set<n>'``
+        suffix, e.g. ``'vp_evaporation_log10atm__set2'``.
+    mp_context : multiprocessing context or None
+        How worker processes are started when ``use_threads`` is False.
+        ``None`` keeps the module default (fork on Linux and macOS). Pass
+        ``multiprocessing.get_context('spawn')`` when calling from a
+        multi-threaded host such as the MCP server, where forking is unsafe.
 
     Returns
     -------
@@ -373,6 +446,7 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
         if b not in BP_METHODS:
             raise ValueError('bp_source must be one of %s' % sorted(BP_METHODS))
 
+    methods, psets = normalise_parameter_sets(methods, parameter_sets)
     if methods is None:
         methods_to_run = frozenset(resolve_methods(ALL_METHODS, bp_sources=bp_sources))
     else:
@@ -386,7 +460,7 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
 
     bp_sources_t = tuple(bp_sources)
     args = [
-        (name, Chem.MolToSmiles(mol), temperature, methods_to_run, bp_sources_t)
+        (name, Chem.MolToSmiles(mol), temperature, methods_to_run, bp_sources_t, psets)
         for name, mol in mols
     ]
 
@@ -396,14 +470,14 @@ def run_all(mols, methods=None, temperature=298.15, workers=None,
 
     if output_csv:
         requested_fields = ['name', 'smiles'] + resolved_output_columns(
-            methods_to_run, bp_sources)
+            methods_to_run, bp_sources, psets)
         csv_file = open(output_csv, 'w', newline='')
         writer = csv.DictWriter(csv_file, fieldnames=requested_fields,
                                 extrasaction='ignore')
         writer.writeheader()
 
     Executor = ThreadPoolExecutor if use_threads else ProcessPoolExecutor
-    pool_kwargs = {} if use_threads else {'mp_context': _MP_CONTEXT}
+    pool_kwargs = {} if use_threads else {'mp_context': mp_context or _MP_CONTEXT}
 
     try:
         with Executor(max_workers=workers, **pool_kwargs) as pool:

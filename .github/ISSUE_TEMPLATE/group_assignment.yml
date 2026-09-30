@@ -1,0 +1,42 @@
+name: Group assignment discrepancy
+description: A molecule appears to be split into the wrong functional groups for a method.
+title: "[Groups] <method>: <molecule>"
+labels: ["method", "group-assignment"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Reports with a molecule, the expected groups and the supporting page of the
+        source paper can be checked and turned into a test quickly.
+  - type: input
+    id: method
+    attributes:
+      label: Method ID
+      description: As listed by `list_methods`, e.g. vp_simpol, bp_nannoolal, aiomfac.
+    validations: {required: true}
+  - type: input
+    id: smiles
+    attributes:
+      label: SMILES
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected groups and counts
+      description: The group assignment you believe the method's source defines.
+    validations: {required: true}
+  - type: input
+    id: source
+    attributes:
+      label: Supporting reference
+      description: Paper, page, table or worked example that supports the expected assignment.
+    validations: {required: true}
+  - type: textarea
+    id: observed
+    attributes:
+      label: What AeroSysProp produced
+      description: Paste the diagnose_smiles output or the groups returned, and the AeroSysProp version.
+  - type: textarea
+    id: impact
+    attributes:
+      label: Effect on the predicted value (if known)

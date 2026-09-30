@@ -1,0 +1,10 @@
+# Changes to prediction methods, their parameters and group definitions need
+# approval from the core management team. See METHODS_GOVERNANCE.md.
+# (Enforced when branch protection on main has "Require review from Code Owners" enabled.)
+
+/aerosysprop/methods/        @simonom
+/aerosysprop/data/           @simonom
+/aerosysprop/groups.py       @simonom
+/aerosysprop/method_cards.py @simonom
+/METHODS_GOVERNANCE.md       @simonom
+/.github/CODEOWNERS          @simonom

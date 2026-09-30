@@ -14,6 +14,8 @@ existing session without schema changes, and export filtered views to CSV.
 import csv
 import sqlite3
 from datetime import datetime, timezone
+from pathlib import Path
+from urllib.request import pathname2url
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +71,20 @@ CREATE INDEX IF NOT EXISTS idx_mixspecies_mixture ON mixture_species(mixture_id)
 """
 
 
-def _connect(path):
+def _connect(path, read_only=False):
+    """Open a session database.
+
+    With ``read_only=True`` the file is opened in SQLite's read-only mode:
+    it must already exist, the schema script is not run, and any attempt to
+    write raises ``sqlite3.OperationalError``. The agent API (``aerosysprop.api``)
+    always uses this mode so that agents can never modify a results store.
+    """
+    if read_only:
+        resolved = Path(path).resolve()
+        if not resolved.is_file():
+            raise FileNotFoundError(f'session database not found: {path}')
+        uri = 'file:%s?mode=ro' % pathname2url(str(resolved))
+        return sqlite3.connect(uri, uri=True)
     conn = sqlite3.connect(path)
     conn.execute('PRAGMA foreign_keys = ON')
     conn.executescript(_DDL)
@@ -123,7 +138,7 @@ def save_results(path, results, temperature):
         conn.close()
 
 
-def load_results(path, methods=None, temperature=None):
+def load_results(path, methods=None, temperature=None, read_only=False):
     """
     Load results from a session database as a wide-form list of dicts.
 
@@ -144,7 +159,7 @@ def load_results(path, methods=None, temperature=None):
         One dict per compound.  Keys: ``name``, ``smiles``, plus one key per
         method with the most recent value for that compound.
     """
-    conn = _connect(path)
+    conn = _connect(path, read_only=read_only)
     try:
         where_clauses = []
         params = []
@@ -185,9 +200,9 @@ def load_results(path, methods=None, temperature=None):
         conn.close()
 
 
-def list_compounds(path):
+def list_compounds(path, read_only=False):
     """Return all (name, smiles) pairs stored in the session database."""
-    conn = _connect(path)
+    conn = _connect(path, read_only=read_only)
     try:
         return conn.execute(
             'SELECT name, smiles FROM compounds ORDER BY id'
@@ -245,10 +260,10 @@ def save_mixture_result(path, name, species_rows, temperature,
         conn.close()
 
 
-def list_mixtures(path):
+def list_mixtures(path, read_only=False):
     """Return stored mixtures as a list of dicts (id, name, temperature,
     basis, salts, created_at), newest first."""
-    conn = _connect(path)
+    conn = _connect(path, read_only=read_only)
     try:
         rows = conn.execute(
             'SELECT id, name, temperature, basis, salts, created_at '
@@ -263,9 +278,9 @@ def list_mixtures(path):
         conn.close()
 
 
-def load_mixture_species(path, mixture_id):
+def load_mixture_species(path, mixture_id, read_only=False):
     """Return the species rows for one stored mixture as a list of dicts."""
-    conn = _connect(path)
+    conn = _connect(path, read_only=read_only)
     try:
         rows = conn.execute(
             'SELECT species, smiles, kind, fraction, gamma '

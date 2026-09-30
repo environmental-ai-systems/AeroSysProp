@@ -1,0 +1,75 @@
+# Method card: vp_evaporation
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# This method offers two parameter sets: same equations, different SMARTS.
+# Request a specific set as 'vp_evaporation@1' or 'vp_evaporation@2'; output
+# columns always carry the set, e.g. vp_evaporation_log10atm__set2.
+# Fingerprints: to add a set, append it to parameter_sets with its files'
+# fingerprints set to null and run `python -m aerosysprop.method_cards --record`.
+# Existing sets are never edited in place.
+id: vp_evaporation
+name: EVAPORATION (as ported)
+property: pure-component vapour pressure
+output_unit: log10(atm)
+status: published-with-modifications
+model:
+  summary: log10 P = A + B / T^1.5 with A and B from group contributions, including non-additivity corrections
+    for crowded functional groups.
+  references:
+  - citation: Compernolle, Ceulemans and Muller (2011), Atmos. Chem. Phys. 11, 9431-9450
+    doi: 10.5194/acp-11-9431-2011
+    role: source method
+    verified: false
+  - citation: Topping et al. (2016), UManSysProp v1.0, Geosci. Model Dev. 9, 899-914
+    doi: 10.5194/gmd-9-899-2016
+    role: implementation this code descends from
+    verified: false
+  inputs:
+  - SMILES
+  - temperature (K)
+parameter_sets:
+- version: 1
+  label: 'Set 1: MCM-style enol term'
+  files:
+    data/evaporation.smarts: b08c7413970f5f753f181297293b6f4a3b9d91214dd39893b6557af55eb18db3
+    data/evaporation.data: f477453f7f4a7a2ce3f0bdd47c4133240e68300c29439dd6e2040c30b897d64a
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version. Its SMARTS include
+    a vinyl alcohol (enol) term following MCM usage, which differs from the published method.
+- version: 2
+  default: true
+  label: 'Set 2: revised alcohol terms, matching the published method'
+  files:
+    data/evaporation2.smarts: de48fa142287e647910b39455669e4f3aae108d2b2c80532705b6d0cf8933739
+    data/evaporation2.data: f477453f7f4a7a2ce3f0bdd47c4133240e68300c29439dd6e2040c30b897d64a
+  origin:
+    date: 2018-12
+    author: Petroc Shelley
+    change: Enol term restricted and a new enol pattern (805) added, and the diol pattern (1902) widened
+      to CX3, so enols are treated as alkyl alcohols to match the published EVAPORATION. Coefficients
+      identical to set 1.
+history:
+- date: 2026-09
+  change: The former method ID vp_evaporation2 merged into this card as parameter set 2 (now the default).
+    vp_evaporation2 is still accepted as a deprecated alias for vp_evaporation@2.
+implementation_notes:
+- Set 2 is the default because it matches the published method. Set 1 is kept so earlier results can be
+  reproduced.
+group_interpretation:
+- Set 2 widens diol pattern 1902 to [CX4]([OX2;H1])[CX4,CX3]([OX2;H1]) so an enol OH next to an alcohol counts
+  as a diol. The [CX3] branch also matches a carboxylic acid carbon, so alpha-hydroxy acids (13 MCM species,
+  e.g. glycolic acid) receive a diol correction in set 2 (group 19 count +2, about +0.25 log10 atm). This looks
+  unintended. Needs a core team decision; a fix would be parameter set 3.
+known_limitations:
+- Nitro groups and several nitrogen functionalities are not covered (reported as UNMATCHED_ATOMS).
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  set_comparison: tests/test_evaporation_sets.py freezes values and group counts for both sets on the 91 MCM
+    species where they differ (78 enols, 13 alpha-hydroxy acids), plus controls where they agree.
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.

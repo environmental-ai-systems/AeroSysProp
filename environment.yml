@@ -3,9 +3,14 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python>=3.10
   - rdkit
   - pytest
   - tqdm
   - numpy
   - pandas
+  - pyyaml
   - streamlit
+  - pip
+  - pip:
+      - "mcp>=2.2,<3"

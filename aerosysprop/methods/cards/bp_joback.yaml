@@ -1,0 +1,49 @@
+# Method card: bp_joback
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: bp_joback
+name: Joback & Reid
+property: normal boiling point
+output_unit: K
+status: published-with-modifications
+model:
+  summary: Tb = 198 + sum of group contributions.
+  references:
+  - citation: Joback and Reid (1987), Chem. Eng. Commun. 57, 233-243
+    doi: 10.1080/00986448708960487
+    role: source method
+    verified: false
+  - citation: Topping et al. (2016), UManSysProp v1.0, Geosci. Model Dev. 9, 899-914
+    doi: 10.5194/gmd-9-899-2016
+    role: implementation this code descends from
+    verified: false
+  inputs:
+  - SMILES
+parameter_set:
+  version: 1
+  files:
+    data/stein_and_brown.smarts: f3b26e28ee58fec88a15d38f85019ca3de224348cc4cf68b131f2e692a1bbf93
+    data/joback.data: 8823fa7b9288dddb78d9e0b60086ff50b65c17f357590e5171680b62554afc0f
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- Groups are counted with the Stein & Brown SMARTS set, not a separate Joback group definition; Joback
+  coefficients are looked up against those groups.
+- Stein & Brown SMARTS groups numbered 101 to 109 include atmospheric additions (e.g. nitrate 101, peroxyacid
+  105, PAN 106) that are not in the 1994 paper. Origin and values to confirm.
+group_interpretation: []
+known_limitations:
+- Joback & Reid is known to overestimate boiling points of large, multifunctional molecules.
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.

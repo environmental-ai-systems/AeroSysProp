@@ -1,0 +1,75 @@
+# Method card: aiomfac
+# The versioned record of this prediction technique. See METHODS_GOVERNANCE.md.
+# Changes to this file or to the parameter files it lists need core team review.
+#
+# Fingerprints: to declare a new parameter set, increase parameter_set.version,
+# move the old entry to history, set the changed files' fingerprints to null and
+# run `python -m aerosysprop.method_cards --record`.
+id: aiomfac
+name: AIOMFAC activity coefficients
+property: activity coefficients of neutral components and ions in liquid mixtures
+output_unit: dimensionless
+status: published-with-modifications
+model:
+  summary: Short-range modified UNIFAC, middle-range organic-ion and ion-ion interactions, and long-range
+    Debye-Hueckel terms.
+  references:
+  - citation: Zuend et al. (2008), Atmos. Chem. Phys. 8, 4559-4593
+    doi: 10.5194/acp-8-4559-2008
+    role: source method
+    verified: false
+  - citation: Zuend et al. (2011), Atmos. Chem. Phys. 11, 9155-9206
+    doi: 10.5194/acp-11-9155-2011
+    role: source method
+    verified: false
+  - citation: Public Fortran AIOMFAC reference code
+    doi: null
+    role: validation reference
+    verified: false
+  inputs:
+  - SMILES of neutral components
+  - salt names
+  - mole or mass fractions
+  - temperature (K)
+parameter_set:
+  version: 1
+  files:
+    data/aiomfac_unifac.smarts: b012c13b12af350b5060a1aa8b7899e6d43955761e5c33b11275f9625558460a
+    data/aiomfac_hctail.smarts: e4d88a5e1fc54887479b26d64ff9716df8dc692dea4ea2ba12d245d81136e9a0
+    data/aiomfac_ions.smarts: 47008b1c261f2eba9479960c052bc6512ebb4d430dc3e1a1e95748b019ab5d0d
+    data/aiomfac_main.data: 17756aa41c075945b86c639ec9a6af03b75f0791437a949ae30c975aa2e67afd
+    data/aiomfac_ions.data: b6261b8067d95da337903704df3bc6b2ba953fc101bc54d77b204b0e730c55b4
+    data/aiomfac_salts.data: 59e2634474e9444501d223371fb1fe2141a7b87aa549436f9cd70c3694484e5d
+    data/aiomfac_sr_interactions.matrix: 887d50189f14604ec1c329e6780bdbc8b8f5907bd3f62f33e47c43acf9e77b79
+    data/aiomfac_mr_org_ion_interactions_b1.matrix: 4c5e5c6b8300e02ecea523ba36b1eb391ef506f76cee84f3a407700e45f19db2
+    data/aiomfac_mr_org_ion_interactions_b2.matrix: ad64d1b39e3746b8fcd0f4077aa12a7221b3385f6746e16729c24e3549306b43
+    data/aiomfac_mr_ion_ion_interactions_b1.matrix: d786b419bacf6c7473013561bf9cf8f62efe5fce807f795d9e13bb1411ec6fd2
+    data/aiomfac_mr_ion_ion_interactions_b2.matrix: f5109b8b83aea3eef5a859aa6916968da34d3732437755ed9d3181b0d592e59e
+    data/aiomfac_mr_ion_ion_interactions_b3.matrix: af8ea4b75b03ce2ce3849b823adadb42255094d8ced831caa4173c1e1b9edf05
+    data/aiomfac_mr_ion_ion_interactions_c1.matrix: 9d1d5f02123db8f173b606a85e77912e2d6459b749579c227c3aefd394f2e08d
+    data/aiomfac_mr_ion_ion_interactions_c2.matrix: aec36dbd843aa733960869ee6b525177bb55dcea9e43cb725eade669d5cfcdc7
+    data/aiomfac_mr_ion_ion_interactions_c3.matrix: 708e833ae34ce59ccb09171c41ef36e59b86402a038379f7a4221882b1bac6f1
+  origin: As inherited from UManSysProp / current AeroSysProp; first recorded version.
+history: []
+implementation_notes:
+- Python port validated against the Fortran AIOMFAC reference for more than 1500 compounds and the common
+  atmospheric salts (see methods/activity_coefficients.md).
+- Extension subgroups 281 to 285 are specific to AeroSysProp and are dropped by the Fortran reference
+  (diagnostic EXTENSION_SUBGROUP).
+- SMILES are decomposed into AIOMFAC subgroups by this project's SMARTS; the reference code takes subgroups
+  directly.
+- Bisulfate dissociation equilibrium is solved by default, matching the Fortran treatment.
+group_interpretation: []
+known_limitations:
+- See the Known limitations section of methods/activity_coefficients.md, including functional groups outside
+  the AIOMFAC SMARTS set.
+- Missing organic-ion middle-range parameters are reported as MR_PARAM_MISSING.
+validation:
+  reference_outputs: tests/fixtures.json (values frozen from the current implementation)
+  group_count_tests: null
+  todo: Add group assignment tests from worked examples in the source papers.
+review:
+  state: draft
+  approved_by: []
+  approved_on: null
+  note: Drafted from the code and README; every field needs checking by the core team.
