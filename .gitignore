@@ -13,3 +13,7 @@ dist/
 # Editor / OS noise
 .DS_Store
 *.swp
+
+# Evaluation: question sets people write for themselves, and run output
+evaluation/sets/
+evaluation/results/

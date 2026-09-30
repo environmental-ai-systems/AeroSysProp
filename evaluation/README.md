@@ -46,6 +46,34 @@ Every key carries `value_from_transcript: true`. The marker checks the answer
 against the tool result in that transcript as well as against the key, so a
 number no tool returned is caught as invention whatever path the model took.
 
+## Your own question set
+
+The shipped set is a reference, not a limit. To test the compounds you care
+about, copy the template and point the builder at it:
+
+```bash
+mkdir -p evaluation/sets
+cp evaluation/example_specs.yaml evaluation/sets/my_specs.yaml
+# edit the molecules and questions, then:
+python -m evaluation.build_questions --specs evaluation/sets/my_specs.yaml --skip-batch
+# writes evaluation/sets/my_questions.yaml
+```
+
+You never type an expected value: the builder computes the keys the same way it
+does for the shipped set, and stamps them with the commit and the parameter
+fingerprints they came from. Run the harness against your set exactly as against
+the shipped one.
+
+`evaluation/sets/` and `evaluation/results/` are ignored by git, so your
+questions and your runs stay yours. The shipped specification, its keyed set and
+the builder are listed in `docs/CODEOWNERS`, because they define what "the tool
+answers well" means for everyone; your own sets need nobody's approval.
+
+A local comparison is worth running for its own sake, separately from this study.
+Two models, or one model before and after you change a tool description, on ten
+questions about your own compounds, tells you quickly whether an agent can be
+trusted with them.
+
 ## Before the set is frozen
 
 1. The core team reviews and edits every question. Claude drafted them, and

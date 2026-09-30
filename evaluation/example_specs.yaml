@@ -1,0 +1,25 @@
+# Your own question set. Copy this, change the molecules, run:
+#   python -m evaluation.build_questions --specs evaluation/sets/my_specs.yaml
+# The keys are computed by AeroSysProp; you never type an expected value.
+# Anything under evaluation/sets/ is ignored by git, so it stays yours.
+defaults:
+  temperature_K: 298.15
+  tolerance: 0.02
+  bp_sources: [bp_nannoolal]
+
+questions:
+  - id: my-lookup-01
+    kind: lookup
+    tests: a compound I care about
+    molecules: [{name: pinonic acid, smiles: 'CC(=O)C1CC(C1(C)C)CC(=O)O'}]
+    methods: [vapour_pressure]
+    ask: What is the vapour pressure of pinonic acid at 298.15 K?
+
+  - id: my-delta-01
+    kind: delta
+    tests: what a hydroperoxide group does to my backbone
+    parent: {name: pinonic acid, smiles: 'CC(=O)C1CC(C1(C)C)CC(=O)O'}
+    variants:
+      - {name: hydroperoxy pinonic acid, smiles: 'CC(=O)C1CC(C1(C)C)C(OO)C(=O)O', change: hydroperoxide added}
+    methods: [vp_simpol, vp_evaporation]
+    ask: How much does adding a hydroperoxide group change the vapour pressure?

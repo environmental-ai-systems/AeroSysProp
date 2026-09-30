@@ -8,3 +8,10 @@
 /aerosysprop/method_cards.py @simonom
 /METHODS_GOVERNANCE.md       @simonom
 /.github/CODEOWNERS          @simonom
+
+# The shipped evaluation set defines what "the tool answers well" means, so a
+# change to it, or to the builder that generates its keys, needs the same review.
+# Sets people write for themselves live in /evaluation/sets/ and are not owned.
+/evaluation/question_specs.yaml @simonom
+/evaluation/questions.yaml      @simonom
+/evaluation/build_questions.py  @simonom

@@ -335,12 +335,19 @@ def build(specs_path: Path, out_path: Path, skip_batch: bool = False) -> dict:
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument('--specs', type=Path, default=DEFAULT_SPECS)
-    p.add_argument('--out', type=Path, default=DEFAULT_OUT)
+    p.add_argument('--specs', type=Path, default=DEFAULT_SPECS,
+                   help='specification file; your own may live anywhere, '
+                        'evaluation/sets/ is ignored by git')
+    p.add_argument('--out', type=Path, default=None,
+                   help='where to write the keyed set (default: beside the specs)')
     p.add_argument('--skip-batch', action='store_true',
                    help='do not run batch questions; write their keys as pending')
     args = p.parse_args(argv)
-    build(args.specs, args.out, skip_batch=args.skip_batch)
+    out = args.out
+    if out is None:
+        out = DEFAULT_OUT if args.specs.resolve() == DEFAULT_SPECS.resolve() else \
+            args.specs.with_name(args.specs.stem.replace('_specs', '') + '_questions.yaml')
+    build(args.specs, out, skip_batch=args.skip_batch)
     return 0
 
 
