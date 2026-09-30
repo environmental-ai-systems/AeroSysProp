@@ -63,14 +63,14 @@ def main(argv=None) -> int:
     messages = [{'role': 'user', 'content': QUESTION}]
     try:
         first = chat(args.host, args.model, messages, TOOLS)
-    except urllib.error.URLError as exc:
-        print(f'FAIL  cannot reach Ollama at {args.host}: {exc}')
-        print('      is the Ollama service running? try: ollama list')
-        return 2
-    except urllib.error.HTTPError as exc:
+    except urllib.error.HTTPError as exc:  # before URLError, which it subclasses
         detail = exc.read().decode(errors='replace')[:200]
         print(f'FAIL  Ollama refused the request ({exc.code}): {detail}')
         print(f'      has the model been pulled? try: ollama pull {args.model}')
+        return 2
+    except urllib.error.URLError as exc:
+        print(f'FAIL  cannot reach Ollama at {args.host}: {exc}')
+        print('      is the Ollama service running? try: ollama list')
         return 2
 
     msg = first.get('message', {})
