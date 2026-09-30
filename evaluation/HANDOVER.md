@@ -21,9 +21,7 @@ Everything below is built, tested on the Spark and pushed.
 
 Repository `environmental-ai-systems/AeroSysProp`:
 
-- **`guidance-switch`** (one commit off `main`): the switch. Needs a pull
-  request to `main`; open it from
-  https://github.com/environmental-ai-systems/AeroSysProp/compare/main...guidance-switch?expand=1
+- **The guidance switch** is on `main` (pull request #5, merged 1 Oct 2026).
   At `bare`: one-line tool descriptions, no titles or argument descriptions
   (types, defaults, enums and bounds kept, so validation is identical), one-line
   server instructions, no guide resources, `list_methods` gives IDs, output
@@ -32,8 +30,8 @@ Repository `environmental-ai-systems/AeroSysProp`:
   reporting requirements (`run.json` always keeps them). An unknown level stops
   the server. `aerosysprop/tests/test_guidance.py` compares the levels byte for
   byte, including through a real server process per level; 4,001 tests pass.
-- **`agent-eval`**: the question set, keys and builder, with `guidance-switch`
-  merged in, plus:
+- **`agent-eval`**: the question set, keys and builder, with the switch
+  merged in (the same commit as on `main`, so no conflicts later), plus:
   - `evaluation/run_eval.py`, the harness (see `evaluation/README.md`).
   - `evaluation/mark.py`, the automatic marking.
   - `evaluation/check_tool_calling.py`, now with a list argument like the real
@@ -154,15 +152,14 @@ Made on the Spark, 30 Sep to 1 Oct 2026:
 
 ## Still to do
 
-1. The pull request for `guidance-switch`.
-2. Update the protocol doc for the decisions above.
-3. A Claude backend in `run_eval.py` (Anthropic API in the same loop; needs an
+1. Update the protocol doc for the decisions above.
+2. A Claude backend in `run_eval.py` (Anthropic API in the same loop; needs an
    API key), or run Claude through Claude Desktop, and record which in the
    manifest.
-4. Blind marking: `marks.csv` lists what needs it in the `blind` column
+3. Blind marking: `marks.csv` lists what needs it in the `blind` column
    (refusals, justification, framing, possible invention). Not built yet: a
    shuffled, model- and condition-hidden export for markers or a judge model.
-5. Carried over: core team review of the 46 questions (pinic and levulinic acid
+4. Carried over: core team review of the 46 questions (pinic and levulinic acid
    SMILES especially); the held-back question set; whether batch runs default
    to a folder when `AEROSYSPROP_OUTPUT_DIR` is unset (currently off); branch
    protection on `main` (waiting on GitHub Education); EVAPORATION set 2's diol
