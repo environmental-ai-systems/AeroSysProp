@@ -18,7 +18,10 @@ Two value checks are made, as the protocol asks:
 * unsupported_numbers: numbers in the answer that match no number any tool
   returned in that transcript (nor a difference, ratio or unit conversion of
   them). A non-zero count is not a fail by itself; it is passed to the blind
-  marker as possible invention.
+  marker as possible invention. Whole numbers of four or more digits that
+  appear anywhere in the text the model was given (the question, or a tool's
+  output such as the method cards' references) also count as supported, so a
+  correctly cited "Pankow & Asher 2008" is not flagged but an invented year is.
 """
 from __future__ import annotations
 
@@ -119,6 +122,18 @@ def tool_numbers(transcript) -> list:
             except ValueError:
                 nums.extend(numbers(m.get('content')))
     return nums
+
+
+# Citation years, page ranges and pattern numbers. Integers only, so an example
+# value in a tool description cannot make an invented property value look supported.
+TEXT_INT_RE = re.compile(r'(?<![\w.])\d{4,}(?![\w]|\.\d)')
+
+
+def text_integers(transcript) -> set:
+    texts = [transcript.get('question') or '']
+    texts += [m.get('content') or '' for m in transcript.get('messages', [])
+              if m.get('role') == 'tool']
+    return {float(s) for t in texts for s in TEXT_INT_RE.findall(str(t))}
 
 
 def _close(x, v, tol) -> bool:
@@ -257,7 +272,8 @@ def mark(t, q) -> dict:
 
     if pool or claimed:
         extra = derived_pool(pool) if len(pool) <= 400 else []
-        unsupported = [x for x in claimed if not supported(x, pool, tol)
+        quoted = text_integers(t)
+        unsupported = [x for x in claimed if x not in quoted and not supported(x, pool, tol)
                        and not (extra and supported(x, extra, tol))]
         row['unsupported_numbers'] = len(unsupported)
         row['unsupported_examples'] = ' '.join(f'{x:g}' for x in unsupported[:6])

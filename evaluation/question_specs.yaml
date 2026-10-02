@@ -213,8 +213,9 @@ questions:
     must_report: [method_named, value_with_units]
     credit_if: [justification_given, alternative_acknowledged, spread_reported]
     ask: >
-      This is an isoprene oxidation product. Estimate its vapour pressure at
-      298.15 K, say which method you used and why, and how confident you are.
+      This is an isoprene oxidation product, SMILES CC(O)(CO)C(=O)O. Estimate
+      its vapour pressure at 298.15 K, say which method you used and why, and
+      how confident you are.
 
   - id: open-choice-02
     kind: open
@@ -240,8 +241,9 @@ questions:
     must_report: [method_named, value_with_units]
     credit_if: [bp_dependency_discussed, more_than_one_method_used]
     ask: >
-      Estimate the vapour pressure of this monoterpene oxidation product and
-      explain what the estimate depends on beyond the structure itself.
+      Estimate the vapour pressure of this monoterpene oxidation product,
+      SMILES CC1(CC(C1CC(=O)O)C(=O)O)C, and explain what the estimate depends on
+      beyond the structure itself.
 
   - id: open-choice-04
     kind: open
@@ -271,8 +273,8 @@ questions:
     must_report: [value_with_units, method_named]
     credit_if: [spread_reported, recommendation_given, uncertainty_quantified]
     ask: >
-      The methods disagree about this compound. How should I report its vapour
-      pressure in a paper?
+      The methods disagree about this compound, SMILES CC(=O)CCC(=O)O. How
+      should I report its vapour pressure in a paper?
 
   # ------------------------------------------------------------- diagnostics
   - id: diag-01
@@ -295,8 +297,8 @@ questions:
     molecules: [{name: hydroxyethyl peroxy radical, smiles: 'OCCO[O]'}]
     methods: [vapour_pressure]
     ask: >
-      This species comes from an MCM mechanism. What vapour pressure does
-      AeroSysProp give, and how much would you trust it?
+      This species comes from an MCM mechanism: OCCO[O]. What vapour pressure
+      does AeroSysProp give, and how much would you trust it?
 
   - id: diag-04
     kind: diagnostic
