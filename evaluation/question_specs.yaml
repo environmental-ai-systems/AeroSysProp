@@ -236,13 +236,13 @@ questions:
   - id: open-choice-03
     kind: open
     tests: recognises that a method needing a boiling point inherits its error
-    molecules: [{name: pinic acid, smiles: 'CC1(CC(C1CC(=O)O)C(=O)O)C'}]
+    molecules: [{name: pinic acid, smiles: 'CC1(C)C(CC(=O)O)CC1C(=O)O'}]
     acceptable_methods: [vp_simpol, vp_evaporation, vp_nannoolal, vp_myrdal]
     must_report: [method_named, value_with_units]
     credit_if: [bp_dependency_discussed, more_than_one_method_used]
     ask: >
       Estimate the vapour pressure of this monoterpene oxidation product,
-      SMILES CC1(CC(C1CC(=O)O)C(=O)O)C, and explain what the estimate depends on
+      SMILES CC1(C)C(CC(=O)O)CC1C(=O)O, and explain what the estimate depends on
       beyond the structure itself.
 
   - id: open-choice-04
