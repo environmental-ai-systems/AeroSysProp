@@ -1,9 +1,9 @@
-built: '2026-10-02T11:46:39Z'
-specs_sha256: 47e52956e55b1149dcb0c9be2b220d9573200ff9ca2177f73ba17205a904f6fe
+built: '2026-10-02T12:06:43Z'
+specs_sha256: 5033e3eb2c008ca3369e333460a6d2c2faa85e9feb0e779107e60ddce0b0283f
 software:
   aerosysprop_version: '0.1'
-  git_commit: aa24d10
-git_commit: aa24d10
+  git_commit: 8090faa
+git_commit: 8090faa
 method_cards:
   aiomfac: aiomfac@1 (f173b5619e1a)
   bp_joback: bp_joback@1 (f04eb40c76a4)
@@ -1149,7 +1149,7 @@ questions:
     tell me how far apart the methods are across that set.
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_124637_key-batch-01_2a88e0
+    run_id: 2026-10-02_130641_key-batch-01_ab0f68
     coverage:
       molecules: 583
       computed: 583
@@ -1334,7 +1334,7 @@ questions:
     vapour pressure methods, and what does that number cover?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_124637_key-batch-01_2a88e0
+    run_id: 2026-10-02_130641_key-batch-01_ab0f68
     coverage:
       molecules: 583
       computed: 583
@@ -1519,7 +1519,7 @@ questions:
     either of them flagged?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_124637_key-batch-01_2a88e0
+    run_id: 2026-10-02_130641_key-batch-01_ab0f68
     coverage:
       molecules: 583
       computed: 583
@@ -1734,7 +1734,7 @@ questions:
     most?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_124637_key-batch-01_2a88e0
+    run_id: 2026-10-02_130641_key-batch-01_ab0f68
     coverage:
       molecules: 583
       computed: 583
@@ -1919,7 +1919,7 @@ questions:
     they need from you?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_124637_key-batch-01_2a88e0
+    run_id: 2026-10-02_130641_key-batch-01_ab0f68
     coverage:
       molecules: 583
       computed: 583
@@ -2103,7 +2103,7 @@ questions:
   question: Run the same calculation again and tell me whether anything changed.
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_124637_key-batch-01_2a88e0
+    run_id: 2026-10-02_130641_key-batch-01_ab0f68
     coverage:
       molecules: 583
       computed: 583
@@ -2454,7 +2454,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: aa24d10
+          git_commit: 8090faa
         methods:
           aiomfac:
             method: aiomfac
@@ -2508,7 +2508,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: aa24d10
+          git_commit: 8090faa
         methods:
           aiomfac:
             method: aiomfac
@@ -2562,7 +2562,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: aa24d10
+          git_commit: 8090faa
         methods:
           aiomfac:
             method: aiomfac
@@ -2578,3 +2578,510 @@ questions:
     - coefficients_reported
     - basis_named
     value_from_transcript: true
+- id: lookup-09
+  kind: lookup
+  tests: a temperature given in Celsius, below freezing
+  question: What are the SIMPOL and EVAPORATION vapour pressures of pinonic acid (CC(=O)C1CC(C1(C)C)CC(=O)O)
+    at -10 °C?
+  temperature_K: 263.15
+  key:
+    values:
+      pinonic acid:
+        vp_evaporation_log10atm__set2: -8.1737
+        vp_simpol_log10atm: -8.8092
+    diagnostics: {}
+    provenance_labels:
+      vp_evaporation@2: vp_evaporation@2 (d3935c1d1b7a)
+      vp_simpol: vp_simpol@1 (44ca9771f3fb)
+    tolerance: 0.02
+    acceptable_methods:
+    - vp_simpol
+    - vp_evaporation
+    must_report:
+    - value_with_units
+    - method_named
+    value_from_transcript: true
+- id: lookup-10
+  kind: lookup
+  tests: a boiling-point dependent method away from 298.15 K
+  question: What does the Nannoolal method give for the vapour pressure of malonic
+    acid (OC(=O)CC(=O)O) at 273.15 K?
+  temperature_K: 273.15
+  key:
+    values:
+      malonic acid:
+        bp_nannoolal_K: 544.6313
+        vp_nannoolal_log10atm: -7.1284
+    diagnostics: {}
+    provenance_labels:
+      bp_nannoolal: bp_nannoolal@1 (2e3b72c68667)
+      vp_nannoolal: vp_nannoolal@1 (885834dce630)
+    tolerance: 0.02
+    acceptable_methods:
+    - vp_nannoolal
+    must_report:
+    - value_with_units
+    - method_named
+    value_from_transcript: true
+- id: mix-04
+  kind: mixture
+  tests: AIOMFAC at a temperature other than 298.15 K
+  question: What are the activity coefficients in an 80:20 (by mass) water and ethanol
+    mixture at 0 °C?
+  temperature_K: 273.15
+  key:
+    result:
+      model: AIOMFAC (short-range + middle-range + long-range Debye-Hueckel)
+      temperature_K: 273.15
+      composition_basis: mass_fraction
+      bisulfate_equilibrium: null
+      neutral_components:
+      - smiles: O
+        mass_fraction: 0.8
+        activity_coefficient: 1.0158017853145995
+      - smiles: CCO
+        mass_fraction: 0.2
+        activity_coefficient: 2.1442877542871046
+      ions: []
+      salts: []
+      reference_states:
+        neutral_components: mole-fraction basis, pure-component (Raoult) reference
+        ions: molality basis, infinite dilution in water reference
+      diagnostics: []
+      warnings: []
+      provenance:
+        software:
+          aerosysprop_version: '0.1'
+          git_commit: 8090faa
+        methods:
+          aiomfac:
+            method: aiomfac
+            documented: true
+            status: published-with-modifications
+            parameter_set_version: 1
+            parameter_fingerprint: f173b5619e1a
+            parameters_match_card: true
+            review_state: draft
+            label: aiomfac@1 (f173b5619e1a)
+    tolerance: 0.05
+    must_report:
+    - coefficients_reported
+    - basis_named
+    value_from_transcript: true
+- id: lookup-11
+  kind: lookup
+  tests: critical properties, with units
+  question: What critical temperature and critical pressure does AeroSysProp give
+    for adipic acid (OC(=O)CCCCC(=O)O)?
+  temperature_K: 298.15
+  key:
+    values:
+      adipic acid:
+        bp_nannoolal_K: 587.8602
+        tc_nannoolal_K: 779.2032
+        pc_nannoolal_bar: 32.8679
+    diagnostics: {}
+    provenance_labels:
+      bp_nannoolal: bp_nannoolal@1 (2e3b72c68667)
+      cp_nannoolal: cp_nannoolal@1 (3c7285d23977)
+    tolerance: 0.02
+    acceptable_methods:
+    - critical_properties
+    must_report:
+    - value_with_units
+    - method_named
+    value_from_transcript: true
+- id: lookup-12
+  kind: lookup
+  tests: every liquid density method, and the spread between them
+  question: What liquid densities do the different methods give for succinic acid
+    (OC(=O)CCC(=O)O), and how far apart are they?
+  temperature_K: 298.15
+  key:
+    values:
+      succinic acid:
+        bp_nannoolal_K: 559.4063
+        density_girolami_gcc: 1.2882
+        tc_nannoolal_K: 758.916
+        pc_nannoolal_bar: 40.5056
+        density_schroeder_gcc: 1.4132
+        density_le_bas_gcc: 1.2232
+        density_tyn_calus_gcc: 1.3234
+    diagnostics: {}
+    provenance_labels:
+      bp_nannoolal: bp_nannoolal@1 (2e3b72c68667)
+      cp_nannoolal: cp_nannoolal@1 (3c7285d23977)
+      density_girolami: density_girolami@1 (51c60b21478a)
+      density_schroeder: density_schroeder@1 (409221e261bc)
+      density_le_bas: density_le_bas@1 (5b03b09c5534)
+      density_tyn_calus: density_tyn_calus@1
+    tolerance: 0.02
+    acceptable_methods:
+    - liquid_density
+    must_report:
+    - value_with_units
+    - method_named
+    value_from_transcript: true
+- id: mix-05
+  kind: mixture
+  tests: a nitrate salt with a dicarboxylic acid, and the ion basis
+  question: What are the activity coefficients in water with 10% succinic acid and
+    5% ammonium nitrate by mass, at 298.15 K?
+  temperature_K: 298.15
+  key:
+    result:
+      model: AIOMFAC (short-range + middle-range + long-range Debye-Hueckel)
+      temperature_K: 298.15
+      composition_basis: mass_fraction
+      bisulfate_equilibrium: true
+      neutral_components:
+      - smiles: O
+        mass_fraction: 0.85
+        activity_coefficient: 1.004171568662613
+      - smiles: OC(=O)CCC(=O)O
+        mass_fraction: 0.1
+        activity_coefficient: 0.7688844327215472
+      ions:
+      - ion: NH4+
+        kind: cation
+        activity_coefficient: 0.6140790753587333
+      - ion: NO3-
+        kind: anion
+        activity_coefficient: 0.6244898480117039
+      salts:
+      - salt: NH4NO3
+        mass_fraction: 0.05
+        mean_ionic_activity_coefficient: 0.619262584400142
+      reference_states:
+        neutral_components: mole-fraction basis, pure-component (Raoult) reference
+        ions: molality basis, infinite dilution in water reference
+      diagnostics: []
+      warnings: []
+      provenance:
+        software:
+          aerosysprop_version: '0.1'
+          git_commit: 8090faa
+        methods:
+          aiomfac:
+            method: aiomfac
+            documented: true
+            status: published-with-modifications
+            parameter_set_version: 1
+            parameter_fingerprint: f173b5619e1a
+            parameters_match_card: true
+            review_state: draft
+            label: aiomfac@1 (f173b5619e1a)
+    tolerance: 0.05
+    must_report:
+    - coefficients_reported
+    - basis_named
+    value_from_transcript: true
+- id: mix-06
+  kind: mixture
+  tests: a sulfate salt, where the ion values differ most
+  question: For water with 10% malonic acid and 10% sodium sulfate by mass at 298.15
+    K, what are the activity coefficients of every component and ion?
+  temperature_K: 298.15
+  key:
+    result:
+      model: AIOMFAC (short-range + middle-range + long-range Debye-Hueckel)
+      temperature_K: 298.15
+      composition_basis: mass_fraction
+      bisulfate_equilibrium: true
+      neutral_components:
+      - smiles: O
+        mass_fraction: 0.8
+        activity_coefficient: 1.0074949820850432
+      - smiles: OC(=O)CC(=O)O
+        mass_fraction: 0.1
+        activity_coefficient: 0.6333744079922631
+      ions:
+      - ion: Na+
+        kind: cation
+        activity_coefficient: 0.5777179572383903
+      - ion: SO4--
+        kind: anion
+        activity_coefficient: 0.07016103697548423
+      salts:
+      - salt: Na2SO4
+        mass_fraction: 0.1
+        mean_ionic_activity_coefficient: 0.2860943257955978
+      reference_states:
+        neutral_components: mole-fraction basis, pure-component (Raoult) reference
+        ions: molality basis, infinite dilution in water reference
+      diagnostics: []
+      warnings: []
+      provenance:
+        software:
+          aerosysprop_version: '0.1'
+          git_commit: 8090faa
+        methods:
+          aiomfac:
+            method: aiomfac
+            documented: true
+            status: published-with-modifications
+            parameter_set_version: 1
+            parameter_fingerprint: f173b5619e1a
+            parameters_match_card: true
+            review_state: draft
+            label: aiomfac@1 (f173b5619e1a)
+    tolerance: 0.05
+    must_report:
+    - coefficients_reported
+    - basis_named
+    value_from_transcript: true
+- id: opera-01
+  kind: open
+  tests: reports an unavailable service honestly rather than inventing a value
+  question: What does OPERA predict for the vapour pressure of pinonic acid (CC(=O)C1CC(C1(C)C)CC(=O)O)?
+  temperature_K: 298.15
+  key:
+    acceptable_methods:
+    - vp_simpol
+    - vp_evaporation
+    - vp_nannoolal
+    - vp_myrdal
+    must_report:
+    - failure_reported
+    credit_if:
+    - no_opera_value_invented
+    - alternative_offered
+    value_from_transcript: true
+    marking: automatic checks plus blind human or judge marking
+- id: session-01
+  kind: lookup
+  tests: reads a session database and filters it to the temperature asked for
+  question: My session database, session.db, has results saved from the web app. According
+    to it, which is less volatile by SIMPOL at 273.15 K, pinic acid or 2-methyltetrol,
+    and by how much?
+  temperature_K: 273.15
+  key:
+    values:
+      pinic acid:
+        vp_simpol_log10atm: -10.6247
+      2-methyltetrol:
+        vp_simpol_log10atm: -10.7143
+    diagnostics: {}
+    provenance_labels: {}
+    tolerance: 0.02
+    acceptable_methods:
+    - vp_simpol
+    must_report:
+    - value_with_units
+    - method_named
+    value_from_transcript: true
+- id: diag-07
+  kind: diagnostic
+  tests: a PAN, where only some methods are flagged
+  question: What is the vapour pressure of peroxyacetyl nitrate (PAN, CC(=O)OO[N+](=O)[O-])
+    at 298.15 K?
+  temperature_K: 298.15
+  key:
+    values:
+      peroxyacetyl nitrate:
+        bp_nannoolal_K: 377.0704
+        vp_evaporation_log10atm__set2: 1.2695
+        vp_simpol_log10atm: -1.3296
+        vp_nannoolal_log10atm: -1.4014
+        vp_myrdal_log10atm: -1.3326
+    diagnostics:
+      peroxyacetyl nitrate:
+        vp_evaporation@2:
+        - UNMATCHED_ATOMS
+        vp_simpol:
+        - UNMATCHED_ATOMS
+    expected_codes:
+    - UNMATCHED_ATOMS
+    invalid_smiles: []
+    provenance_labels:
+      bp_nannoolal: bp_nannoolal@1 (2e3b72c68667)
+      vp_nannoolal: vp_nannoolal@1 (885834dce630)
+      vp_myrdal: vp_myrdal@1 (ed32fcda0db9)
+      vp_evaporation@2: vp_evaporation@2 (d3935c1d1b7a)
+      vp_simpol: vp_simpol@1 (44ca9771f3fb)
+    tolerance: 0.02
+    must_report:
+    - caveat_passed_on
+    value_from_transcript: true
+- id: diag-08
+  kind: diagnostic
+  tests: an aromatic diol flagged by one method only, so the warning must name it
+  question: Estimate the vapour pressure of catechol (Oc1ccccc1O) at 298.15 K with
+    each available method.
+  temperature_K: 298.15
+  key:
+    values:
+      catechol:
+        bp_nannoolal_K: 512.5809
+        vp_evaporation_log10atm__set2: -0.87
+        vp_simpol_log10atm: -5.5988
+        vp_nannoolal_log10atm: -4.5376
+        vp_myrdal_log10atm: -4.7612
+    diagnostics:
+      catechol:
+        vp_evaporation@2:
+        - UNMATCHED_ATOMS
+    expected_codes:
+    - UNMATCHED_ATOMS
+    invalid_smiles: []
+    provenance_labels:
+      bp_nannoolal: bp_nannoolal@1 (2e3b72c68667)
+      vp_nannoolal: vp_nannoolal@1 (885834dce630)
+      vp_myrdal: vp_myrdal@1 (ed32fcda0db9)
+      vp_evaporation@2: vp_evaporation@2 (d3935c1d1b7a)
+      vp_simpol: vp_simpol@1 (44ca9771f3fb)
+    tolerance: 0.02
+    must_report:
+    - caveat_passed_on
+    value_from_transcript: true
+- id: diag-09
+  kind: diagnostic
+  tests: a sulfur compound no method covers
+  question: What vapour pressure does AeroSysProp give for methanesulfonic acid (CS(=O)(=O)O)
+    at 298.15 K?
+  temperature_K: 298.15
+  key:
+    values:
+      methanesulfonic acid:
+        bp_nannoolal_K: 84.3395
+        vp_evaporation_log10atm__set2: 1.7546
+        vp_simpol_log10atm: 1.4196
+        vp_nannoolal_log10atm: 2.918
+        vp_myrdal_log10atm: 0.6579
+    diagnostics:
+      methanesulfonic acid:
+        bp_nannoolal:
+        - UNMATCHED_ATOMS
+        vp_nannoolal:
+        - UNMATCHED_ATOMS
+        vp_myrdal:
+        - UNMATCHED_ATOMS
+        vp_evaporation@2:
+        - UNMATCHED_ATOMS
+        vp_simpol:
+        - UNMATCHED_ATOMS
+    expected_codes:
+    - UNMATCHED_ATOMS
+    invalid_smiles: []
+    provenance_labels:
+      bp_nannoolal: bp_nannoolal@1 (2e3b72c68667)
+      vp_nannoolal: vp_nannoolal@1 (885834dce630)
+      vp_myrdal: vp_myrdal@1 (ed32fcda0db9)
+      vp_evaporation@2: vp_evaporation@2 (d3935c1d1b7a)
+      vp_simpol: vp_simpol@1 (44ca9771f3fb)
+    tolerance: 0.02
+    must_report:
+    - caveat_passed_on
+    value_from_transcript: true
+- id: diag-10
+  kind: diagnostic
+  tests: a clean molecule that looks risky, inviting a needless warning
+  question: What is the vapour pressure of methyl hydroperoxide (COO) at 298.15 K,
+    and can I trust the estimate?
+  temperature_K: 298.15
+  key:
+    values:
+      methyl hydroperoxide:
+        bp_nannoolal_K: 358.2521
+        vp_evaporation_log10atm__set2: -1.0717
+        vp_simpol_log10atm: -1.0194
+        vp_nannoolal_log10atm: -1.1636
+        vp_myrdal_log10atm: -1.3044
+    diagnostics:
+      methyl hydroperoxide: {}
+    expected_codes: []
+    invalid_smiles: []
+    provenance_labels:
+      bp_nannoolal: bp_nannoolal@1 (2e3b72c68667)
+      vp_nannoolal: vp_nannoolal@1 (885834dce630)
+      vp_myrdal: vp_myrdal@1 (ed32fcda0db9)
+      vp_evaporation@2: vp_evaporation@2 (d3935c1d1b7a)
+      vp_simpol: vp_simpol@1 (44ca9771f3fb)
+    tolerance: 0.02
+    must_report:
+    - no_false_warning
+    value_from_transcript: true
+- id: diag-11
+  kind: diagnostic
+  tests: a clean multifunctional SOA tracer
+  question: What is the vapour pressure of 2-methyltetrol (CC(O)(CO)C(O)CO), an isoprene
+    SOA tracer, at 298.15 K?
+  temperature_K: 298.15
+  key:
+    values:
+      2-methyltetrol:
+        bp_nannoolal_K: 590.2476
+        vp_evaporation_log10atm__set2: -8.2148
+        vp_simpol_log10atm: -9.0049
+        vp_nannoolal_log10atm: -8.7479
+        vp_myrdal_log10atm: -7.0397
+    diagnostics:
+      2-methyltetrol: {}
+    expected_codes: []
+    invalid_smiles: []
+    provenance_labels:
+      bp_nannoolal: bp_nannoolal@1 (2e3b72c68667)
+      vp_nannoolal: vp_nannoolal@1 (885834dce630)
+      vp_myrdal: vp_myrdal@1 (ed32fcda0db9)
+      vp_evaporation@2: vp_evaporation@2 (d3935c1d1b7a)
+      vp_simpol: vp_simpol@1 (44ca9771f3fb)
+    tolerance: 0.02
+    must_report:
+    - no_false_warning
+    value_from_transcript: true
+- id: diag-12
+  kind: diagnostic
+  tests: an unclosed ring, and whether the failure is reported honestly
+  question: What is the vapour pressure of C1CCCCC at 298.15 K?
+  temperature_K: 298.15
+  key:
+    values:
+      unclosed ring:
+        error: INVALID_SMILES
+    diagnostics:
+      unclosed ring: {}
+    expected_codes: []
+    invalid_smiles:
+    - unclosed ring
+    provenance_labels:
+      bp_nannoolal: bp_nannoolal@1 (2e3b72c68667)
+      vp_nannoolal: vp_nannoolal@1 (885834dce630)
+      vp_myrdal: vp_myrdal@1 (ed32fcda0db9)
+      vp_evaporation@2: vp_evaporation@2 (d3935c1d1b7a)
+      vp_simpol: vp_simpol@1 (44ca9771f3fb)
+    tolerance: 0.02
+    must_report:
+    - failure_reported
+    value_from_transcript: true
+- id: prov-06
+  kind: open
+  tests: reports a modified method as modified
+  question: Is the Nannoolal vapour pressure method in AeroSysProp exactly as published?
+  temperature_K: 298.15
+  key:
+    acceptable_methods:
+    - vp_nannoolal
+    must_report:
+    - status_reported
+    credit_if:
+    - modification_explained
+    value_from_transcript: true
+    marking: automatic checks plus blind human or judge marking
+- id: prov-07
+  kind: open
+  tests: 'does not claim modifications that are not there; SIMPOL is listed as published,
+    with its group encoding still to be checked against the paper
+
+    '
+  question: Has AeroSysProp changed the SIMPOL method from the published paper?
+  temperature_K: 298.15
+  key:
+    acceptable_methods:
+    - vp_simpol
+    must_report:
+    - method_named
+    credit_if:
+    - status_correct
+    - encoding_caveat_mentioned
+    value_from_transcript: true
+    marking: automatic checks plus blind human or judge marking
