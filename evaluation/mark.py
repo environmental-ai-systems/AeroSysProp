@@ -3,18 +3,21 @@
     python -m evaluation.mark evaluation/results/2026-10-07
 
 Writes marks.csv beside answers.csv: one row per transcript, one column per
-criterion, 1 (met), 0 (not met) or empty (does not apply). The checks are
-deliberately generous patterns; anything they cannot decide (refusals,
-justification, framing) is left for blind marking, listed in the `blind`
-column.
+criterion, 1 (met), 0 (not met) or empty (does not apply). Where the key holds
+the answer (coverage figures, version labels, the reference basis, the run the
+tools reported) a check compares against it rather than looking for a word.
+Anything they cannot decide (refusals, justification, framing) is left for
+blind marking, listed in the `blind` column.
 
-Two value checks are made, as the protocol asks:
+Value checks, as the protocol asks:
 
 * value_key: the answer carries the key's values, within the key's tolerance
   (log10 values may also be given converted, e.g. in atm, within 5%): for each
   molecule a value from a required method (or, where none is required, from any
   method the key lists), each delta, the series step and each activity
   coefficient. Reported as the fraction of those found.
+* value_key_all: the same, but every expected value counts separately, so an
+  answer giving one method of the three asked for scores a third.
 * unsupported_numbers: numbers in the answer that match no number any tool
   returned in that transcript (nor a difference, ratio or unit conversion of
   them). A non-zero count is not a fail by itself; it is passed to the blind
@@ -38,9 +41,10 @@ import yaml
 
 HERE = Path(__file__).parent
 
-CRITERIA = ['tool_called', 'value_key', 'method_ok', 'method_named', 'value_with_units',
-            'version_named', 'caveat_passed', 'failure_reported', 'batch_tool_used',
-            'run_folder_cited', 'coverage_stated', 'basis_named', 'status_reported']
+CRITERIA = ['tool_called', 'value_key', 'value_key_all', 'method_ok', 'method_named',
+            'value_with_units', 'version_named', 'caveat_passed', 'no_false_warning',
+            'failure_reported', 'batch_tool_used', 'run_folder_cited', 'coverage_stated',
+            'basis_named', 'status_reported']
 FIELDS = (['model', 'guidance', 'question_id', 'kind', 'repeat', 'status', 'stop_reason',
            'n_calls', 'tool_errors'] + CRITERIA +
           ['key_values_found', 'key_values_total', 'unsupported_numbers',
@@ -54,18 +58,47 @@ METHOD_NAMES = {
 UNIT_RE = re.compile(r'log\s*10|log₁₀|log\(|\batm\b|\bPa\b|kPa|mmHg|\btorr\b|\bbar\b|°C|\bK\b',
                      re.I)
 VERSION_RE = re.compile(r'@\s?\d|\b[0-9a-f]{12}\b|parameter set \d|\bset \d|version \d', re.I)
-CAVEAT_RE = re.compile(r'UNMATCHED|not (?:be )?(?:recogni[sz]ed|matched|covered|represented)|'
-                       r'unrecogni[sz]ed|ignor(?:e|ed|es)|flag(?:ged)?|warning|diagnostic|'
-                       r'caution|unreliable|coverage', re.I)
-FAILURE_RE = re.compile(r'invalid|could not (?:be )?pars|cannot (?:be )?pars|not a valid|'
-                        r'malformed|error|unbalanced|incomplete', re.I)
+# Phrases that pass a coverage warning on. Bare words such as "coverage" or
+# "diagnostic" are not enough: "coverage is complete" is not a warning.
+WARN_RE = re.compile(r'UNMATCHED|not (?:be )?(?:recogni[sz]ed|matched|covered|represented|'
+                     r'accounted for)|unrecogni[sz]ed|ignor(?:e|ed|es|ing)\b|flagged|warning|'
+                     r'caution|unreliable|less reliable|not reliable|'
+                     r'(?:incomplete|partial|limited|poor) coverage|'
+                     r'coverage (?:problem|issue|gap|warning|limitation)|missing groups?|'
+                     r'no (?:group|parameter)s? for|'
+                     r'not (?:designed|intended|parameteri[sz]ed|suitable|valid|meant) for|'
+                     r'(?:does|do) not (?:typically )?(?:support|handle|cover)', re.I)
+# A warning phrase in a sentence with one of these says nothing is wrong
+# ("no warnings were raised"), so that sentence is not a warning.
+# "any ... problems" is the question being restated or a hypothetical, not a finding.
+NEGATED_RE = re.compile(r'\b(?:no|zero|any)\W+(?:[\w‑-]+\W+){0,2}(?:warnings?|flags?|diagnostics?|'
+                        r'issues?|problems?|limitations?|gaps?|concerns?|unmatched)|'
+                        r'\bwithout\W+(?:any\W+)?(?:[\w‑-]+\W+)?(?:warnings?|flags?|issues?|problems?)|'
+                        r'\bnot flagged|\b(?:user|you) (?:asked|is asking|are asking)|'
+                        r'\basking (?:if|whether|about)|'
+                        r'\bnone (?:of \w+ )?(?:were|was|are|is) flagged|'
+                        r'\bnone of (?:the|these) (?:\w+\W+){0,3}(?:raised|reported|flagged|returned)|'
+                        r'\bfull coverage|'
+                        r'\bno atoms? (?:were |was )?(?:left )?unmatched|'
+                        r'\ball atoms (?:were |are )?matched|\bfully (?:covered|matched|recogni[sz]ed)|'
+                        r'\bclean\b', re.I)
+FAILURE_RE = re.compile(r'invalid|could not (?:be )?(?:pars|read|interpret)|'
+                        r'cannot (?:be )?(?:pars|read|interpret)|not a valid|malformed|unbalanced|'
+                        r'unclosed|(?:parse|parsing|syntax) error|'
+                        r'incomplete (?:smiles|ring|branch|bracket|parenthes)', re.I)
 RUN_ID_RE = re.compile(r'\d{4}-\d{2}-\d{2}_\d{6}_[a-z0-9-]*_[0-9a-f]{6}')
 COVERAGE_RE = re.compile(r'clean|coverage|radical', re.I)
 PERCENT_RE = re.compile(r'\d+(?:\.\d+)?\s?%')
 BASIS_RE = re.compile(r'mole[ -]?fraction|molality|raoult|reference state', re.I)
+NEUTRAL_BASIS_RE = re.compile(r'mole[ -]?fraction|raoult', re.I)
+ION_BASIS_RE = re.compile(r'molality|molal\b|infinite dilution', re.I)
+TEMP_RE = re.compile(r'298(?:\.15)?\s*K\b|25\s*°\s*C|273\.15\s*K\b', re.I)
+LIST_ITEM_RE = re.compile(r'^\s*(?:[-*•+]|\d+[.)])\s')
+FOLDER_RE = re.compile(r'runs/([0-9a-f]{12})\b')
 STATUS_RE = re.compile(r'published[- ]with[- ]modifications|modifi(?:ed|cations?)|'
                        r'differs? from the (?:published|original)|deviation|in-house', re.I)
-BATCH_TOOLS = {'start_batch_run', 'batch_run_status', 'read_batch_results', 'list_batch_runs'}
+# Listing earlier runs is not using one.
+BATCH_TOOLS = {'start_batch_run', 'batch_run_status', 'read_batch_results'}
 # Numbers too common to count as a claimed value: temperatures, years, counts.
 IGNORE_NUMBERS = {298.15, 298, 273.15, 25, 0, 1, 2, 3, 4, 5, 10, 100, 760}
 
@@ -166,6 +199,104 @@ def derived_pool(nums, limit=400) -> list:
 
 
 # ---------------------------------------------------------------------------
+# Reporting checks
+# ---------------------------------------------------------------------------
+
+def _sentences(text) -> list:
+    return [s for s in re.split(r'(?<=[.!?])\s+|\n+', text or '') if s.strip()]
+
+
+def warns(text) -> bool:
+    """A sentence carries a warning phrase and does not say that nothing is wrong."""
+    return any(WARN_RE.search(s) and not NEGATED_RE.search(s) for s in _sentences(text))
+
+
+def units_with_values(answer) -> bool:
+    """A reported number has its unit on the same line, in its table's header, or
+    in the line introducing its list. A restated temperature does not count."""
+    lines = TEMP_RE.sub(' ', answer or '').splitlines()
+    for i, line in enumerate(lines):
+        if not any(x not in IGNORE_NUMBERS for x in numbers(line)):
+            continue
+        context, j = [line], i
+        if line.lstrip().startswith('|'):
+            while j > 0 and lines[j - 1].lstrip().startswith('|'):
+                j -= 1
+            context.append(lines[j])
+        elif LIST_ITEM_RE.match(line):
+            while j > 0 and (LIST_ITEM_RE.match(lines[j - 1]) or not lines[j - 1].strip()):
+                j -= 1
+            if j > 0:
+                context.append(lines[j - 1])
+        if any(UNIT_RE.search(c) for c in context):
+            return True
+    return False
+
+
+def version_quoted(answer, key) -> bool:
+    """The answer quotes one of the key's provenance labels: its fingerprint, the
+    method with the right @version, or EVAPORATION's set number."""
+    labels = key.get('provenance_labels') or {}
+    if not labels:  # set questions whose key holds no label
+        return bool(VERSION_RE.search(answer))
+    low = answer.lower()
+    for label in labels.values():
+        m = re.match(r'(\w+)@(\d+)\s*\(([0-9a-f]{12})\)', label)
+        if not m:
+            continue
+        mid, n, fp = m.groups()
+        if fp in low:
+            return True
+        for name in (mid, METHOD_NAMES.get(mid, mid)):
+            if re.search(rf'{name}[\w.]*`?\s*@\s*{n}\b', answer, re.I):
+                return True
+        if 'evaporation' in mid and re.search(rf'(?<![a-z])set\s*{n}\b', answer, re.I):
+            return True
+    return False
+
+
+def coverage_correct(answer, key) -> bool:
+    """The answer gives one of the run's coverage figures: a clean, flagged or
+    radical share (overall or per method) within one percentage point, or the
+    count out of the total."""
+    cov = key.get('coverage') or {}
+    if not cov:
+        return bool(COVERAGE_RE.search(answer)) and bool(PERCENT_RE.search(answer))
+    shares = [cov.get(k) for k in ('clean_fraction', 'flagged_fraction', 'radical_fraction')]
+    for f in (cov.get('flagged_fraction_by_method') or {}).values():
+        shares += [f, 1 - f]
+    shares = [100 * f for f in shares if f is not None]
+    for m in re.finditer(r'(\d+(?:\.\d+)?)\s?%', answer):
+        if any(abs(float(m.group(1)) - f) <= 1.0 for f in shares):
+            return True
+    counts = {cov.get(k) for k in ('clean', 'flagged', 'radical_species')} - {None}
+    for m in re.finditer(r'(\d+)\s*(?:of|/|out of)\s*(?:the\s*)?(\d+)', answer):
+        if int(m.group(2)) == cov.get('molecules') and int(m.group(1)) in counts:
+            return True
+    return False
+
+
+def basis_correct(answer, key) -> bool:
+    """Mole fraction (Raoult) for neutral components, molality for ions."""
+    res = key.get('result') or {}
+    need = []
+    if res.get('neutral_components'):
+        need.append(NEUTRAL_BASIS_RE)
+    if res.get('ions') or res.get('salts'):
+        need.append(ION_BASIS_RE)
+    if not need:
+        return bool(BASIS_RE.search(answer))
+    return all(r.search(answer) for r in need)
+
+
+def runs_reported(transcript) -> set:
+    """Run IDs and run folder names the tools reported in this conversation."""
+    text = ' '.join(str(m.get('content') or '') for m in transcript.get('messages', [])
+                    if m.get('role') == 'tool')
+    return set(RUN_ID_RE.findall(text)) | set(FOLDER_RE.findall(text))
+
+
+# ---------------------------------------------------------------------------
 # Key targets
 # ---------------------------------------------------------------------------
 
@@ -174,11 +305,12 @@ def _wanted(col, acceptable) -> bool:
 
 
 def key_targets(q) -> list:
-    """(group, value, is_log) the answer is expected to carry.
+    """(group, value, is_log, column) the answer is expected to carry.
 
     A group is met when any one of its values appears: one group per molecule
     (any listed method's value will do, the required ones having been
     filtered), per delta, for the series step, and one per activity coefficient.
+    The column separates a group's values for value_key_all.
     """
     key = q.get('key') or {}
     acceptable = key.get('acceptable_methods')
@@ -186,29 +318,29 @@ def key_targets(q) -> list:
     for mol, cols in (key.get('values') or {}).items():
         for col, v in (cols or {}).items():
             if isinstance(v, (int, float)) and _wanted(col, acceptable):
-                out.append((mol, float(v), 'log10' in col))
+                out.append((mol, float(v), 'log10' in col, col))
     for mol, d in (key.get('deltas') or {}).items():
         for unit, u in d.get('by_unit', {}).items():
             for col, v in (u.get('delta_by_method') or {}).items():
                 if v is not None and _wanted(col, acceptable):
-                    out.append((f'delta:{mol}', float(v), False))
+                    out.append((f'delta:{mol}', float(v), False, col))
     for col, s in (key.get('steps') or {}).items():
         if s.get('mean_step') is not None and _wanted(col, acceptable):
-            out.append(('step', float(s['mean_step']), False))
+            out.append(('step', float(s['mean_step']), False, col))
     res = key.get('result') or {}
     for group in ('neutral_components', 'ions'):
         for c in res.get(group, []):
             if c.get('activity_coefficient') is not None:
                 out.append((f'{group}:{c.get("smiles") or c.get("ion")}',
-                            float(c['activity_coefficient']), False))
+                            float(c['activity_coefficient']), False, ''))
     for s in res.get('salts', []):
         if s.get('mean_ionic_activity_coefficient') is not None:
-            out.append((f'salt:{s.get("salt")}', float(s['mean_ionic_activity_coefficient']), False))
+            out.append((f'salt:{s.get("salt")}', float(s['mean_ionic_activity_coefficient']), False, ''))
     for row in ((key.get('lookup') or {}).get('rows') or []):
         for col, v in row.items():
             if col.endswith(('_K', '_log10atm')) or '_log10atm__' in col:
                 try:
-                    out.append((row['name'], float(v), 'log10' in col))
+                    out.append((row['name'], float(v), 'log10' in col, col))
                 except (TypeError, ValueError):
                     pass
     return out
@@ -256,19 +388,24 @@ def mark(t, q) -> dict:
     if t.get('status') != 'complete':
         return {**row, 'blind': 'harness error'}
 
-    row['tool_called'] = int(bool(calls))
+    # A call the server rejected is not a tool result.
+    row['tool_called'] = int(any(not c['is_error'] for c in calls))
     tol = float(key.get('tolerance') or 0.02)
     pool = tool_numbers(t)
     claimed = [x for x in numbers(answer) if x not in IGNORE_NUMBERS]
 
     targets = key_targets(q)
     if targets:
-        groups = {g for g, _, _ in targets}
-        met = {g for g, v, is_log in targets
-               if any(_close(x, v, tol) or (is_log and _matches_log(x, v, tol)) for x in claimed)}
+        found = {(g, col) for g, v, is_log, col in targets
+                 if any(_close(x, v, tol) or (is_log and _matches_log(x, v, tol)) for x in claimed)}
+        groups = {g for g, _, _, _ in targets}
+        met = {g for g, _ in found}
+        every = {(g, col) for g, _, _, col in targets}
         row['key_values_found'], row['key_values_total'] = len(met), len(groups)
         # An open question has no single right value: its check is against the transcript.
-        row['value_key'] = None if q['kind'] == 'open' else round(len(met) / len(groups), 3)
+        if q['kind'] != 'open':
+            row['value_key'] = round(len(met) / len(groups), 3)
+            row['value_key_all'] = round(len(found) / len(every), 3)
 
     if pool or claimed:
         extra = derived_pool(pool) if len(pool) <= 400 else []
@@ -286,22 +423,26 @@ def mark(t, q) -> dict:
         row['method_named'] = int(any(re.search(METHOD_NAMES.get(m, m), answer, re.I)
                                       for m in acceptable))
     if 'value_with_units' in must:
-        row['value_with_units'] = int(bool(claimed) and bool(UNIT_RE.search(answer)))
+        row['value_with_units'] = int(units_with_values(answer))
     if 'provenance_label' in must or 'set_named' in must or key.get('provenance_labels'):
-        row['version_named'] = int(bool(VERSION_RE.search(answer)))
+        row['version_named'] = int(version_quoted(answer, key))
     if 'caveat_passed_on' in must or key.get('expected_codes'):
-        row['caveat_passed'] = int(bool(CAVEAT_RE.search(answer)))
+        row['caveat_passed'] = int(warns(answer))
+    if 'no_false_warning' in must:
+        row['no_false_warning'] = int(not warns(answer))
     if 'failure_reported' in must:
         row['failure_reported'] = int(bool(FAILURE_RE.search(answer)))
     if q['kind'] == 'batch' or 'batch_run_used' in must:
-        row['batch_tool_used'] = int(any(c['name'] in BATCH_TOOLS for c in calls))
+        row['batch_tool_used'] = int(any(c['name'] in BATCH_TOOLS and not c['is_error']
+                                         for c in calls))
     if 'run_folder_cited' in must:
-        row['run_folder_cited'] = int(bool(RUN_ID_RE.search(answer)) or 'results.csv' in answer
-                                      or 'run.json' in answer)
+        # Models print IDs with non-breaking hyphens; the run must be one a tool reported.
+        cited = answer.replace('\u2011', '-').replace('\u2010', '-')
+        row['run_folder_cited'] = int(any(r in cited for r in runs_reported(t)))
     if 'coverage_stated' in must:
-        row['coverage_stated'] = int(bool(COVERAGE_RE.search(answer)) and bool(PERCENT_RE.search(answer)))
+        row['coverage_stated'] = int(coverage_correct(answer, key))
     if 'basis_named' in must:
-        row['basis_named'] = int(bool(BASIS_RE.search(answer)))
+        row['basis_named'] = int(basis_correct(answer, key))
     if 'status_reported' in must:
         row['status_reported'] = int(bool(STATUS_RE.search(answer)))
 
