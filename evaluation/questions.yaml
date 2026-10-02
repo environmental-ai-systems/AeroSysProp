@@ -1,9 +1,9 @@
-built: '2026-10-02T12:06:43Z'
-specs_sha256: 5033e3eb2c008ca3369e333460a6d2c2faa85e9feb0e779107e60ddce0b0283f
+built: '2026-10-02T12:33:37Z'
+specs_sha256: d733d49715af639facd2a2962827b38132f8624c8168d6801b00a50cc7b6809d
 software:
   aerosysprop_version: '0.1'
-  git_commit: 8090faa
-git_commit: 8090faa
+  git_commit: d77dd16
+git_commit: d77dd16
 method_cards:
   aiomfac: aiomfac@1 (f173b5619e1a)
   bp_joback: bp_joback@1 (f04eb40c76a4)
@@ -1149,7 +1149,7 @@ questions:
     tell me how far apart the methods are across that set.
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_130641_key-batch-01_ab0f68
+    run_id: 2026-10-02_133335_key-batch-01_788fd7
     coverage:
       molecules: 583
       computed: 583
@@ -1334,7 +1334,7 @@ questions:
     vapour pressure methods, and what does that number cover?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_130641_key-batch-01_ab0f68
+    run_id: 2026-10-02_133335_key-batch-01_788fd7
     coverage:
       molecules: 583
       computed: 583
@@ -1519,7 +1519,7 @@ questions:
     either of them flagged?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_130641_key-batch-01_ab0f68
+    run_id: 2026-10-02_133335_key-batch-01_788fd7
     coverage:
       molecules: 583
       computed: 583
@@ -1734,7 +1734,7 @@ questions:
     most?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_130641_key-batch-01_ab0f68
+    run_id: 2026-10-02_133335_key-batch-01_788fd7
     coverage:
       molecules: 583
       computed: 583
@@ -1919,7 +1919,7 @@ questions:
     they need from you?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_130641_key-batch-01_ab0f68
+    run_id: 2026-10-02_133335_key-batch-01_788fd7
     coverage:
       molecules: 583
       computed: 583
@@ -2103,7 +2103,7 @@ questions:
   question: Run the same calculation again and tell me whether anything changed.
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_130641_key-batch-01_ab0f68
+    run_id: 2026-10-02_133335_key-batch-01_788fd7
     coverage:
       molecules: 583
       computed: 583
@@ -2428,8 +2428,8 @@ questions:
 - id: mix-01
   kind: mixture
   tests: composition order, neutrals before salts
-  question: What are the activity coefficients in an 80:20 water and ethanol mixture
-    at 298.15 K?
+  question: What are the activity coefficients in an 80:20 (by mass) water and ethanol
+    mixture at 298.15 K?
   temperature_K: 298.15
   key:
     result:
@@ -2454,7 +2454,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: 8090faa
+          git_commit: d77dd16
         methods:
           aiomfac:
             method: aiomfac
@@ -2508,7 +2508,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: 8090faa
+          git_commit: d77dd16
         methods:
           aiomfac:
             method: aiomfac
@@ -2562,7 +2562,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: 8090faa
+          git_commit: d77dd16
         methods:
           aiomfac:
             method: aiomfac
@@ -2652,7 +2652,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: 8090faa
+          git_commit: d77dd16
         methods:
           aiomfac:
             method: aiomfac
@@ -2760,7 +2760,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: 8090faa
+          git_commit: d77dd16
         methods:
           aiomfac:
             method: aiomfac
@@ -2814,7 +2814,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: 8090faa
+          git_commit: d77dd16
         methods:
           aiomfac:
             method: aiomfac
