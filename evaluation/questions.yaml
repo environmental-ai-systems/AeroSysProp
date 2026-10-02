@@ -1,9 +1,9 @@
-built: '2026-09-30T12:55:33Z'
-specs_sha256: a08bc5f75924cfa7369d792b9f39af1adcf47ed5dae5946abfa61907606618b8
+built: '2026-10-02T08:36:53Z'
+specs_sha256: 19c3ff82c0bfca1f850ff53ca85bea5640d7dfa0e7e333c395f8115479825b9e
 software:
   aerosysprop_version: '0.1'
-  git_commit: d5d5f76
-git_commit: d5d5f76
+  git_commit: 6f8ac6a
+git_commit: 6f8ac6a
 method_cards:
   aiomfac: aiomfac@1 (f173b5619e1a)
   bp_joback: bp_joback@1 (f04eb40c76a4)
@@ -848,8 +848,9 @@ questions:
 - id: open-choice-01
   kind: open
   tests: picks a method for a multifunctional oxygenate and justifies it
-  question: This is an isoprene oxidation product. Estimate its vapour pressure at
-    298.15 K, say which method you used and why, and how confident you are.
+  question: This is an isoprene oxidation product, SMILES CC(O)(CO)C(=O)O. Estimate
+    its vapour pressure at 298.15 K, say which method you used and why, and how confident
+    you are.
   temperature_K: 298.15
   key:
     acceptable_methods:
@@ -893,8 +894,9 @@ questions:
 - id: open-choice-03
   kind: open
   tests: recognises that a method needing a boiling point inherits its error
-  question: Estimate the vapour pressure of this monoterpene oxidation product and
-    explain what the estimate depends on beyond the structure itself.
+  question: Estimate the vapour pressure of this monoterpene oxidation product, SMILES
+    CC1(CC(C1CC(=O)O)C(=O)O)C, and explain what the estimate depends on beyond the
+    structure itself.
   temperature_K: 298.15
   key:
     acceptable_methods:
@@ -949,8 +951,8 @@ questions:
 - id: open-choice-06
   kind: open
   tests: turning a spread between methods into advice
-  question: The methods disagree about this compound. How should I report its vapour
-    pressure in a paper?
+  question: The methods disagree about this compound, SMILES CC(=O)CCC(=O)O. How should
+    I report its vapour pressure in a paper?
   temperature_K: 298.15
   key:
     acceptable_methods:
@@ -1026,8 +1028,8 @@ questions:
 - id: diag-03
   kind: diagnostic
   tests: a peroxy radical from the MCM, the commonest flagged case
-  question: This species comes from an MCM mechanism. What vapour pressure does AeroSysProp
-    give, and how much would you trust it?
+  question: 'This species comes from an MCM mechanism: OCCO[O]. What vapour pressure
+    does AeroSysProp give, and how much would you trust it?'
   temperature_K: 298.15
   key:
     values:
@@ -1147,7 +1149,7 @@ questions:
     tell me how far apart the methods are across that set.
   temperature_K: 298.15
   key:
-    run_id: 2026-09-30_125526_key-batch-01_30351d
+    run_id: 2026-10-02_093652_key-batch-01_2198e2
     coverage:
       molecules: 583
       computed: 583
@@ -1332,7 +1334,7 @@ questions:
     vapour pressure methods, and what does that number cover?
   temperature_K: 298.15
   key:
-    run_id: 2026-09-30_125526_key-batch-01_30351d
+    run_id: 2026-10-02_093652_key-batch-01_2198e2
     coverage:
       molecules: 583
       computed: 583
@@ -1517,7 +1519,7 @@ questions:
     either of them flagged?
   temperature_K: 298.15
   key:
-    run_id: 2026-09-30_125526_key-batch-01_30351d
+    run_id: 2026-10-02_093652_key-batch-01_2198e2
     coverage:
       molecules: 583
       computed: 583
@@ -1732,7 +1734,7 @@ questions:
     most?
   temperature_K: 298.15
   key:
-    run_id: 2026-09-30_125526_key-batch-01_30351d
+    run_id: 2026-10-02_093652_key-batch-01_2198e2
     coverage:
       molecules: 583
       computed: 583
@@ -1917,7 +1919,7 @@ questions:
     they need from you?
   temperature_K: 298.15
   key:
-    run_id: 2026-09-30_125526_key-batch-01_30351d
+    run_id: 2026-10-02_093652_key-batch-01_2198e2
     coverage:
       molecules: 583
       computed: 583
@@ -2101,7 +2103,7 @@ questions:
   question: Run the same calculation again and tell me whether anything changed.
   temperature_K: 298.15
   key:
-    run_id: 2026-09-30_125526_key-batch-01_30351d
+    run_id: 2026-10-02_093652_key-batch-01_2198e2
     coverage:
       molecules: 583
       computed: 583
@@ -2441,7 +2443,7 @@ questions:
         activity_coefficient: 1.0157397816029614
       - smiles: CCO
         mass_fraction: 0.2
-        activity_coefficient: 2.202249732784572
+        activity_coefficient: 2.2022497327845723
       ions: []
       salts: []
       reference_states:
@@ -2452,7 +2454,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: d5d5f76
+          git_commit: 6f8ac6a
         methods:
           aiomfac:
             method: aiomfac
@@ -2490,14 +2492,14 @@ questions:
       ions:
       - ion: Na+
         kind: cation
-        activity_coefficient: 1.9221284275513943
+        activity_coefficient: 1.922128427551395
       - ion: Cl-
         kind: anion
         activity_coefficient: 1.0741903564727733
       salts:
       - salt: NaCl
         mass_fraction: 0.1
-        mean_ionic_activity_coefficient: 1.4369174718047948
+        mean_ionic_activity_coefficient: 1.436917471804795
       reference_states:
         neutral_components: mole-fraction basis, pure-component (Raoult) reference
         ions: molality basis, infinite dilution in water reference
@@ -2506,7 +2508,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: d5d5f76
+          git_commit: 6f8ac6a
         methods:
           aiomfac:
             method: aiomfac
@@ -2540,18 +2542,18 @@ questions:
         activity_coefficient: 0.9965960522110345
       - smiles: OCC(O)CO
         mass_fraction: 0.3
-        activity_coefficient: 0.7693355836789304
+        activity_coefficient: 0.7693355836789305
       ions:
       - ion: NH4+
         kind: cation
-        activity_coefficient: 0.6514120665524815
+        activity_coefficient: 0.6514120665524816
       - ion: SO4--
         kind: anion
         activity_coefficient: 0.10891948732784881
       salts:
       - salt: NH42SO4
         mass_fraction: 0.1
-        mean_ionic_activity_coefficient: 0.35887157622933696
+        mean_ionic_activity_coefficient: 0.358871576229337
       reference_states:
         neutral_components: mole-fraction basis, pure-component (Raoult) reference
         ions: molality basis, infinite dilution in water reference
@@ -2560,7 +2562,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: d5d5f76
+          git_commit: 6f8ac6a
         methods:
           aiomfac:
             method: aiomfac
