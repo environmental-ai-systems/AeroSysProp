@@ -452,7 +452,9 @@ questions:
     components: [{name: water, smiles: 'O'}, {name: ethanol, smiles: CCO}]
     salts: []
     mass_fractions: [0.8, 0.2]
-    ask: What are the activity coefficients in an 80:20 water and ethanol mixture at 298.15 K?
+    ask: >
+      What are the activity coefficients in an 80:20 (by mass) water and ethanol
+      mixture at 298.15 K?
 
   - id: mix-02
     kind: mixture
