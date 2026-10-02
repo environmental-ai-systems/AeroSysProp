@@ -473,3 +473,181 @@ questions:
     ask: >
       I want ammonium sulfate in a water and glycerol mixture. Is that salt
       supported, and what are the activity coefficients?
+
+  # ===================================================================
+  # Added 2 Oct 2026 for areas the first 46 covered thinly. New questions
+  # give the SMILES with the name, so they test the behaviour named in
+  # `tests` and not name-to-structure conversion.
+
+  # ------------------------------------------------- other temperatures
+  - id: lookup-09
+    kind: lookup
+    tests: a temperature given in Celsius, below freezing
+    molecules: [{name: pinonic acid, smiles: 'CC(=O)C1CC(C1(C)C)CC(=O)O'}]
+    methods: [vp_simpol, vp_evaporation]
+    temperature_K: 263.15
+    ask: >
+      What are the SIMPOL and EVAPORATION vapour pressures of pinonic acid
+      (CC(=O)C1CC(C1(C)C)CC(=O)O) at -10 °C?
+
+  - id: lookup-10
+    kind: lookup
+    tests: a boiling-point dependent method away from 298.15 K
+    molecules: [{name: malonic acid, smiles: 'OC(=O)CC(=O)O'}]
+    methods: [vp_nannoolal]
+    temperature_K: 273.15
+    ask: >
+      What does the Nannoolal method give for the vapour pressure of malonic
+      acid (OC(=O)CC(=O)O) at 273.15 K?
+
+  - id: mix-04
+    kind: mixture
+    tests: AIOMFAC at a temperature other than 298.15 K
+    components: [{name: water, smiles: 'O'}, {name: ethanol, smiles: CCO}]
+    salts: []
+    mass_fractions: [0.8, 0.2]
+    temperature_K: 273.15
+    ask: >
+      What are the activity coefficients in an 80:20 (by mass) water and ethanol
+      mixture at 0 °C?
+
+  # --------------------------------------- properties other than vapour pressure
+  - id: lookup-11
+    kind: lookup
+    tests: critical properties, with units
+    molecules: [{name: adipic acid, smiles: 'OC(=O)CCCCC(=O)O'}]
+    methods: [critical_properties]
+    ask: >
+      What critical temperature and critical pressure does AeroSysProp give for
+      adipic acid (OC(=O)CCCCC(=O)O)?
+
+  - id: lookup-12
+    kind: lookup
+    tests: every liquid density method, and the spread between them
+    molecules: [{name: succinic acid, smiles: 'OC(=O)CCC(=O)O'}]
+    methods: [liquid_density]
+    ask: >
+      What liquid densities do the different methods give for succinic acid
+      (OC(=O)CCC(=O)O), and how far apart are they?
+
+  - id: mix-05
+    kind: mixture
+    tests: a nitrate salt with a dicarboxylic acid, and the ion basis
+    components: [{name: water, smiles: 'O'}, {name: succinic acid, smiles: 'OC(=O)CCC(=O)O'}]
+    salts: [NH4NO3]
+    mass_fractions: [0.85, 0.10, 0.05]
+    ask: >
+      What are the activity coefficients in water with 10% succinic acid and 5%
+      ammonium nitrate by mass, at 298.15 K?
+
+  - id: mix-06
+    kind: mixture
+    tests: a sulfate salt, where the ion values differ most
+    components: [{name: water, smiles: 'O'}, {name: malonic acid, smiles: 'OC(=O)CC(=O)O'}]
+    salts: [Na2SO4]
+    mass_fractions: [0.8, 0.1, 0.1]
+    ask: >
+      For water with 10% malonic acid and 10% sodium sulfate by mass at 298.15 K,
+      what are the activity coefficients of every component and ion?
+
+  # ------------------------------------------------ less used tools
+  - id: opera-01
+    kind: open
+    tests: reports an unavailable service honestly rather than inventing a value
+    molecules: [{name: pinonic acid, smiles: 'CC(=O)C1CC(C1(C)C)CC(=O)O'}]
+    acceptable_methods: [vp_simpol, vp_evaporation, vp_nannoolal, vp_myrdal]
+    must_report: [failure_reported]
+    credit_if: [no_opera_value_invented, alternative_offered]
+    ask: >
+      What does OPERA predict for the vapour pressure of pinonic acid
+      (CC(=O)C1CC(C1(C)C)CC(=O)O)?
+
+  - id: session-01
+    kind: lookup
+    tests: reads a session database and filters it to the temperature asked for
+    molecules:
+      - {name: pinic acid, smiles: 'CC1(C)C(CC(=O)O)CC1C(=O)O'}
+      - {name: 2-methyltetrol, smiles: 'CC(O)(CO)C(O)CO'}
+    methods: [vp_simpol]
+    temperature_K: 273.15
+    provenance: false
+    ask: >
+      My session database, session.db, has results saved from the web app.
+      According to it, which is less volatile by SIMPOL at 273.15 K, pinic acid
+      or 2-methyltetrol, and by how much?
+
+  # ------------------------------------------------ more coverage warnings
+  - id: diag-07
+    kind: diagnostic
+    tests: a PAN, where only some methods are flagged
+    molecules: [{name: peroxyacetyl nitrate, smiles: 'CC(=O)OO[N+](=O)[O-]'}]
+    methods: [vapour_pressure]
+    ask: >
+      What is the vapour pressure of peroxyacetyl nitrate (PAN,
+      CC(=O)OO[N+](=O)[O-]) at 298.15 K?
+
+  - id: diag-08
+    kind: diagnostic
+    tests: an aromatic diol flagged by one method only, so the warning must name it
+    molecules: [{name: catechol, smiles: 'Oc1ccccc1O'}]
+    methods: [vapour_pressure]
+    ask: >
+      Estimate the vapour pressure of catechol (Oc1ccccc1O) at 298.15 K with
+      each available method.
+
+  - id: diag-09
+    kind: diagnostic
+    tests: a sulfur compound no method covers
+    molecules: [{name: methanesulfonic acid, smiles: 'CS(=O)(=O)O'}]
+    methods: [vapour_pressure]
+    ask: >
+      What vapour pressure does AeroSysProp give for methanesulfonic acid
+      (CS(=O)(=O)O) at 298.15 K?
+
+  # ------------------------------------------- clean molecules (no false warnings)
+  - id: diag-10
+    kind: diagnostic
+    tests: a clean molecule that looks risky, inviting a needless warning
+    molecules: [{name: methyl hydroperoxide, smiles: 'COO'}]
+    methods: [vapour_pressure]
+    ask: >
+      What is the vapour pressure of methyl hydroperoxide (COO) at 298.15 K, and
+      can I trust the estimate?
+
+  - id: diag-11
+    kind: diagnostic
+    tests: a clean multifunctional SOA tracer
+    molecules: [{name: 2-methyltetrol, smiles: 'CC(O)(CO)C(O)CO'}]
+    methods: [vapour_pressure]
+    ask: >
+      What is the vapour pressure of 2-methyltetrol (CC(O)(CO)C(O)CO), an
+      isoprene SOA tracer, at 298.15 K?
+
+  # ------------------------------------------------- another invalid input
+  - id: diag-12
+    kind: diagnostic
+    tests: an unclosed ring, and whether the failure is reported honestly
+    molecules: [{name: unclosed ring, smiles: 'C1CCCCC'}]
+    methods: [vapour_pressure]
+    ask: What is the vapour pressure of C1CCCCC at 298.15 K?
+
+  # ---------------------------------------------- publication status
+  - id: prov-06
+    kind: open
+    tests: reports a modified method as modified
+    acceptable_methods: [vp_nannoolal]
+    must_report: [status_reported]
+    credit_if: [modification_explained]
+    ask: >
+      Is the Nannoolal vapour pressure method in AeroSysProp exactly as
+      published?
+
+  - id: prov-07
+    kind: open
+    tests: >
+      does not claim modifications that are not there; SIMPOL is listed as
+      published, with its group encoding still to be checked against the paper
+    acceptable_methods: [vp_simpol]
+    must_report: [method_named]
+    credit_if: [status_correct, encoding_caveat_mentioned]
+    ask: Has AeroSysProp changed the SIMPOL method from the published paper?

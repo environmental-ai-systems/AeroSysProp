@@ -159,9 +159,10 @@ Made on the Spark, 30 Sep to 1 Oct 2026:
 3. Blind marking: `marks.csv` lists what needs it in the `blind` column
    (refusals, justification, framing, possible invention). Not built yet: a
    shuffled, model- and condition-hidden export for markers or a judge model.
-4. Carried over: core team review of the 46 questions (pinic and levulinic acid
-   SMILES especially); the held-back question set; whether batch runs default
-   to a folder when `AEROSYSPROP_OUTPUT_DIR` is unset (currently off); branch
-   protection on `main` (waiting on GitHub Education); EVAPORATION set 2's diol
+4. Carried over: core team review of the questions, now 63 (17 added on
+   2 Oct 2026 for thinly covered areas; pinic acid's SMILES corrected); the
+   held-back question set; whether batch runs default to a folder when
+   `AEROSYSPROP_OUTPUT_DIR` is unset (currently off); branch protection on
+   `main` (waiting on GitHub Education); EVAPORATION set 2's diol
    correction on 13 MCM alpha-hydroxy acids (a parameter set 3 is a core team
    decision).

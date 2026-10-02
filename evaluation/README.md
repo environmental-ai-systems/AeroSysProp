@@ -25,6 +25,14 @@ export AEROSYSPROP_OUTPUT_DIR=~/aerosysprop-runs
 python -m evaluation.build_questions
 ```
 
+The `session-01` question reads `session.db`, a web-app session database in the
+same folder. It is generated from the installed methods, so regenerate it before
+rebuilding the keys after any approved parameter change:
+
+```bash
+python -m evaluation.make_session_db
+```
+
 `mcm_subset.txt` is a tab separated `name<TAB>SMILES` file. A few hundred species
 is enough; taking every tenth species from the MCM gives a mixture of clean
 molecules, radicals and flagged cases, which is what the coverage questions need.
