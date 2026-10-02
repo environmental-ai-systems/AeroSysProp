@@ -123,7 +123,8 @@ def key_lookup(spec, d):
                                   spec.get('bp_sources', d['bp_sources']))
     return {'values': values,
             'diagnostics': {n: c for n, c in diags.items() if any(c.values())},
-            'provenance_labels': _labels(prov),
+            # A question answered from saved results has no labels to quote.
+            'provenance_labels': _labels(prov) if spec.get('provenance', True) else {},
             'tolerance': spec.get('tolerance', d['tolerance']),
             'acceptable_methods': spec.get('methods'),
             'must_report': spec.get('must_report', ['value_with_units', 'method_named']),

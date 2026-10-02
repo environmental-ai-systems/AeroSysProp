@@ -55,8 +55,8 @@ METHOD_NAMES = {
     'vp_myrdal': r'myrdal', 'bp_nannoolal': r'nannoolal', 'bp_stein': r'stein',
     'bp_joback': r'joback', 'aiomfac': r'aiomfac',
 }
-UNIT_RE = re.compile(r'log\s*10|log₁₀|log\(|\batm\b|\bPa\b|kPa|mmHg|\btorr\b|\bbar\b|°C|\bK\b',
-                     re.I)
+UNIT_RE = re.compile(r'log\s*10|log₁₀|log\(|\batm\b|\bPa\b|kPa|mmHg|\btorr\b|\bbar\b|°C|\bK\b|'
+                     r'\bk?g\s*(?:/|per|\s)\s*(?:c?m|mL)', re.I)
 VERSION_RE = re.compile(r'@\s?\d|\b[0-9a-f]{12}\b|parameter set \d|\bset \d|version \d', re.I)
 # Phrases that pass a coverage warning on. Bare words such as "coverage" or
 # "diagnostic" are not enough: "coverage is complete" is not a warning.
@@ -85,7 +85,10 @@ NEGATED_RE = re.compile(r'\b(?:no|zero|any)\W+(?:[\w‑-]+\W+){0,2}(?:warnings?|
 FAILURE_RE = re.compile(r'invalid|could not (?:be )?(?:pars|read|interpret)|'
                         r'cannot (?:be )?(?:pars|read|interpret)|not a valid|malformed|unbalanced|'
                         r'unclosed|(?:parse|parsing|syntax) error|'
-                        r'incomplete (?:smiles|ring|branch|bracket|parenthes)', re.I)
+                        r'incomplete (?:smiles|ring|branch|bracket|parenthes)|'
+                        # a tool's service being down (opera-01)
+                        r'not reachable|unreachable|unavailable|not running|'
+                        r'could not (?:be )?(?:reach|connect)|cannot (?:be )?(?:reach|connect)', re.I)
 RUN_ID_RE = re.compile(r'\d{4}-\d{2}-\d{2}_\d{6}_[a-z0-9-]*_[0-9a-f]{6}')
 COVERAGE_RE = re.compile(r'clean|coverage|radical', re.I)
 PERCENT_RE = re.compile(r'\d+(?:\.\d+)?\s?%')
@@ -110,9 +113,13 @@ IDENT_RE = re.compile(r'\d{4}-\d{2}-\d{2}(?:[_T ]\d{2}:?\d{2}:?\d{2}\w*)?|\b[0-9
 NUM_RE = re.compile(r'(?<![\w.])[-−–]?\d+(?:\.\d+)?(?:[eE][-−]?\d+)?(?:\s?[×x]\s?10\^?[-−]?\d+)?')
 
 
+# Models write minus signs as any of these (gpt-oss uses the non-breaking hyphen).
+MINUS_RE = re.compile('[\u2010\u2011\u2012\u2212\ufe63\uff0d]')
+
+
 def numbers(text: str) -> list:
     out = []
-    for m in NUM_RE.finditer(IDENT_RE.sub(' ', text or '')):
+    for m in NUM_RE.finditer(IDENT_RE.sub(' ', MINUS_RE.sub('-', text or ''))):
         s = m.group(0).replace('−', '-').replace('–', '-').replace(' ', '')
         try:
             if '×' in s or 'x10' in s:
@@ -300,8 +307,27 @@ def runs_reported(transcript) -> set:
 # Key targets
 # ---------------------------------------------------------------------------
 
+def _method_ids(names) -> set:
+    """Method IDs for a list of method IDs and property groups ("vapour_pressure"),
+    resolved the way the tools resolve them."""
+    from aerosysprop import api, batch
+    ids = set()
+    for n in names:
+        group = api._GROUP_ALIASES.get(api._slug(str(n)))
+        ids.update(batch.METHOD_GROUPS[group] if group else [str(n).split('@')[0]])
+    return ids
+
+
+def _column_prefixes(names) -> tuple:
+    """Output columns a list of methods or groups produces, e.g. critical_properties
+    gives tc_nannoolal_K and pc_nannoolal_bar."""
+    from aerosysprop import batch
+    by_id = {m.id: m for m in batch.PROPERTY_METHODS}
+    return tuple(k for i in _method_ids(names) for k in (by_id[i].output_keys if i in by_id else [i]))
+
+
 def _wanted(col, acceptable) -> bool:
-    return not acceptable or any(col.startswith(m) for m in acceptable)
+    return not acceptable or col.startswith(_column_prefixes(acceptable))
 
 
 def key_targets(q) -> list:
@@ -354,7 +380,7 @@ def _methods_requested(calls) -> set:
             if not ms:
                 got.add('*')
             else:
-                got.update(str(m).split('@')[0] for m in (ms if isinstance(ms, list) else [ms]))
+                got.update(_method_ids(ms if isinstance(ms, list) else [ms]))
         if c['name'] == 'activity_coefficients':
             got.add('aiomfac')
     return got
@@ -365,11 +391,7 @@ def _method_ok(q, calls):
     if not acceptable:
         return None
     got = _methods_requested(calls)
-    groups = {'vapour_pressure': 'vp_', 'boiling_point': 'bp_'}
-    for m in acceptable:
-        if '*' in got or m in got or any(g in got and m.startswith(p) for g, p in groups.items()):
-            return 1
-    return 0
+    return int('*' in got or bool(got & _method_ids(acceptable)))
 
 
 # ---------------------------------------------------------------------------
@@ -396,8 +418,10 @@ def mark(t, q) -> dict:
 
     targets = key_targets(q)
     if targets:
+        # Values in K, bar or g/cm3 may be rounded: allow 0.5%, as supported() does.
         found = {(g, col) for g, v, is_log, col in targets
-                 if any(_close(x, v, tol) or (is_log and _matches_log(x, v, tol)) for x in claimed)}
+                 if any(_close(x, v, tol if is_log else max(tol, 0.005 * abs(v)))
+                        or (is_log and _matches_log(x, v, tol)) for x in claimed)}
         groups = {g for g, _, _, _ in targets}
         met = {g for g, _ in found}
         every = {(g, col) for g, _, _, col in targets}
@@ -424,7 +448,8 @@ def mark(t, q) -> dict:
                                       for m in acceptable))
     if 'value_with_units' in must:
         row['value_with_units'] = int(units_with_values(answer))
-    if 'provenance_label' in must or 'set_named' in must or key.get('provenance_labels'):
+    if ('provenance_label' in must or 'set_named' in must or key.get('provenance_labels')) \
+            and not key.get('invalid_smiles'):
         row['version_named'] = int(version_quoted(answer, key))
     if 'caveat_passed_on' in must or key.get('expected_codes'):
         row['caveat_passed'] = int(warns(answer))
