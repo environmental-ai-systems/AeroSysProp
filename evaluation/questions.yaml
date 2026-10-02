@@ -1,9 +1,9 @@
-built: '2026-10-02T08:36:53Z'
-specs_sha256: 19c3ff82c0bfca1f850ff53ca85bea5640d7dfa0e7e333c395f8115479825b9e
+built: '2026-10-02T11:46:39Z'
+specs_sha256: 47e52956e55b1149dcb0c9be2b220d9573200ff9ca2177f73ba17205a904f6fe
 software:
   aerosysprop_version: '0.1'
-  git_commit: 6f8ac6a
-git_commit: 6f8ac6a
+  git_commit: aa24d10
+git_commit: aa24d10
 method_cards:
   aiomfac: aiomfac@1 (f173b5619e1a)
   bp_joback: bp_joback@1 (f04eb40c76a4)
@@ -895,7 +895,7 @@ questions:
   kind: open
   tests: recognises that a method needing a boiling point inherits its error
   question: Estimate the vapour pressure of this monoterpene oxidation product, SMILES
-    CC1(CC(C1CC(=O)O)C(=O)O)C, and explain what the estimate depends on beyond the
+    CC1(C)C(CC(=O)O)CC1C(=O)O, and explain what the estimate depends on beyond the
     structure itself.
   temperature_K: 298.15
   key:
@@ -1149,7 +1149,7 @@ questions:
     tell me how far apart the methods are across that set.
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_093652_key-batch-01_2198e2
+    run_id: 2026-10-02_124637_key-batch-01_2a88e0
     coverage:
       molecules: 583
       computed: 583
@@ -1308,7 +1308,7 @@ questions:
         all:
           n: 583
           min: -11.615427734795851
-          median: -3.382022282261194
+          median: -3.3820222822611923
           max: 1.754550604611865
       vp_simpol_log10atm:
         unit: log10(atm)
@@ -1334,7 +1334,7 @@ questions:
     vapour pressure methods, and what does that number cover?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_093652_key-batch-01_2198e2
+    run_id: 2026-10-02_124637_key-batch-01_2a88e0
     coverage:
       molecules: 583
       computed: 583
@@ -1493,7 +1493,7 @@ questions:
         all:
           n: 583
           min: -11.615427734795851
-          median: -3.382022282261194
+          median: -3.3820222822611923
           max: 1.754550604611865
       vp_simpol_log10atm:
         unit: log10(atm)
@@ -1519,7 +1519,7 @@ questions:
     either of them flagged?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_093652_key-batch-01_2198e2
+    run_id: 2026-10-02_124637_key-batch-01_2a88e0
     coverage:
       molecules: 583
       computed: 583
@@ -1678,7 +1678,7 @@ questions:
         all:
           n: 583
           min: -11.615427734795851
-          median: -3.382022282261194
+          median: -3.3820222822611923
           max: 1.754550604611865
       vp_simpol_log10atm:
         unit: log10(atm)
@@ -1734,7 +1734,7 @@ questions:
     most?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_093652_key-batch-01_2198e2
+    run_id: 2026-10-02_124637_key-batch-01_2a88e0
     coverage:
       molecules: 583
       computed: 583
@@ -1893,7 +1893,7 @@ questions:
         all:
           n: 583
           min: -11.615427734795851
-          median: -3.382022282261194
+          median: -3.3820222822611923
           max: 1.754550604611865
       vp_simpol_log10atm:
         unit: log10(atm)
@@ -1919,7 +1919,7 @@ questions:
     they need from you?
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_093652_key-batch-01_2198e2
+    run_id: 2026-10-02_124637_key-batch-01_2a88e0
     coverage:
       molecules: 583
       computed: 583
@@ -2078,7 +2078,7 @@ questions:
         all:
           n: 583
           min: -11.615427734795851
-          median: -3.382022282261194
+          median: -3.3820222822611923
           max: 1.754550604611865
       vp_simpol_log10atm:
         unit: log10(atm)
@@ -2103,7 +2103,7 @@ questions:
   question: Run the same calculation again and tell me whether anything changed.
   temperature_K: 298.15
   key:
-    run_id: 2026-10-02_093652_key-batch-01_2198e2
+    run_id: 2026-10-02_124637_key-batch-01_2a88e0
     coverage:
       molecules: 583
       computed: 583
@@ -2262,7 +2262,7 @@ questions:
         all:
           n: 583
           min: -11.615427734795851
-          median: -3.382022282261194
+          median: -3.3820222822611923
           max: 1.754550604611865
       vp_simpol_log10atm:
         unit: log10(atm)
@@ -2454,7 +2454,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: 6f8ac6a
+          git_commit: aa24d10
         methods:
           aiomfac:
             method: aiomfac
@@ -2508,7 +2508,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: 6f8ac6a
+          git_commit: aa24d10
         methods:
           aiomfac:
             method: aiomfac
@@ -2562,7 +2562,7 @@ questions:
       provenance:
         software:
           aerosysprop_version: '0.1'
-          git_commit: 6f8ac6a
+          git_commit: aa24d10
         methods:
           aiomfac:
             method: aiomfac
