@@ -1,0 +1,22 @@
+MACCS.smarts
+============
+
+The SMARTS patterns in MACCS.smarts define the publicly available MDL MACCS
+keys. They were written by Greg Landrum for RDKit (rdkit/Chem/MACCSKeys.py)
+and are distributed with Open Babel as data/MACCS.txt, from which UManSysProp
+originally read them through Pybel. AeroSysProp keeps the patterns and
+evaluates them with RDKit. Unlike the reference implementations, AeroSysProp
+returns match counts rather than forcing each key to 0 or 1.
+
+Original notice:
+
+    Copyright (C) 2001-2008 greg Landrum and Rational Discovery LLC
+    This file is part of the RDKit.
+    The contents are covered by the terms of the BSD license
+    which is included in the file license.txt, found at the root
+    of the RDKit source tree.
+
+The BSD licence is compatible with the GPL v3 licence of AeroSysProp.
+Sources:
+https://github.com/rdkit/rdkit/blob/master/rdkit/Chem/MACCSKeys.py
+https://github.com/openbabel/openbabel/blob/master/data/MACCS.txt

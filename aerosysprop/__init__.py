@@ -17,7 +17,7 @@ molecules and ensemble mixtures relevant to aerosol science"""
 import sys
 
 __project__ = 'aerosysprop'
-__version__ = '0.1'
+__version__ = '1.0.0'
 __keywords__ = ['aerosol', 'organic', 'chemistry','droplets','atmospheric']
 __authors__ = 'David Topping and project team'
 __lead_author_email__ = '[David Topping] david.topping@manchester.ac.uk'

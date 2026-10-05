@@ -1,0 +1,59 @@
+cff-version: 1.2.0
+message: >-
+  If you use AeroSysProp, please cite the software using the metadata below,
+  and cite the original publications for each method you use (listed in
+  THIRD_PARTY.md and in each method card).
+title: AeroSysProp
+type: software
+version: 1.0.0
+# date-released: YYYY-MM-DD   # set when the release is tagged
+# doi: 10.5281/zenodo.XXXXXXX  # add once Zenodo has minted the DOI
+license: GPL-3.0-or-later
+repository-code: https://github.com/environmental-ai-systems/AeroSysProp
+abstract: >-
+  AeroSysProp is a Python library and web application for predicting
+  thermophysical properties of organic compounds relevant to atmospheric
+  aerosol research from SMILES strings. It provides group contribution
+  estimates of boiling points, vapour pressures, critical properties and
+  liquid densities, AIOMFAC activity coefficients for mixtures with
+  inorganic ions, diagnostics for unassigned functional groups, versioned
+  method cards with parameter fingerprints, provenance records for batch
+  runs, and an interface for AI agents through the Model Context Protocol.
+keywords:
+  - atmospheric aerosol
+  - group contribution
+  - vapour pressure
+  - activity coefficients
+  - AIOMFAC
+  - SMILES
+authors:
+  # Add co-authors, ORCIDs and affiliations before the release.
+  - family-names: Topping
+    given-names: David
+    email: david.topping@manchester.ac.uk
+    affiliation: University of Manchester
+    # orcid: https://orcid.org/XXXX-XXXX-XXXX-XXXX
+references:
+  - type: article
+    title: "UManSysProp v1.0: an online and open-source facility for molecular property prediction and atmospheric aerosol calculations"
+    authors:
+      - family-names: Topping
+        given-names: David
+      - family-names: Barley
+        given-names: Mark
+      - family-names: Bane
+        given-names: Michael K.
+      - family-names: Higham
+        given-names: Nicholas
+      - family-names: Aumont
+        given-names: Bernard
+      - family-names: Dingle
+        given-names: Nicholas
+      - family-names: McFiggans
+        given-names: Gordon
+    journal: Geoscientific Model Development
+    volume: 9
+    start: 899
+    end: 914
+    year: 2016
+    doi: 10.5194/gmd-9-899-2016
