@@ -53,6 +53,34 @@ def size_b(model: str) -> float:
     return float(m.group(1)) if m else float('nan')
 
 
+JUDGE_COUNTS = ['j_numbers_checked', 'j_invented', 'j_unclear', 'j_has_numbers', 'j_judged']
+
+
+def add_judge(m: pd.DataFrame, judge_marks: pd.DataFrame) -> tuple:
+    """Join judge marks (evaluation.judge merge) onto the automatic ones.
+
+    judge_score is the share of judged criteria met. judge_invented is 1 where the judge
+    called any number invented and 0 where it found none; a completed transcript with no
+    number lacking a successful tool result behind it counts as 0. Transcripts whose numbers
+    are still waiting for the judge are left out."""
+    keys = ['model', 'guidance', 'question_id', 'repeat']
+    jm = judge_marks[judge_marks['j_judged'] == 1]
+    crit = [c for c in jm.columns if c.startswith('j_') and c not in JUDGE_COUNTS]
+    m = m.merge(jm[keys + crit + [c for c in JUDGE_COUNTS if c in jm]], on=keys, how='left')
+    m['judge_score'] = m[crit].mean(axis=1, skipna=True) if crit else np.nan
+    pending = judge_marks[(judge_marks['j_judged'] == 0) & (judge_marks['j_has_numbers'] == 1)]
+    waiting = m.set_index(keys).index.isin(pending.set_index(keys).index)
+    invented = pd.Series(0.0, index=m.index).where(m['status'] == 'complete')
+    with_numbers = m['j_has_numbers'].fillna(0) == 1
+    invented[with_numbers] = (m.loc[with_numbers, 'j_invented'] > 0).astype(float)
+    invented[waiting] = np.nan
+    m['judge_invented'] = invented
+    extra = {'judge_score': 'Judge: share of judged criteria met',
+             'judge_invented': 'Judge: answer contains an invented value (lower is better)'}
+    extra.update({c: f'Judge: {c[2:]}' for c in crit})
+    return m, extra
+
+
 def outcomes(marks: pd.DataFrame) -> pd.DataFrame:
     m = marks.copy()
     m['score'] = m[SCORE_CRITERIA].mean(axis=1, skipna=True)
@@ -67,6 +95,8 @@ def paired(m: pd.DataFrame, outcome: str) -> pd.DataFrame:
     """One row per model and question: mean over repeats at each level, and the difference."""
     d = m[m['status'] == 'complete'].dropna(subset=[outcome])
     cell = d.groupby(['model', 'question_id', 'kind', 'guidance'])[outcome].mean().unstack()
+    if not {'full', 'bare'} <= set(cell.columns):  # nothing to pair yet, e.g. a partial judge run
+        return pd.DataFrame(columns=['model', 'question_id', 'kind', 'bare', 'full', 'diff'])
     cell = cell.dropna(subset=['full', 'bare']).reset_index()
     cell['diff'] = cell['full'] - cell['bare']
     return cell
@@ -102,9 +132,9 @@ def _p_sign(samples) -> float:
     return round(float(min(1.0, 2 * min((s <= 0).mean(), (s >= 0).mean()))), 4)
 
 
-def pooled_effects(m: pd.DataFrame, rng) -> pd.DataFrame:
+def pooled_effects(m: pd.DataFrame, rng, outcomes_=None) -> pd.DataFrame:
     rows = []
-    for name, desc in OUTCOMES.items():
+    for name, desc in (outcomes_ or OUTCOMES).items():
         cell = paired(m, name)
         if cell.empty:
             continue
@@ -133,7 +163,8 @@ def per_model(m: pd.DataFrame, outcome: str, rng) -> pd.DataFrame:
                      'diff': round(c['diff'].mean(), 3), 'ci_low': _ci(boot)[0],
                      'ci_high': _ci(boot)[1], 'p': _p_sign(boot),
                      'questions_better': int((q > 0).sum()), 'questions_worse': int((q < 0).sum())})
-    return pd.DataFrame(rows).sort_values('diff', ascending=False)
+    out = pd.DataFrame(rows)
+    return out.sort_values('diff', ascending=False) if rows else out
 
 
 def per_kind(m: pd.DataFrame, outcome: str, rng) -> pd.DataFrame:
@@ -231,6 +262,15 @@ def main(argv=None) -> int:
     m = outcomes(marks)
     errors = marks[marks['status'] != 'complete']
 
+    judge_path = args.campaign / 'judge' / 'judge_marks.csv'
+    judged = None
+    if judge_path.exists():
+        m, judge_outcomes = add_judge(m, pd.read_csv(judge_path))
+        judged = pooled_effects(m, rng, judge_outcomes)
+        judged.to_csv(out / 'judge_effects.csv', index=False)
+        per_model(m, 'judge_score', rng).to_csv(out / 'per_model_judge_score.csv', index=False)
+        per_question(m, 'judge_score').to_csv(out / 'per_question_judge_score.csv', index=False)
+
     pooled = pooled_effects(m, rng)
     models_score = per_model(m, 'score', rng)
     models_value = per_model(m, 'value_key', rng)
@@ -278,6 +318,10 @@ def main(argv=None) -> int:
         '## Tool calls per conversation', '', _md(calls.reset_index()), '',
         '## Repeats that agree exactly (overall score)', '', _md(agree.reset_index()), '',
     ]
+    if judged is not None:
+        summary += ['## Judge marks (evaluation.judge)', '',
+                    f'{int(m["judge_score"].notna().sum())} transcripts with judged criteria.', '',
+                    _md(judged), '']
     if quality is not None:
         summary += ['## Data quality (share of transcripts; repeats_identical is per question)',
                     '', _md(quality.reset_index()), '']
