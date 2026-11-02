@@ -150,12 +150,39 @@ Made on the Spark, 30 Sep to 1 Oct 2026:
 - **Where to run:** the full run on the Blackwell desktop, with the machine to
   itself; the Spark was for setup and debugging.
 
+Made on polaris (Windows), 2 Nov 2026:
+
+- **Claude runs through the API, in the harness.** `run_eval.py --backend
+  anthropic` gives Claude the same prompt, tools, caps and fresh server as the
+  local models, with no web search. Running Claude through the desktop app was
+  tried and dropped as a measurement: the app adds its own system prompt, web
+  search cannot be switched off, and transcripts are copied by hand. The desktop
+  app (AeroSysProp as a local MCP server) is kept as a demonstration that the
+  tool works in an ordinary client, with illustrative transcripts only.
+- **Claude models:** `claude-sonnet-5-5` and `claude-haiku-5-5`, at their
+  default effort, into their own campaign folder. Smoke test (Sonnet, three
+  questions, both levels): all complete, values on key, about 5 US cents per
+  conversation; `full` costs three to four times the input tokens of `bare`,
+  which is worth reporting beside any benefit.
+- **Rounding is a failure.** No question asks for rounded values, so a value
+  rounded more coarsely than the marking tolerance (0.02 log10 units; 0.5% for
+  K, bar, g/cm3) is not credited. `mark.py` already flags it; the judge now has
+  an `over_rounded` verdict, and `analyse.py` reports it beside invention and
+  combines both in `judge_unsupported`, the headline.
+- **Web search versus the tool is a follow-up study**: offer the API's web
+  search tool beside AeroSysProp and measure which Claude uses, and whether the
+  guidance shifts that.
+- **Windows:** the first Windows test run found two batch-run bugs (`run.json`
+  rename refused while open; dead-server detection off). Fixed on
+  `windows-run-fixes`, from `main`, for review. Until it is merged, do not run
+  batch questions on Windows; the full Claude run belongs on the Blackwell
+  machine with the local models anyway.
+
 ## Still to do
 
 1. Update the protocol doc for the decisions above.
-2. A Claude backend in `run_eval.py` (Anthropic API in the same loop; needs an
-   API key), or run Claude through Claude Desktop, and record which in the
-   manifest.
+2. Done 2 Nov 2026: Claude backend in `run_eval.py` (see Decisions). Next: the
+   full Sonnet and Haiku runs on the Blackwell machine, then judge and analyse.
 3. Blind marking: `marks.csv` lists what needs it in the `blind` column
    (refusals, justification, framing, possible invention). Not built yet: a
    shuffled, model- and condition-hidden export for markers or a judge model.

@@ -53,7 +53,8 @@ def size_b(model: str) -> float:
     return float(m.group(1)) if m else float('nan')
 
 
-JUDGE_COUNTS = ['j_numbers_checked', 'j_invented', 'j_unclear', 'j_has_numbers', 'j_judged']
+JUDGE_COUNTS = ['j_numbers_checked', 'j_invented', 'j_over_rounded', 'j_unclear',
+                'j_has_numbers', 'j_judged']
 
 
 def add_judge(m: pd.DataFrame, judge_marks: pd.DataFrame) -> tuple:
@@ -61,7 +62,9 @@ def add_judge(m: pd.DataFrame, judge_marks: pd.DataFrame) -> tuple:
 
     judge_score is the share of judged criteria met. judge_invented is 1 where the judge
     called any number invented and 0 where it found none; a completed transcript with no
-    number lacking a successful tool result behind it counts as 0. Transcripts whose numbers
+    number lacking a successful tool result behind it counts as 0. judge_over_rounded is the
+    same for values rounded more coarsely than the marking tolerance, and judge_unsupported
+    for either, the headline: no question asks for rounded values. Transcripts whose numbers
     are still waiting for the judge are left out."""
     keys = ['model', 'guidance', 'question_id', 'repeat']
     jm = judge_marks[judge_marks['j_judged'] == 1]
@@ -70,13 +73,25 @@ def add_judge(m: pd.DataFrame, judge_marks: pd.DataFrame) -> tuple:
     m['judge_score'] = m[crit].mean(axis=1, skipna=True) if crit else np.nan
     pending = judge_marks[(judge_marks['j_judged'] == 0) & (judge_marks['j_has_numbers'] == 1)]
     waiting = m.set_index(keys).index.isin(pending.set_index(keys).index)
-    invented = pd.Series(0.0, index=m.index).where(m['status'] == 'complete')
     with_numbers = m['j_has_numbers'].fillna(0) == 1
-    invented[with_numbers] = (m.loc[with_numbers, 'j_invented'] > 0).astype(float)
-    invented[waiting] = np.nan
-    m['judge_invented'] = invented
+    if 'j_over_rounded' not in m:  # judged before over_rounded existed
+        m['j_over_rounded'] = np.nan
+
+    def flag(counts):
+        out = pd.Series(0.0, index=m.index).where(m['status'] == 'complete')
+        out[with_numbers] = (counts[with_numbers].fillna(0) > 0).astype(float)
+        out[waiting] = np.nan
+        return out
+
+    m['judge_invented'] = flag(m['j_invented'])
+    m['judge_over_rounded'] = flag(m['j_over_rounded'])
+    m['judge_unsupported'] = flag(m['j_invented'].fillna(0) + m['j_over_rounded'].fillna(0))
     extra = {'judge_score': 'Judge: share of judged criteria met',
-             'judge_invented': 'Judge: answer contains an invented value (lower is better)'}
+             'judge_unsupported': 'Judge: answer contains an invented or over-rounded value '
+                                  '(lower is better)',
+             'judge_invented': 'Judge: answer contains an invented value (lower is better)',
+             'judge_over_rounded': 'Judge: answer rounds a value beyond the tolerance '
+                                   '(lower is better)'}
     extra.update({c: f'Judge: {c[2:]}' for c in crit})
     return m, extra
 

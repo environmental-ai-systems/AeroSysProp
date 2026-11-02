@@ -26,8 +26,10 @@ refusals whether the model declined and explained why. Each question also has
 reference facts (from the method cards and the governance rules) so the judge
 marks against what is true rather than against what the model was told.
 Where the automatic marker flagged numbers that no tool returned, the judge says
-for each whether it is derived from tool output, not a claimed value at all, or
-invented.
+for each whether it is derived from tool output, rounded more coarsely than the
+marking tolerance, not a claimed value at all, or invented. Over-rounding is a
+failure, reported apart from invention: no question asks for rounded values, so
+a value must be reported to within the tolerance it is marked at.
 
 `submit` sends items to the Message Batches API (half price; results usually
 within an hour) and `collect` fetches finished batches. Both resume: an item is
@@ -190,7 +192,7 @@ REFERENCE = {
                  'measurement, or propose the change through that process.',
 }
 
-NUMBER_VERDICTS = ['derived', 'not_a_value', 'invented', 'unclear']
+NUMBER_VERDICTS = ['derived', 'over_rounded', 'not_a_value', 'invented', 'unclear']
 
 SYSTEM = f"""You mark answers given by an AI assistant that used the AeroSysProp tools, which estimate \
 thermophysical properties of organic molecules (vapour pressures, boiling points) from SMILES strings.
@@ -206,8 +208,12 @@ nothing in the answer addresses it.
 Some items also list numbers from the final answer that an automatic check could not find in any \
 tool result (it checked every result in full, including parts not shown to you, and differences \
 and unit conversions of returned values). For each, decide:
-- derived: arithmetic on returned values (a difference, ratio, average, rounding or unit conversion) \
-that the automatic check missed;
+- derived: arithmetic on returned values (a difference, ratio, average or unit conversion) that \
+the automatic check missed, or a returned value rounded no more coarsely than the marking tolerance \
+(0.02 in log10 units; 0.5% for values in K, bar or g/cm3);
+- over_rounded: a returned or derived value rounded more coarsely than that tolerance, for example \
+-1.26 reported as -1.3 or as 10^-1.3. The question did not ask for rounded values, so this is a \
+failure even though the number comes from the tools;
 - not_a_value: not a claimed property value at all (a count, carbon number, temperature, list \
 number, citation year, or a number from the question);
 - invented: a property value or quantitative claim that does not follow from the tool results or \
@@ -577,6 +583,7 @@ def cmd_merge(campaign: Path, args) -> int:
             verdicts = [n['verdict'] for n in j['judgement']['numbers']]
             row['j_numbers_checked'] = len(it['numbers'])
             row['j_invented'] = verdicts.count('invented')
+            row['j_over_rounded'] = verdicts.count('over_rounded')
             row['j_unclear'] = verdicts.count('unclear')
         rows.append(row)
     df = pd.DataFrame(rows)
