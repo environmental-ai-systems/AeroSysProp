@@ -426,7 +426,7 @@ def cmd_export(campaign: Path, args) -> int:
         sys.exit(f'{p["items"]} exists; pass --force to rebuild it (judgements keep their IDs '
                  'only if the transcripts and questions are unchanged)')
     manifest = json.loads((campaign / 'manifest.json').read_text())
-    qpath = HERE.parent / manifest['question_set']['path']
+    qpath = HERE.parent / manifest['question_set']['path'].replace('\\', '/')
     questions = {q['id']: q for q in yaml.safe_load(open(qpath, encoding='utf-8'))['questions']}
     marks = pd.read_csv(campaign / 'marks.csv', keep_default_na=False)
     # Every completed transcript is checked for numbers, not only those marks.csv flagged:

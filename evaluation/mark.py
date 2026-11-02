@@ -110,7 +110,10 @@ IGNORE_NUMBERS = {298.15, 298, 273.15, 25, 0, 1, 2, 3, 4, 5, 10, 100, 760}
 IDENT_RE = re.compile(r'\d{4}-\d{2}-\d{2}(?:[_T ]\d{2}:?\d{2}:?\d{2}\w*)?|\b[0-9a-f]{12}\b|'
                       r'@\s?\d+|__set\d+|\bset \d+\b|\b\d{6}_[\w-]+')
 
-NUM_RE = re.compile(r'(?<![\w.])[-−–]?\d+(?:\.\d+)?(?:[eE][-−]?\d+)?(?:\s?[×x]\s?10\^?[-−]?\d+)?')
+# A comma between digit groups of exactly three ("6,580 Pa") is a thousands
+# separator, read as one number; "1,2" or "0.8,0.2" stay separate numbers.
+NUM_RE = re.compile(r'(?<![\w.])[-−–]?(?:\d{1,3}(?:,\d{3})+(?![\d,])|\d+)(?:\.\d+)?'
+                    r'(?:[eE][-−]?\d+)?(?:\s?[×x]\s?10\^?[-−]?\d+)?')
 
 
 # Models write minus signs as any of these (gpt-oss uses the non-breaking hyphen).
@@ -120,7 +123,7 @@ MINUS_RE = re.compile('[\u2010\u2011\u2012\u2212\ufe63\uff0d]')
 def numbers(text: str) -> list:
     out = []
     for m in NUM_RE.finditer(IDENT_RE.sub(' ', MINUS_RE.sub('-', text or ''))):
-        s = m.group(0).replace('−', '-').replace('–', '-').replace(' ', '')
+        s = m.group(0).replace('−', '-').replace('–', '-').replace(' ', '').replace(',', '')
         try:
             if '×' in s or 'x10' in s:
                 base, exp = re.split(r'[×x]10\^?', s)
@@ -487,7 +490,7 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
     out = Path(args.campaign)
     manifest = json.loads((out / 'manifest.json').read_text())
-    qpath = Path(args.questions) if args.questions else HERE.parent / manifest['question_set']['path']
+    qpath = Path(args.questions) if args.questions else HERE.parent / manifest['question_set']['path'].replace('\\', '/')
     questions = {q['id']: q for q in yaml.safe_load(open(qpath, encoding='utf-8'))['questions']}
     rows = []
     for tp in sorted((out / 'transcripts').glob('*.json')):

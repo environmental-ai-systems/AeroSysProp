@@ -447,7 +447,7 @@ def main(argv=None) -> int:
         'started': manifest.get('started') or datetime.now(timezone.utc).isoformat(timespec='seconds'),
         'aerosysprop': {'version': __version__, 'commit': _git('rev-parse', '--short', 'HEAD'),
                         'dirty': bool(_git('status', '--porcelain', '--untracked-files=no'))},
-        'question_set': {'path': os.path.relpath(args.questions, REPO),
+        'question_set': {'path': Path(os.path.relpath(args.questions, REPO)).as_posix(),
                          'sha256': _sha256(args.questions),
                          'specs_sha256': qdoc.get('specs_sha256'),
                          'keys_built_at_commit': qdoc.get('git_commit'),
@@ -524,7 +524,7 @@ def main(argv=None) -> int:
             except Exception as e:  # recorded, not fatal: the campaign carries on
                 record.update({'status': 'error', 'error': f'{type(e).__name__}: {e}'[:2000]})
             new_runs = sorted({p.name for p in run_dir.iterdir()} - set(manifest['seed_state']))
-            record['output_folder'] = os.path.relpath(run_dir, out)
+            record['output_folder'] = Path(os.path.relpath(run_dir, out)).as_posix()
             record['new_run_folders'] = new_runs
             if not new_runs:
                 shutil.rmtree(run_dir)
