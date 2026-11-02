@@ -88,6 +88,26 @@ digests and quantisation, sampling), one transcript per conversation, and
 `answers.csv`. Stopping and restarting the same command carries on where it
 left off; restarting with different settings is refused.
 
+### Claude through the Anthropic API
+
+```bash
+pip install anthropic
+export ANTHROPIC_API_KEY=...        # PowerShell: $env:ANTHROPIC_API_KEY = "..."
+python -m evaluation.run_eval --backend anthropic --models claude-sonnet-5-5,claude-opus-5-5 \
+    --out evaluation/results/2026-11-claude
+```
+
+The same loop as for local models: the same system prompt and server
+instructions, the AeroSysProp tools and no others (no web search), the same
+call cap, a fresh server per conversation, and transcripts in the same shape, so
+`mark.py` and `judge.py` read them unchanged. Current Claude models reject
+non-default temperature and have no seed, so they run at their own defaults,
+with adaptive thinking (summarised in the transcript) at the model's default
+effort unless `--effort` is given. `--num-predict` is the per-turn output cap
+(thinking included), 8,192 tokens as for local models. Each transcript records
+the model snapshot that served it. Run Claude into its own campaign folder: a
+campaign refuses to mix backends.
+
 Every conversation starts from the same state: an output folder already holding
 one completed run of the batch request over `mcm_subset.txt`, so questions that
 refer to "that run" or "the last batch" mean the same thing whatever order they

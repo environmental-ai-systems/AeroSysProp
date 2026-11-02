@@ -4,11 +4,16 @@ For every model, guidance level, question and repeat the harness starts a fresh
 AeroSysProp MCP server as a subprocess, gives the model the question and the
 server's tool list, passes the model's tool calls to the server until it stops
 asking (or hits the call cap), and writes a transcript. Models are served by
-Ollama on this machine.
+Ollama on this machine, or with --backend anthropic by the Anthropic API (needs
+the anthropic package and ANTHROPIC_API_KEY). Both backends get the same system
+prompt, the same tools, the same call cap and a fresh server per conversation,
+and write transcripts in the same shape, so mark.py and judge.py read either.
 
     python -m evaluation.run_eval --models qwen3:8b,llama3.1:8b --out evaluation/results/pilot
     python -m evaluation.run_eval --models qwen3:4b --questions-only lookup-01,diag-01 \\
         --repeats 1 --out evaluation/results/smoke
+    python -m evaluation.run_eval --backend anthropic --models claude-sonnet-5-5 \\
+        --questions-only lookup-01,diag-01 --repeats 1 --out evaluation/results/claude-smoke
 
 Every conversation starts from the same state: an output folder holding one
 completed run of the batch questions' request over mcm_subset.txt, so "that run"
@@ -185,6 +190,131 @@ async def converse(host, model, question, env, sampling, max_calls=MAX_CALLS,
 
 
 # ---------------------------------------------------------------------------
+# Anthropic API
+# ---------------------------------------------------------------------------
+# Current Claude models think adaptively by default and reject non-default
+# temperature, top_p and top_k, so the model's own defaults are the only
+# setting, as with --sampling model for local models. There is no seed.
+# Thinking is requested with display "summarized" so the transcript keeps a
+# summary of it; that changes what is returned, not how the model reasons.
+# Thinking blocks are passed back unmodified, as the API requires.
+ANTHROPIC_THINKING = {'type': 'adaptive', 'display': 'summarized'}
+
+
+def anthropic_client():
+    try:
+        import anthropic
+    except ImportError:
+        raise SystemExit('The anthropic backend needs the anthropic package: pip install anthropic')
+    if not os.environ.get('ANTHROPIC_API_KEY'):
+        raise SystemExit('Set ANTHROPIC_API_KEY to use the anthropic backend.')
+    return anthropic, anthropic.Anthropic(max_retries=8)
+
+
+def _anthropic_tools(tools) -> list:
+    return [{'name': t.name, 'description': t.description or '',
+             'input_schema': t.input_schema} for t in tools]
+
+
+def _block_dict(b) -> dict:
+    return b.model_dump(mode='json', exclude_none=True) if hasattr(b, 'model_dump') else dict(b)
+
+
+async def converse_anthropic(api, model, question, env, effort=None, max_calls=MAX_CALLS,
+                             max_tokens=NUM_PREDICT) -> dict:
+    """One conversation through the Anthropic API. Same loop, prompt and caps as
+    converse(); messages are also stored in the Ollama-like shape the markers read."""
+    from mcp import Client, StdioServerParameters
+
+    params = StdioServerParameters(command=sys.executable,
+                                   args=['-m', 'aerosysprop.mcp_server'], env=env)
+    calls, turns = [], []
+    stop, final = None, ''
+    served_model = None
+    t0 = time.time()
+    async with Client(params) as client:
+        instructions = client.instructions or ''
+        system = SYSTEM_PROMPT + (f'\n\n{instructions}' if instructions else '')
+        tools = (await client.list_tools()).tools
+        tool_defs = _anthropic_tools(tools)
+        api_messages = [{'role': 'user', 'content': question}]   # what the API is sent
+        messages = [{'role': 'system', 'content': system},       # what the markers read
+                    {'role': 'user', 'content': question}]
+        raw = []                                                  # every response, verbatim
+        while True:
+            body = {'model': model, 'max_tokens': max_tokens, 'system': system,
+                    'messages': api_messages, 'tools': tool_defs,
+                    'thinking': ANTHROPIC_THINKING}
+            if effort:
+                body['output_config'] = {'effort': effort}
+            t = time.time()
+            reply = await asyncio.to_thread(api.messages.create, **body)
+            served_model = reply.model
+            u = reply.usage
+            cached = (getattr(u, 'cache_read_input_tokens', 0) or 0) + \
+                     (getattr(u, 'cache_creation_input_tokens', 0) or 0)
+            turns.append({'seconds': round(time.time() - t, 2),
+                          'prompt_tokens': (u.input_tokens or 0) + cached,
+                          'completion_tokens': u.output_tokens,
+                          # 'length' as Ollama reports it, so the same checks apply
+                          'done_reason': 'length' if reply.stop_reason == 'max_tokens'
+                                         else reply.stop_reason,
+                          'stop_reason': reply.stop_reason,
+                          'request_id': getattr(reply, '_request_id', None)})
+            blocks = [_block_dict(b) for b in reply.content]
+            raw.append(blocks)
+            api_messages.append({'role': 'assistant', 'content': reply.content})
+            text = '\n'.join(b.text for b in reply.content if b.type == 'text').strip()
+            thinking = '\n'.join(b.thinking for b in reply.content
+                                 if b.type == 'thinking' and b.thinking).strip()
+            requested = [b for b in reply.content if b.type == 'tool_use']
+            msg = {'role': 'assistant', 'content': text}
+            if thinking:
+                msg['thinking'] = thinking
+            if requested:
+                msg['tool_calls'] = [{'id': b.id, 'function': {'name': b.name,
+                                                               'arguments': b.input}}
+                                     for b in requested]
+            messages.append(msg)
+            if not requested:
+                stop = 'output_cap' if reply.stop_reason == 'max_tokens' else (
+                    'refusal' if reply.stop_reason == 'refusal' else 'answered')
+                final = text
+                break
+            if len(calls) + len(requested) > max_calls:
+                stop, final = 'call_cap', text
+                break
+            results = []
+            for b in requested:
+                name, args = b.name, b.input or {}
+                t = time.time()
+                try:
+                    res = await client.call_tool(name, args)
+                    out, is_error = _result_text(res), bool(res.is_error)
+                except Exception as e:  # unknown tool, protocol error: tell the model
+                    out, is_error = f'Error: {type(e).__name__}: {e}', True
+                calls.append({'name': name, 'arguments': args, 'is_error': is_error,
+                              'seconds': round(time.time() - t, 2), 'result_chars': len(out)})
+                results.append({'type': 'tool_result', 'tool_use_id': b.id,
+                                'content': out, 'is_error': is_error})
+                messages.append({'role': 'tool', 'tool_name': name, 'content': out,
+                                 'tool_call_id': b.id})
+            api_messages.append({'role': 'user', 'content': results})
+    prompt = [x['prompt_tokens'] or 0 for x in turns]
+    return {
+        'server_instructions': instructions,
+        'messages': messages, 'tools_offered': tool_defs, 'tool_calls': calls, 'turns': turns,
+        'raw_responses': raw, 'served_model': served_model,
+        'stop_reason': stop, 'final_answer': final,
+        'wall_seconds': round(time.time() - t0, 2),
+        'prompt_tokens': sum(prompt), 'max_prompt_tokens': max(prompt, default=0),
+        'completion_tokens': sum(x['completion_tokens'] or 0 for x in turns),
+        'context_near_limit': False,  # the context is far larger than any conversation here
+        'turns_hit_output_cap': sum(1 for x in turns if x['done_reason'] == 'length'),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Campaign
 # ---------------------------------------------------------------------------
 
@@ -247,7 +377,11 @@ def _seed_script(input_file) -> str:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument('--models', required=True, help='comma-separated Ollama tags')
+    p.add_argument('--models', required=True,
+                   help='comma-separated Ollama tags, or Claude model IDs with --backend anthropic')
+    p.add_argument('--backend', choices=['ollama', 'anthropic'], default='ollama')
+    p.add_argument('--effort', choices=['low', 'medium', 'high', 'xhigh', 'max'], default=None,
+                   help="anthropic only: thinking effort; omit for the model's default")
     p.add_argument('--conditions', default='full,bare')
     p.add_argument('--questions', default=str(HERE / 'questions.yaml'))
     p.add_argument('--questions-only', default='', help='comma-separated question ids')
@@ -261,6 +395,10 @@ def main(argv=None) -> int:
     p.add_argument('--max-calls', type=int, default=MAX_CALLS)
     p.add_argument('--order-seed', type=int, default=20261001)
     args = p.parse_args(argv)
+    if args.backend == 'anthropic' and args.sampling != 'model':
+        p.error('the Anthropic API accepts only the model\'s default sampling: use --sampling model')
+    if args.effort and args.backend != 'anthropic':
+        p.error('--effort applies to --backend anthropic only')
     # The MCP client logs every tool error; transcripts record them already.
     logging.getLogger('mcp').setLevel(logging.ERROR)
 
@@ -281,16 +419,24 @@ def main(argv=None) -> int:
     data_dir = Path(args.data_dir).resolve()
     seed = build_seed(out, data_dir, questions)
 
-    try:
-        ollama_version = _http(args.host, '/api/version')['version']
-    except (urllib.error.URLError, OSError) as e:
-        raise SystemExit(f'Cannot reach Ollama at {args.host}: {e}')
+    api = None
+    if args.backend == 'anthropic':
+        anthropic, api = anthropic_client()
+        serving = {'software': 'anthropic-api', 'sdk_version': anthropic.__version__}
+        server_label = f'anthropic api (sdk {anthropic.__version__})'
+    else:
+        try:
+            ollama_version = _http(args.host, '/api/version')['version']
+        except (urllib.error.URLError, OSError) as e:
+            raise SystemExit(f'Cannot reach Ollama at {args.host}: {e}')
+        serving = {'software': 'ollama', 'version': ollama_version, 'host': args.host}
+        server_label = f'ollama {ollama_version}'
     from aerosysprop import __version__
     manifest_path = out / 'manifest.json'
     manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
     fixed = {'sampling_mode': args.sampling, 'num_ctx': args.num_ctx,
              'num_predict': args.num_predict, 'max_tool_calls': args.max_calls,
-             'order_seed': args.order_seed}
+             'order_seed': args.order_seed, 'backend': args.backend, 'effort': args.effort}
     changed = {k: (manifest[k], v) for k, v in fixed.items() if k in manifest and manifest[k] != v}
     if manifest.get('question_set', {}).get('sha256') not in (None, _sha256(args.questions)):
         changed['question_set'] = ('a different file', args.questions)
@@ -313,14 +459,20 @@ def main(argv=None) -> int:
         'sampling': SAMPLING_MODES[args.sampling], 'num_ctx': args.num_ctx,
         'num_predict': args.num_predict,
         'max_tool_calls': args.max_calls, 'order_seed': args.order_seed,
-        'serving': {'software': 'ollama', 'version': ollama_version, 'host': args.host},
+        'backend': args.backend, 'effort': args.effort,
+        'anthropic_thinking': ANTHROPIC_THINKING if args.backend == 'anthropic' else None,
+        'serving': serving,
         'machine': {'platform': platform.platform(), 'machine': platform.machine(),
                     'gpu': _gpu(), 'python': platform.python_version()},
         'seed_state': sorted(p.name for p in seed.iterdir()),
     })
     manifest.setdefault('models', {})
     for m in models:
-        manifest['models'][m] = model_info(args.host, m)
+        manifest['models'][m] = (model_info(args.host, m) if args.backend == 'ollama' else
+                                 {'name': m, 'provider': 'anthropic',
+                                  'effort': args.effort or 'model default',
+                                  'thinking': ANTHROPIC_THINKING,
+                                  'sampling': 'model defaults (the API rejects others)'})
     manifest_path.write_text(json.dumps(manifest, indent=1))
 
     total = len(models) * len(conditions) * len(questions) * args.repeats
@@ -345,7 +497,7 @@ def main(argv=None) -> int:
                    'AEROSYSPROP_OUTPUT_DIR': str(run_dir), 'PYTHONWARNINGS': 'ignore'}
             record = {'model': model, 'quantisation': info.get('quantisation'),
                       'model_digest': info.get('digest'),
-                      'server': f'ollama {ollama_version}', 'guidance': cond,
+                      'server': server_label, 'backend': args.backend, 'guidance': cond,
                       'question_id': q['id'], 'kind': q['kind'], 'repeat': rep,
                       'question': q['question'].strip(),
                       'sampling_mode': args.sampling,
@@ -355,10 +507,19 @@ def main(argv=None) -> int:
                       'max_tool_calls': args.max_calls,
                       'aerosysprop': manifest['aerosysprop'],
                       'started': datetime.now(timezone.utc).isoformat(timespec='seconds')}
+            if args.backend == 'anthropic':
+                record['effort'] = args.effort or 'model default'
+                record['thinking'] = ANTHROPIC_THINKING
             try:
-                record.update(asyncio.run(converse(
-                    args.host, model, q['question'].strip(), env, SAMPLING_MODES[args.sampling],
-                    args.max_calls, args.num_ctx, args.num_predict)))
+                if args.backend == 'anthropic':
+                    record.update(asyncio.run(converse_anthropic(
+                        api, model, q['question'].strip(), env, args.effort,
+                        args.max_calls, args.num_predict)))
+                else:
+                    record.update(asyncio.run(converse(
+                        args.host, model, q['question'].strip(), env,
+                        SAMPLING_MODES[args.sampling], args.max_calls, args.num_ctx,
+                        args.num_predict)))
                 record['status'] = 'complete'
             except Exception as e:  # recorded, not fatal: the campaign carries on
                 record.update({'status': 'error', 'error': f'{type(e).__name__}: {e}'[:2000]})
@@ -372,7 +533,8 @@ def main(argv=None) -> int:
                   f'{record.get("stop_reason") or record.get("error", "")[:80]} '
                   f'calls={len(record.get("tool_calls", []))} {record.get("wall_seconds", "")}s',
                   flush=True)
-        unload(args.host, model)
+        if args.backend == 'ollama':
+            unload(args.host, model)
 
     write_answers(out)
     manifest['finished'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
