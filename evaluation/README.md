@@ -93,7 +93,7 @@ left off; restarting with different settings is refused.
 ```bash
 pip install anthropic
 export ANTHROPIC_API_KEY=...        # PowerShell: $env:ANTHROPIC_API_KEY = "..."
-python -m evaluation.run_eval --backend anthropic --models claude-sonnet-5-5,claude-opus-5-5 \
+python -m evaluation.run_eval --backend anthropic --models claude-sonnet-5-5,claude-haiku-5-5 \
     --out evaluation/results/2026-11-claude
 ```
 
