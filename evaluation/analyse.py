@@ -137,6 +137,8 @@ def _boot_two_way(cell: pd.DataFrame, rng) -> np.ndarray:
 
 
 def _ci(samples) -> tuple:
+    if len(samples) == 0:  # e.g. a correlation over two models, or sizes unknown
+        return float('nan'), float('nan')
     lo, hi = np.percentile(samples, [2.5, 97.5])
     return round(float(lo), 3), round(float(hi), 3)
 
