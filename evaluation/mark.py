@@ -82,8 +82,9 @@ NEGATED_RE = re.compile(r'\b(?:no|zero|any)\W+(?:[\w‑-]+\W+){0,2}(?:warnings?|
                         r'\bno atoms? (?:were |was )?(?:left )?unmatched|'
                         r'\ball atoms (?:were |are )?matched|\bfully (?:covered|matched|recogni[sz]ed)|'
                         r'\bclean\b', re.I)
-FAILURE_RE = re.compile(r'invalid|could not (?:be )?(?:pars|read|interpret)|'
-                        r'cannot (?:be )?(?:pars|read|interpret)|not a valid|malformed|unbalanced|'
+FAILURE_RE = re.compile(r'invalid|(?:could ?n[o\'’]?t|can[\'’]?t|cannot|fail(?:s|ed)? to) (?:be )?'
+                        r'(?:pars|read|interpret)|'
+                        r'(?:is ?n[o\'’]?t|not) (?:a )?valid|rejects? (?:it|the)|malformed|unbalanced|'
                         r'unclosed|(?:parse|parsing|syntax) error|'
                         r'incomplete (?:smiles|ring|branch|bracket|parenthes)|'
                         # a tool's service being down (opera-01)
@@ -100,6 +101,10 @@ LIST_ITEM_RE = re.compile(r'^\s*(?:[-*•+]|\d+[.)])\s')
 FOLDER_RE = re.compile(r'runs/([0-9a-f]{12})\b')
 STATUS_RE = re.compile(r'published[- ]with[- ]modifications|modifi(?:ed|cations?)|'
                        r'differs? from the (?:published|original)|deviation|in-house', re.I)
+# Provenance questions are answered from the method cards, which list_methods
+# returns: consulting it is using the method, and the years and counts the cards
+# quote are not values that need units.
+CARD_QUESTION_PREFIX = 'prov-'
 # Listing earlier runs is not using one.
 BATCH_TOOLS = {'start_batch_run', 'batch_run_status', 'read_batch_results'}
 # Numbers too common to count as a claimed value: temperatures, years, counts.
@@ -394,6 +399,9 @@ def _method_ok(q, calls):
     if not acceptable:
         return None
     got = _methods_requested(calls)
+    if q['id'].startswith(CARD_QUESTION_PREFIX) and any(
+            c['name'] == 'list_methods' and not c['is_error'] for c in calls):
+        got.add('*')
     return int('*' in got or bool(got & _method_ids(acceptable)))
 
 
@@ -449,7 +457,10 @@ def mark(t, q) -> dict:
         acceptable = key.get('acceptable_methods') or list(METHOD_NAMES)
         row['method_named'] = int(any(re.search(METHOD_NAMES.get(m, m), answer, re.I)
                                       for m in acceptable))
-    if 'value_with_units' in must:
+    # A provenance answer with only whole numbers (years, counts) has no value to give a unit.
+    if 'value_with_units' in must and not (
+            q['id'].startswith(CARD_QUESTION_PREFIX)
+            and all(x == int(x) and x > 0 for x in claimed)):
         row['value_with_units'] = int(units_with_values(answer))
     if ('provenance_label' in must or 'set_named' in must or key.get('provenance_labels')) \
             and not key.get('invalid_smiles'):

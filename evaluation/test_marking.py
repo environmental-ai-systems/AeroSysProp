@@ -31,3 +31,43 @@ def test_manifest_written_on_windows_is_readable(tmp_path):
     (camp / 'manifest.json').write_text(json.dumps(
         {'question_set': {'path': 'evaluation\\questions.yaml'}}))
     assert mark.main([str(camp)]) == 0
+
+
+@pytest.mark.parametrize('answer', [
+    "The SMILES \"CC(C\" isn't valid. RDKit can't parse it.",
+    'I can’t give a value because it is not valid SMILES.',
+    'RDKit couldn’t parse it: the ring is never closed.',
+    'That is not a valid SMILES string.',
+    'RDKit rejects it because the parenthesis is never closed.',
+])
+def test_failure_wordings(answer):
+    assert mark.FAILURE_RE.search(answer)
+
+
+def _card_question(must):
+    return {'id': 'prov-04', 'kind': 'open',
+            'key': {'acceptable_methods': ['vp_evaporation'], 'must_report': must}}
+
+
+def _transcript(answer, names):
+    return {'status': 'complete', 'final_answer': answer,
+            'tool_calls': [{'name': n, 'arguments': {}, 'is_error': False} for n in names]}
+
+
+def test_card_question_answered_from_list_methods():
+    # The card is the source: no prediction is needed, and years and counts need no unit.
+    row = mark.mark(_transcript('Set 2 (Compernolle 2011) refits 805 groups.', ['list_methods']),
+                    _card_question(['method_named', 'value_with_units']))
+    assert row['method_ok'] == 1
+    assert row.get('value_with_units') is None
+
+
+def test_card_question_value_still_needs_units():
+    row = mark.mark(_transcript('Set 2 gives -6.11 for pinic acid.', ['list_methods']),
+                    _card_question(['value_with_units']))
+    assert row['value_with_units'] == 0
+
+
+def test_list_methods_is_not_a_prediction_elsewhere():
+    q = {'id': 'lookup-01', 'kind': 'lookup', 'key': {'acceptable_methods': ['vp_simpol']}}
+    assert mark.mark(_transcript('', ['list_methods']), q)['method_ok'] == 0

@@ -181,8 +181,22 @@ Made on polaris (Windows), 2 Nov 2026:
 ## Still to do
 
 1. Update the protocol doc for the decisions above.
-2. Done 2 Nov 2026: Claude backend in `run_eval.py` (see Decisions). Next: the
-   full Sonnet and Haiku runs on the Blackwell machine, then judge and analyse.
+2. Done 3-5 Nov 2026: the full Claude campaign `2026-11-claude` (Sonnet and
+   Haiku, 756 conversations, about $25 in model calls plus $5-8 for the judge),
+   marked, judged and analysed. The automatic score barely moves (0.90 to
+   0.92); the judge score rises 0.81 to 0.97, nearly all of it on the seven
+   card-only questions (0.39 to 0.95).
+   Eight Haiku answers stopped mid-sentence with `stop_reason` refusal;
+   `run_eval.py` now records `stop_details` (the classifier's category) for
+   later runs. Open: a non-Claude judge or human check of Claude's answers,
+   since an Opus judge is marking Claude; the over-rounding rule, which fails
+   summaries such as "about 40 K" for 40.52 K.
+   Marker fix, 5 Nov 2026: answering a provenance (`prov-*`) question from
+   `list_methods` now counts as using the method, years and counts in such an
+   answer no longer need units, and `failure_reported` accepts "isn't valid",
+   "couldn't parse" and "rejects it". Both campaigns were re-marked (old marks
+   in each campaign's `pre-marker-fix/`): open models 0.59 to 0.70 (was 0.57 to
+   0.67), Claude 0.90 to 0.92 (was 0.89 to 0.88). Judge figures are unchanged.
 3. Blind marking: `marks.csv` lists what needs it in the `blind` column
    (refusals, justification, framing, possible invention). Not built yet: a
    shuffled, model- and condition-hidden export for markers or a judge model.

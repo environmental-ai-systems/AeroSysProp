@@ -260,6 +260,9 @@ async def converse_anthropic(api, model, question, env, effort=None, max_calls=M
                           'done_reason': 'length' if reply.stop_reason == 'max_tokens'
                                          else reply.stop_reason,
                           'stop_reason': reply.stop_reason,
+                          # set only on a refusal: the safety classifier's category
+                          'stop_details': details.to_dict() if (
+                              details := getattr(reply, 'stop_details', None)) else None,
                           'request_id': getattr(reply, '_request_id', None)})
             blocks = [_block_dict(b) for b in reply.content]
             raw.append(blocks)
@@ -305,7 +308,8 @@ async def converse_anthropic(api, model, question, env, effort=None, max_calls=M
         'server_instructions': instructions,
         'messages': messages, 'tools_offered': tool_defs, 'tool_calls': calls, 'turns': turns,
         'raw_responses': raw, 'served_model': served_model,
-        'stop_reason': stop, 'final_answer': final,
+        'stop_reason': stop, 'stop_details': turns[-1]['stop_details'] if turns else None,
+        'final_answer': final,
         'wall_seconds': round(time.time() - t0, 2),
         'prompt_tokens': sum(prompt), 'max_prompt_tokens': max(prompt, default=0),
         'completion_tokens': sum(x['completion_tokens'] or 0 for x in turns),
