@@ -109,6 +109,11 @@ are relative to UManSysProp.
   for ever, and a server that has died is detected on every platform.
 - A guidance level switch (`AEROSYSPROP_GUIDANCE`) that changes only the
   explanatory text served to agents, never the values.
+- Tools for evaluating agents that use AeroSysProp (`evaluation/`): a key
+  builder that computes expected answers with AeroSysProp itself, a harness
+  for local models and Claude, automatic and blind judge marking, a paired
+  analysis of the guidance levels and a worked example question. See
+  `docs/agent-evaluation.md`.
 
 ### Testing
 

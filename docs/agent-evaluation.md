@@ -37,8 +37,8 @@ Claude drafted the first version of the questions and is also one of the models 
 
 ## Your own questions
 
-The evaluation tools also work with a question set you write yourself about the compounds you care about. The builder computes the keys for your set exactly as for the shipped set, so you never type an expected value. Two models compared on ten questions about your own molecules, or one model before and after a change to a tool description, quickly shows whether an agent can be trusted with them.
+The evaluation tools are in [`evaluation/`](../evaluation/README.md), with a worked example question. They work with a question set you write yourself about the compounds you care about. The builder computes the keys for your set exactly as for the study's set, so you never type an expected value. Two models compared on ten questions about your own molecules, or one model before and after a change to a tool description, quickly shows whether an agent can be trusted with them.
 
 ## Availability
 
-The harness, the marking code and the question set will be released together with the paper describing AeroSysProp. Until then they are kept private, so that the questions do not reach models in training before the results are reported. The guidance switch is part of the released package from v1.0.0.
+The guidance switch, the harness, the key builder and the marking and analysis code are released from v1.0.0. The study's question set and its results will be released with the paper describing AeroSysProp. Until then they are kept private, so that the questions do not reach models in training before the results are reported. The held-back set stays private after that too.
