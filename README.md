@@ -686,27 +686,26 @@ for x in composition_grid:
 
 ### Cache controls
 
-Both internal caches are introspectable and clearable. The system
-cache is bounded to 128 entries; the per-SMILES diagnostic cache is
-bounded to 4096 entries; both auto-evict via LRU. Memory ceiling is
-on the order of a few MB.
+To keep repeated calls fast, AeroSysProp remembers work it has already done for a given set of SMILES. It keeps two of these stores, or caches:
+
+- the AIOMFAC system built from a list of SMILES, for up to 128 different lists (and another 128 for the short-range-only version), and
+- the diagnostic check for each SMILES, for up to 4,096 molecules.
+
+When a cache is full, the entry used least recently is dropped, so memory stays at a few MB and in normal use you never need to touch them. There are two reasons you might: to confirm that caching is working in your loop, or to start afresh, for example after reloading the SMARTS pattern files during a session.
 
 ```python
-from aerosysprop.methods.activity_coefficients import (
-    system_cache_info, clear_system_cache,
-)
-from aerosysprop.diagnostics import (
-    diagnostic_cache_info, clear_diagnostic_cache,
-)
+from aerosysprop.methods.activity_coefficients import system_cache_info, clear_system_cache
+from aerosysprop.diagnostics import diagnostic_cache_info, clear_diagnostic_cache
 
-# (aiomfac_info, aiomfac_sr_info) — CacheInfo(hits, misses, maxsize, currsize)
-system_cache_info()
+full, short_range = system_cache_info()   # one record for each kind of AIOMFAC system
+print(full.hits, full.misses, full.currsize, full.maxsize)
+print(diagnostic_cache_info())            # the same four numbers for the per-SMILES checks
 
-# For screening workloads with unbounded distinct SMILES, drop the
-# caches periodically:
-clear_system_cache()
-clear_diagnostic_cache()
+clear_system_cache()       # forget the stored AIOMFAC systems
+clear_diagnostic_cache()   # forget the stored per-SMILES checks
 ```
+
+A hit is a call that reused stored work and a miss is one that had to do the work. In a loop over a fixed SMILES list, the full-system cache should show one miss for the list and a hit for every call after that.
 
 ### Surfacing issues without crashing the loop
 
