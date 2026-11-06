@@ -41,4 +41,6 @@ The evaluation tools are in [`evaluation/`](../evaluation/README.md), with a wor
 
 ## Availability
 
-The guidance switch, the harness, the key builder and the marking and analysis code are released from v1.0.0. The study's question set and its results will be released with the paper describing AeroSysProp. Until then they are kept private, so that the questions do not reach models in training before the results are reported. The held-back set stays private after that too.
+The guidance switch, the harness, the key builder and the marking and analysis code are released from v1.0.0. The study's main question set, drafted by Claude for review by the core team, is public with its keys on the `agent-eval` branch. A second, held-back set written by people is not published and will not be. Because any public question set may end up in the training data of future models, the held-back set is the check: if a later model scores well on the public questions but not on the held-back ones, the public scores have been inflated.
+
+Results will be reported with the paper describing AeroSysProp. Until the judge marking has been checked by people, they demonstrate the method rather than stand as finished findings.

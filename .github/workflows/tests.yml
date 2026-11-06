@@ -35,6 +35,9 @@ jobs:
           --ignore=aerosysprop/tests/test_main.py
           --ignore=aerosysprop/tests/test_vapour_pressure.py
 
+      - name: Run the evaluation marking tests
+        run: pytest -q evaluation/test_marking.py
+
       - name: Legacy tests (informational)
         # These use relative paths and exact float comparisons that fail in
         # the last digit on some platforms. Kept visible but non-blocking
