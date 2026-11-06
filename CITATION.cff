@@ -27,12 +27,15 @@ keywords:
   - AIOMFAC
   - SMILES
 authors:
-  # Add co-authors, ORCIDs and affiliations before the release.
   - family-names: Topping
     given-names: David
     email: david.topping@manchester.ac.uk
-    affiliation: University of Manchester
-    # orcid: https://orcid.org/XXXX-XXXX-XXXX-XXXX
+    affiliation: Department of Earth and Environmental Sciences, University of Manchester
+    orcid: https://orcid.org/0000-0001-8247-9649
+  - family-names: O'Meara
+    given-names: Simon
+    affiliation: National Centre for Atmospheric Science, University of Manchester
+    orcid: https://orcid.org/0000-0001-7197-0651
 references:
   - type: article
     title: "UManSysProp v1.0: an online and open-source facility for molecular property prediction and atmospheric aerosol calculations"
