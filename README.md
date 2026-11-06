@@ -7,6 +7,8 @@
 
 # AeroSysProp
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24013620.svg)](https://doi.org/10.5281/zenodo.24013620)
+
 A Python library for predicting thermophysical properties of organic molecules relevant to atmospheric aerosol research. Given a SMILES string, AeroSysProp applies a range of published group-contribution methods to estimate boiling points, vapour pressures, critical properties, and liquid densities. For mixtures, it also provides AIOMFAC activity coefficients (short-range modified UNIFAC, middle-range organic–ion and ion–ion, and long-range Debye–Hückel), validated against the Fortran AIOMFAC reference for >1500 atmospheric and laboratory compounds and the common atmospheric salts (NaCl, Na₂SO₄, (NH₄)₂SO₄, NH₄NO₃, KCl, NH₄Cl, …).
 
 ---

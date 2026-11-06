@@ -6,8 +6,8 @@ message: >-
 title: AeroSysProp
 type: software
 version: 1.0.0
-# date-released: YYYY-MM-DD   # set when the release is tagged
-# doi: 10.5281/zenodo.XXXXXXX  # add once Zenodo has minted the DOI
+date-released: 2026-11-06
+doi: 10.5281/zenodo.24013620
 license: GPL-3.0-or-later
 repository-code: https://github.com/environmental-ai-systems/AeroSysProp
 abstract: >-
