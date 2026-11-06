@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.png">
+    <img src="docs/images/logo-light.png" alt="AeroSysProp: atmospheric aerosol property prediction" width="560">
+  </picture>
+</p>
+
 # AeroSysProp
 
 A Python library for predicting thermophysical properties of organic molecules relevant to atmospheric aerosol research. Given a SMILES string, AeroSysProp applies a range of published group-contribution methods to estimate boiling points, vapour pressures, critical properties, and liquid densities. For mixtures, it also provides AIOMFAC activity coefficients (short-range modified UNIFAC, middle-range organic–ion and ion–ion, and long-range Debye–Hückel), validated against the Fortran AIOMFAC reference for >1500 atmospheric and laboratory compounds and the common atmospheric salts (NaCl, Na₂SO₄, (NH₄)₂SO₄, NH₄NO₃, KCl, NH₄Cl, …).
@@ -485,6 +492,8 @@ docker compose up --build app      # → http://localhost:8501
 
 See the [Docker](#docker) section for details. Either way the app opens at
 <http://localhost:8501>.
+
+![The AeroSysProp web app home page, with the single-component, mixture and external services workflows in the sidebar](docs/images/app.png)
 
 The sidebar navigates between three workflows, reflecting the fact that
 single-component and mixture predictions have fundamentally different
