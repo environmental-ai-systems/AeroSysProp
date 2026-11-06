@@ -113,16 +113,34 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+# Windows refuses to rename a file over one that another handle has open (a
+# status check reading run.json at that moment, or a virus scanner or search
+# indexer), and refuses to open a file in the instant it is being replaced.
+# Both are brief, so retry for up to about two seconds before giving up.
+_LOCK_RETRIES, _LOCK_DELAY_S = 40, 0.05
+
+
+def _retry_if_locked(fn):
+    for attempt in range(_LOCK_RETRIES):
+        try:
+            return fn()
+        except PermissionError:
+            if sys.platform != 'win32' or attempt == _LOCK_RETRIES - 1:
+                raise
+            time.sleep(_LOCK_DELAY_S)
+
+
 def _write_manifest(d: Path, manifest: dict):
     # The manifest is the only file ever rewritten, and only by the run that
     # created it: written to a temporary name, then renamed into place.
     tmp = d / (MANIFEST_FILE + '.tmp')
-    tmp.write_text(json.dumps(json_safe(manifest), indent=2, ensure_ascii=False), encoding='utf-8')
-    os.replace(tmp, d / MANIFEST_FILE)
+    text = json.dumps(json_safe(manifest), indent=2, ensure_ascii=False)
+    _retry_if_locked(lambda: tmp.write_text(text, encoding='utf-8'))
+    _retry_if_locked(lambda: os.replace(tmp, d / MANIFEST_FILE))
 
 
 def _read_manifest(d: Path) -> dict:
-    return json.loads((d / MANIFEST_FILE).read_text(encoding='utf-8'))
+    return json.loads(_retry_if_locked(lambda: (d / MANIFEST_FILE).read_text(encoding='utf-8')))
 
 
 def _slug(label) -> str:
@@ -130,8 +148,13 @@ def _slug(label) -> str:
 
 
 def _pid_alive(pid) -> Optional[bool]:
-    if not isinstance(pid, int) or sys.platform == 'win32':
-        return None  # cannot check safely on Windows
+    """True if a process with this ID is running, False if not, None if unknown."""
+    if not isinstance(pid, int) or pid <= 0:
+        return None
+    if sys.platform == 'win32':
+        # os.kill(pid, 0) would terminate the process on Windows; ask the
+        # kernel instead.
+        return _pid_alive_windows(pid)
     try:
         os.kill(pid, 0)
         return True
@@ -139,6 +162,31 @@ def _pid_alive(pid) -> Optional[bool]:
         return False
     except PermissionError:
         return True
+
+
+def _pid_alive_windows(pid: int) -> Optional[bool]:
+    try:
+        import ctypes
+        from ctypes import wintypes
+        kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        kernel32.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+        PROCESS_QUERY_LIMITED_INFORMATION, STILL_ACTIVE, ERROR_ACCESS_DENIED = 0x1000, 259, 5
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle:
+            # Access denied means the process exists but belongs to someone else.
+            return ctypes.get_last_error() == ERROR_ACCESS_DENIED
+        try:
+            code = wintypes.DWORD()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+                return None
+            return code.value == STILL_ACTIVE
+        finally:
+            kernel32.CloseHandle(handle)
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -317,7 +365,13 @@ def _execute(d: Path, pairs, method_ids, T, bp, include_diagnostics, manifest, s
         except Exception as e:  # the crate is a convenience; never lose the run over it
             manifest.setdefault('warnings', []).append(
                 {'severity': 'warning', 'code': 'CRATE_NOT_WRITTEN', 'message': str(e)[:500]})
-        _write_manifest(d, manifest)
+        # Keep the finished manifest in memory, so the run is never reported as
+        # running (and never blocks the next run) if writing it to disk fails.
+        job['manifest'] = manifest
+        try:
+            _write_manifest(d, manifest)
+        except Exception as e:
+            job['manifest_error'] = f'{type(e).__name__}: {e}'[:500]
         job['status'] = manifest['status']
 
 
@@ -577,10 +631,23 @@ def batch_run_status(run_id: str) -> dict:
     """Status of a run; once complete, includes its summary and provenance."""
     d = _run_dir(run_id)
     m = _read_manifest(d)
+    job = _jobs.get(run_id)
+    if m['status'] == 'running' and job is not None and job['status'] != 'running' \
+            and job.get('manifest') is not None:
+        # The run finished but its manifest could not be written then; try again.
+        m = job['manifest']
+        try:
+            _write_manifest(d, m)
+            job.pop('manifest_error', None)
+        except Exception as e:
+            job['manifest_error'] = f'{type(e).__name__}: {e}'[:500]
     status = m['status']
     out = {'run_id': run_id, 'status': status, 'folder': str(d), 'created': m['created']}
+    if job is not None and job.get('manifest_error'):
+        out['warning'] = ('The run finished, but its run.json could not be updated on disk: '
+                          + job['manifest_error'] + '. The status shown here is correct; '
+                          'run.json on disk still says running.')
     if status == 'running':
-        job = _jobs.get(run_id)
         if job is not None:
             out['progress'] = {'done': job['done'], 'total': job['total'],
                                'elapsed_s': round(time.time() - job['started'], 1)}
