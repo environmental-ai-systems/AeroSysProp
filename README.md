@@ -84,7 +84,7 @@ AeroSysProp/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/loftytopping/AeroSysProp.git
+git clone https://github.com/environmental-ai-systems/AeroSysProp.git
 cd AeroSysProp
 ```
 

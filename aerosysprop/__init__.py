@@ -11,8 +11,8 @@
 # details.
 #
 # You should have received a copy of the GNU General Public License along with
-# umansysprop. If not, see <http://www.gnu.org/licenses/>.
-"""An system for calculating the properties of individual organic
+# AeroSysProp. If not, see <http://www.gnu.org/licenses/>.
+"""A system for calculating the properties of individual organic
 molecules and ensemble mixtures relevant to aerosol science"""
 import sys
 

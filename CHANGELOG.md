@@ -104,6 +104,9 @@ are relative to UManSysProp.
   results, diagnostics, a provenance manifest with file fingerprints and
   RO-Crate metadata, so the folder can be archived as it stands
   (`aerosysprop.runs`).
+  Run status files are written so that Windows, which refuses to replace
+  a file another process has open, cannot leave a run marked as running
+  for ever, and a server that has died is detected on every platform.
 - A guidance level switch (`AEROSYSPROP_GUIDANCE`) that changes only the
   explanatory text served to agents, never the values.
 
