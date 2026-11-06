@@ -2,6 +2,7 @@
 import csv
 import hashlib
 import json
+import os
 import time
 
 import pytest
@@ -271,3 +272,78 @@ def test_parameter_sets_in_batch_run(dirs):
     other = runs.start_batch_run(smiles=['CCO', 'OC=CC(=O)O'], methods=['vp_evaporation@1'])
     assert other['reused'] is False
     _wait(other['run_id'])
+
+
+# --- Windows file locking and process checks -------------------------------
+
+def test_manifest_write_retries_while_windows_holds_the_file(dirs, monkeypatch):
+    # Windows refuses to rename over a file another handle has open; the
+    # rename must be retried rather than lost.
+    _, out = dirs
+    real_replace, refusals = runs.os.replace, []
+
+    def flaky_replace(src, dst):
+        if len(refusals) < 3:
+            refusals.append(dst)
+            raise PermissionError(5, 'Access is denied')
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(runs.sys, 'platform', 'win32')
+    monkeypatch.setattr(runs, '_LOCK_DELAY_S', 0.001)
+    monkeypatch.setattr(runs.os, 'replace', flaky_replace)
+    d = out / 'x'
+    d.mkdir()
+    runs._write_manifest(d, {'status': 'complete'})
+    assert len(refusals) == 3
+    assert json.loads((d / 'run.json').read_text())['status'] == 'complete'
+    assert not (d / 'run.json.tmp').exists()
+
+
+def test_lock_errors_are_not_retried_off_windows(monkeypatch):
+    calls = []
+
+    def refuse():
+        calls.append(1)
+        raise PermissionError(13, 'Permission denied')
+
+    monkeypatch.setattr(runs.sys, 'platform', 'linux')
+    with pytest.raises(PermissionError):
+        runs._retry_if_locked(refuse)
+    assert len(calls) == 1
+
+
+def test_finished_run_is_not_left_running_if_its_manifest_cannot_be_written(dirs, monkeypatch):
+    # If the final run.json write fails for good, the run must still report
+    # its real status and must not block the next run.
+    real_write = runs._write_manifest
+    state = {'fail': False}
+
+    def write(d, manifest):
+        if state['fail'] and manifest['status'] != 'running':
+            raise PermissionError(5, 'Access is denied')
+        return real_write(d, manifest)
+
+    monkeypatch.setattr(runs, '_write_manifest', write)
+    state['fail'] = True
+    rid = runs.start_batch_run(smiles=['CCO'])['run_id']
+    st = _wait(rid)
+    assert st['status'] == 'complete'
+    assert 'could not be updated' in st['warning']
+    # once the disk accepts the write again, run.json is repaired
+    state['fail'] = False
+    st = runs.batch_run_status(rid)
+    assert 'warning' not in st
+    _, out = dirs
+    assert json.loads((out / rid / 'run.json').read_text())['status'] == 'complete'
+    # and the next run is not refused as BUSY
+    _wait(runs.start_batch_run(smiles=['CCCO'])['run_id'])
+
+
+def test_pid_check_knows_this_process_is_alive():
+    assert runs._pid_alive(os.getpid()) is True
+
+
+def test_pid_check_rejects_meaningless_ids():
+    assert runs._pid_alive(None) is None
+    assert runs._pid_alive(0) is None
+    assert runs._pid_alive(-1) is None

@@ -28,7 +28,7 @@ FROM python:3.12-slim
 LABEL maintainer="david.topping@manchester.ac.uk"
 LABEL org.opencontainers.image.title="AeroSysProp app"
 LABEL org.opencontainers.image.description="Streamlit UI for AeroSysProp single-component properties and AIOMFAC mixture activity coefficients"
-LABEL org.opencontainers.image.source="https://github.com/loftytopping/AeroSysProp"
+LABEL org.opencontainers.image.source="https://github.com/environmental-ai-systems/AeroSysProp"
 
 # RDKit's manylinux wheels dlopen a couple of X11 shared libraries at import
 # time even for headless use; install just those.

@@ -13,6 +13,7 @@ A Python library for predicting thermophysical properties of organic molecules r
 - [Loading SMILES from files](#loading-smiles-from-files)
 - [Available methods](#available-methods)
 - [Activity coefficients](#activity-coefficients)
+- [Method cards and provenance](#method-cards-and-provenance)
 - [Web interface](#web-interface)
 - [Use with AI agents (MCP)](#use-with-ai-agents-mcp)
 - [Use in numerical simulations](#use-in-numerical-simulations)
@@ -83,7 +84,7 @@ AeroSysProp/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/loftytopping/AeroSysProp.git
+git clone https://github.com/environmental-ai-systems/AeroSysProp.git
 cd AeroSysProp
 ```
 
@@ -341,8 +342,8 @@ report.has_errors       # True - main_group 4 lacks SO4-- parameter
 ```
 
 For full theory, API reference, validation methodology, compound coverage,
-known limitations, citations, and roadmap (bisulfate equilibrium and
-peroxy/nitrate SMARTS extension still pending), see
+known limitations, citations, and roadmap (the peroxy/nitrate SMARTS
+extension is still pending), see
 [`aerosysprop/methods/activity_coefficients.md`](aerosysprop/methods/activity_coefficients.md).
 
 ### SMARTS hit matrix for a batch of SMILES
@@ -424,6 +425,33 @@ If you intentionally change a method's implementation, regenerate `fixtures.json
 ```bash
 python aerosysprop/tests/generate_fixtures.py
 ```
+
+---
+
+## Method cards and provenance
+
+Every method has a versioned **method card** in
+[`aerosysprop/methods/cards/`](aerosysprop/methods/cards/). The card records
+the method's references and publication status, the parameter files it
+uses with a SHA-256 fingerprint of each, documented departures from the
+source papers, known limitations, validation and review state. A
+prediction is identified by three things: the method ID, the parameter set
+version, and the software version with its git commit.
+
+Continuous integration checks every parameter file against its card, so a
+change to a SMARTS pattern or coefficient fails the build until the card is
+updated:
+
+```bash
+python -m aerosysprop.method_cards            # check every card
+```
+
+Batch runs through the agent API write a run folder containing the
+results, the diagnostics, a provenance manifest (`run.json`) and
+[RO-Crate](https://www.researchobject.org/ro-crate/) metadata, so a run can
+be archived or deposited as it stands. The process for proposing and
+reviewing method changes is set out in
+[`METHODS_GOVERNANCE.md`](METHODS_GOVERNANCE.md).
 
 ---
 
@@ -537,7 +565,7 @@ The server **never overwrites, deletes, or writes to a session database**. File 
 
 **The run folder is the result; an agent's account of it is a guide to the result.** An agent sees a compact summary rather than every row. The summary therefore separates statistics for *clean* molecules (closed-shell, no method flagged) from those for all molecules, carries a coverage statement (for the MCM: 37% clean, 38% radicals), and lists caveats and reporting requirements that agents are instructed to pass on. Specific molecules are always looked up by name or SMILES rather than inferred. Note that this only governs what agents can do *through the server*; an agent that also has shell access is controlled by that agent's own permission settings.
 
-**Guidance level.** `AEROSYSPROP_GUIDANCE=bare` starts the server with one-line tool descriptions, no argument descriptions and no guide resources; `list_methods` then gives method IDs, output columns and units only, and batch summaries leave out the coverage statement, caveats and reporting requirements. The default, `full`, serves all of it. Values, diagnostics, provenance labels, error messages and run folders are identical at both levels (the tests check this byte for byte): the setting exists to measure what the documentation contributes to an agent's answers. For normal use leave it unset.
+**Guidance level.** `AEROSYSPROP_GUIDANCE=bare` serves the tools without their documentation for agents, while every value stays identical. It exists for research on what that documentation contributes, described in [Evaluating AI agents that use AeroSysProp](docs/agent-evaluation.md). For normal use leave it unset.
 
 **Claude Desktop**: add to `claude_desktop_config.json` (use the full path to the command in your environment, e.g. from `which aerosysprop-mcp`):
 
@@ -778,7 +806,9 @@ references are in [`opera/README.md`](opera/README.md).
 
 ## Contributing
 
-Contributions are welcome. Please open an issue before submitting a pull request so that proposed method changes can be discussed with the project team. Any modification to an existing method should be accompanied by:
+Contributions are welcome. Please open an issue before submitting a pull request so that proposed method changes can be discussed with the project team. Incorrect or missing group assignments can be reported with the *group assignment* issue template, and changes to a method's parameters follow the process in [`METHODS_GOVERNANCE.md`](METHODS_GOVERNANCE.md).
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to report problems, check methods against their sources and submit changes. Everyone taking part is expected to follow the [code of conduct](CODE_OF_CONDUCT.md). Any modification to an existing method should be accompanied by:
 
 1. A clear description of what differs from the published technique.
 2. Updated reference values (`fixtures.json`) generated by running `generate_fixtures.py`.
@@ -788,13 +818,19 @@ Contributions are welcome. Please open an issue before submitting a pull request
 
 ## Citation
 
-If you use AeroSysProp in published work, please cite the repository and the original papers for the methods you use (see the tables above).
+If you use AeroSysProp in published work, please cite the software using the metadata in [`CITATION.cff`](CITATION.cff) (GitHub's *Cite this repository* button gives it in APA and BibTeX), quoting the version you used. Please also cite the original papers for the methods you use, listed in the tables above, in each method card and in [`THIRD_PARTY.md`](THIRD_PARTY.md).
+
+AeroSysProp descends from UManSysProp:
+
+Topping, D., Barley, M., Bane, M. K., Higham, N., Aumont, B., Dingle, N., and McFiggans, G.: UManSysProp v1.0: an online and open-source facility for molecular property prediction and atmospheric aerosol calculations, Geosci. Model Dev., 9, 899-914, https://doi.org/10.5194/gmd-9-899-2016, 2016.
+
+Changes between versions are recorded in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
 ## License
 
-AeroSysProp is distributed under the GNU General Public License v3. See [LICENSE](LICENSE) for details.
+AeroSysProp is distributed under the GNU General Public License v3 or later. See [LICENSE](LICENSE) for details, and [`THIRD_PARTY.md`](THIRD_PARTY.md) for material from other sources and its licences.
 
 ---
 

@@ -8,3 +8,8 @@
 /aerosysprop/method_cards.py @simonom
 /METHODS_GOVERNANCE.md       @simonom
 /.github/CODEOWNERS          @simonom
+
+# The key builder defines how expected values are produced for every question set,
+# so a change to it needs the same review. Sets people write for themselves live
+# in /evaluation/sets/ and are not owned.
+/evaluation/build_questions.py  @simonom

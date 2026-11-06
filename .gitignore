@@ -13,3 +13,13 @@ dist/
 # Editor / OS noise
 .DS_Store
 *.swp
+
+# Evaluation: question sets people write for themselves, built example keys, and run output
+evaluation/sets/
+evaluation/results/
+evaluation/example_questions.yaml
+# The study's own question set, notes and session database stay private until the paper
+evaluation/question_specs.yaml
+evaluation/questions.yaml
+evaluation/HANDOVER.md
+evaluation/data/session.db

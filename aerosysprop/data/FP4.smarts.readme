@@ -1,0 +1,20 @@
+FP4.smarts
+==========
+
+The SMARTS patterns in FP4.smarts are the functional group classification
+patterns written by Christian Laggner, distributed with Open Babel as
+data/SMARTS_InteLigand.txt and used there to define the FP4 fingerprint.
+UManSysProp originally read them through Pybel; AeroSysProp keeps the
+patterns and evaluates them with RDKit.
+
+Original notice:
+
+    SMARTS Patterns for Functional Group Classification
+    written by Christian Laggner
+    Copyright 2005 Inte:Ligand Software-Entwicklungs und Consulting GmbH
+    Released under the Lesser General Public License (LGPL license)
+    see http://www.gnu.org/copyleft/lesser.html
+
+The patterns therefore remain under the GNU LGPL, which is compatible with
+the GPL v3 licence of AeroSysProp. Source:
+https://github.com/openbabel/openbabel/blob/master/data/SMARTS_InteLigand.txt

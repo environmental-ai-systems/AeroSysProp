@@ -1,5 +1,4 @@
 # Runs on every pull request and every push to main.
-# Copy this file to .github/workflows/tests.yml in the repository.
 name: Tests
 
 on:
