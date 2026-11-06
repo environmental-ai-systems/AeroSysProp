@@ -1,6 +1,6 @@
 # Evaluation tools: testing AI agents that use AeroSysProp
 
-These scripts measure what an AI model does when it answers questions through the AeroSysProp MCP server, and whether the documentation layer served to agents changes that. The design of the study they were written for is described in [docs/agent-evaluation.md](../docs/agent-evaluation.md). The study's own question set and results are not here; they will be released with the paper describing AeroSysProp. Everything needed to write, key, run and mark a question set of your own is.
+These scripts measure what an AI model does when it answers questions through the AeroSysProp MCP server, and whether the documentation layer served to agents changes that. The design of the study they were written for is described in [docs/agent-evaluation.md](../docs/agent-evaluation.md). The study's main question set and its keys are on the `agent-eval` branch; a held-back set written by people is not published, so that it can show whether models have seen the public set in training. Everything needed to write, key, run and mark a question set of your own is here.
 
 | File | What it does |
 | --- | --- |
